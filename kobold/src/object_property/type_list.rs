@@ -1,6 +1,5 @@
 use std::{collections::HashMap, io};
 
-use ahash::RandomState;
 use bitflags::bitflags;
 use serde::{Deserialize, Deserializer};
 
@@ -39,7 +38,7 @@ bitflags! {
 pub struct TypeList {
     /// A mapping of type definitions.
     #[serde(flatten)]
-    pub list: HashMap<String, TypeDef, RandomState>,
+    pub list: HashMap<String, TypeDef>,
 }
 
 impl TypeList {
@@ -86,7 +85,7 @@ pub struct Property {
     pub hash: u32,
     /// A mapping of all enum options defined on a property.
     #[serde(default)]
-    pub enum_options: HashMap<String, StringOrInt, RandomState>,
+    pub enum_options: HashMap<String, StringOrInt>,
 }
 
 /// Hack to deal with some inconsistencies in how options are stored.
@@ -101,14 +100,13 @@ fn deserialize_property_list<'de, D>(deserializer: D) -> Result<Vec<Property>, D
 where
     D: Deserializer<'de>,
 {
-    let mut properties: Vec<_> =
-        HashMap::<String, Property, RandomState>::deserialize(deserializer)?
-            .drain()
-            .map(|(name, mut property)| {
-                property.name = name;
-                property
-            })
-            .collect();
+    let mut properties: Vec<_> = HashMap::<String, Property>::deserialize(deserializer)?
+        .drain()
+        .map(|(name, mut property)| {
+            property.name = name;
+            property
+        })
+        .collect();
 
     // Sort properties by ID for correct order.
     properties.sort_by(|a, b| a.id.cmp(&b.id));
