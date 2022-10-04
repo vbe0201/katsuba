@@ -5,4 +5,6 @@ pub mod bcd;
 
 pub mod nav;
 
+pub mod poi;
+
 mod utils;
