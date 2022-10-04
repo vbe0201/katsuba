@@ -91,7 +91,7 @@ impl<'de> BitReader<'de> {
     /// Attempts to read `n` bytes from the internal buffer and returns a slice
     /// of those bytes on success.
     pub fn read_bytes(&mut self, n: usize) -> io::Result<Vec<u8>> {
-        let nbits = 5 * u8::BITS as usize;
+        let nbits = n * u8::BITS as usize;
 
         self.read_bits(nbits).map(|bs| match bs.domain() {
             Domain::Region {
