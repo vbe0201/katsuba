@@ -8,3 +8,6 @@ repository = "https://github.com/vbe0201/kobold"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0"
+binrw = "0.10"
+bitflags = "1.3"
