@@ -80,7 +80,6 @@ impl<'de> BitReader<'de> {
         Ok(result)
     }
 
-    #[allow(unsafe_code)]
     #[inline]
     pub(super) fn realign_to_byte(&mut self) {
         let pad_bits = self.data.len() - align_down(self.data.len(), u8::BITS as _);
