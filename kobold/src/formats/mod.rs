@@ -8,3 +8,5 @@ pub mod nav;
 pub mod poi;
 
 mod utils;
+
+pub mod wad;
