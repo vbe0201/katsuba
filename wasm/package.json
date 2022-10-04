@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "kobold": "file:www"
+  }
+}

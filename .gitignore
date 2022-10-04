@@ -1,0 +1,67 @@
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Rust
+/target/
+**/*.rs.bk
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info
+
+# WASM
+bin/
+pkg/
+node_modules
+wasm-pack.log
+
+# mdbook build output
+book/
+
+# Debug files
+*.dSYM/
+*.su
+*.pb
+
+# Reversing stuffs
+/reversing/
+
+# Miscellaneous system files
+.DS_Store
+*~
+._*
+.env
+Thumbs.db
+
+# Editor files
+/.vs/
+/.vscode/
+/.idea/
+
+# Build output
+/[Bb]in/
+/[Bb]uild/
+/[Dd]ebug/
+/[Oo]bj/
+/[Rr]elease/
+*.zip

@@ -1,0 +1,23 @@
+[package]
+name = "kobold-wasm"
+version = "0.1.0"
+authors = ["Valentin B. <valentin.be@protonmail.com>"]
+license = "MIT"
+description = "An interface to Kobold, compiled to WASM"
+repository = "https://github.com/vbe0201/kobold"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+kobold = { path = "../../kobold" }
+
+console_error_panic_hook = "0.1"
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Document", "Element", "Window"] }
+wee_alloc = "0.4"
+
+[profile.release]
+opt-level = "s"
