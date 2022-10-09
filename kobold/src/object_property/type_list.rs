@@ -38,7 +38,7 @@ bitflags! {
 pub struct TypeList {
     /// A mapping of type definitions.
     #[serde(flatten)]
-    pub list: HashMap<String, TypeDef>,
+    pub list: HashMap<u32, TypeDef>,
 }
 
 impl TypeList {
@@ -53,8 +53,9 @@ impl TypeList {
 pub struct TypeDef {
     /// The base classes of a type, if any.
     pub bases: Vec<String>,
-    /// A hash of the type name.
-    pub hash: u32,
+    /// The type name.
+    pub name: String,
+    /// The properties of the class.
     #[serde(deserialize_with = "deserialize_property_list")]
     pub properties: Vec<Property>,
 }

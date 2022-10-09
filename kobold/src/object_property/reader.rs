@@ -30,6 +30,7 @@ macro_rules! impl_read_literal {
 
 /// A binary reader that provides bit-level operations on
 /// byte-sized input.
+#[derive(Default)]
 pub struct BitReader<'de> {
     data: &'de BitSlice<u8, Lsb0>,
 }
