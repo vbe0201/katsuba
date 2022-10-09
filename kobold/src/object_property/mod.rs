@@ -37,6 +37,7 @@ impl Drop for List {
 /// drop impl.
 #[derive(Clone, Debug)]
 pub struct Object {
+    pub name: String,
     pub inner: BTreeMap<String, Value>,
 }
 
@@ -63,10 +64,10 @@ pub enum Value {
     String(Vec<u8>),
     /// Any wide string value.
     WString(Vec<u16>),
+    /// An enum variant or bitflags.
+    Enum(String),
     /// A homogenous list of elements.
     List(List),
-    /// A readable string of encoded bitflags.
-    Bits(String),
     /// An RGBA color.
     Color { b: u8, g: u8, r: u8, a: u8 },
     /// A vector in 3D space.
