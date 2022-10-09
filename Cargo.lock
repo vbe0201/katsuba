@@ -171,6 +171,7 @@ dependencies = [
  "byteorder",
  "flate2",
  "num-traits",
+ "pyo3",
  "serde",
  "serde_json",
 ]
@@ -179,6 +180,7 @@ dependencies = [
 name = "kobold-py"
 version = "0.1.0"
 dependencies = [
+ "kobold",
  "pyo3",
 ]
 
