@@ -1,5 +1,6 @@
 use std::{collections::HashMap, io};
 
+use anyhow::anyhow;
 use bitflags::bitflags;
 use serde::{Deserialize, Deserializer};
 
@@ -87,6 +88,82 @@ pub struct Property {
     /// A mapping of all enum options defined on a property.
     #[serde(default)]
     pub enum_options: HashMap<String, StringOrInt>,
+}
+
+impl Property {
+    /// Decodes any given enum representation into a readable
+    /// string, using the property's options.
+    pub fn decode_enum_variant(&self, variant: StringOrInt) -> anyhow::Result<String> {
+        match (self.flags.contains(PropertyFlags::ENUM), variant) {
+            // When the variant is already in bitflag list format,
+            // we have no work to do and can just return the string.
+            (false, StringOrInt::String(value)) => Ok(value),
+
+            // When we're an enum and got the string representation
+            // of the variant, we just want to prepend the correct
+            // type prefix for easier lookup upon introspection.
+            (true, StringOrInt::String(mut value)) => {
+                value.insert_str(0, "::");
+                value.insert_str(0, &self.r#type);
+
+                Ok(value)
+            }
+
+            // When we're an enum but only got the integer value,
+            // we look up the associated variant name and build
+            // a similar string as above.
+            (true, StringOrInt::Int(value)) => {
+                let variant = self
+                    .enum_options
+                    .iter()
+                    .find(|(_, v)| {
+                        if let StringOrInt::Int(v) = v {
+                            *v == value
+                        } else {
+                            false
+                        }
+                    })
+                    .ok_or_else(|| anyhow!("unknown enum variant received: {value}"))?;
+
+                let mut value = variant.0.to_owned();
+                value.insert_str(0, "::");
+                value.insert_str(0, &self.r#type);
+
+                Ok(value)
+            }
+
+            // And lastly, when we're a bitmask, we walk through
+            // all the bits, look up the names and build a new
+            // bitmask string that matches above representation.
+            (false, StringOrInt::Int(value)) => {
+                let mut bits = String::new();
+
+                for b in 0..u32::BITS {
+                    if !bits.is_empty() {
+                        bits.push_str(" | ");
+                    }
+
+                    if value & 1 << b != 0 {
+                        let variant = self
+                            .enum_options
+                            .iter()
+                            .find(|(_, v)| {
+                                if let StringOrInt::Int(v) = v {
+                                    *v == value
+                                } else {
+                                    false
+                                }
+                            })
+                            .ok_or_else(|| anyhow!("unknown enum variant received: {value}"))?;
+
+                        bits.push_str(variant.0);
+                    }
+                }
+
+                Ok(bits)
+            }
+        }
+    }
 }
 
 /// Hack to deal with some inconsistencies in how options are stored.

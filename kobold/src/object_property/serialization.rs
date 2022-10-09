@@ -424,72 +424,19 @@ impl<'de, T: TypeTag> Deserializer<'de, T> {
     }
 
     fn deserialize_enum_variant(&mut self, property: &Property) -> anyhow::Result<Value> {
-        if self
+        let value = if self
             .options
             .flags
             .contains(SerializerFlags::HUMAN_READABLE_ENUMS)
         {
-            let mut value = String::from_utf8(self.read_str()?)?;
-
-            // When this is bitflags, they already are in the correct
-            // format. For enums, we want to prefix with the type.
-            if property.flags.contains(PropertyFlags::ENUM) {
-                value.insert_str(0, "::");
-                value.insert_str(0, &property.r#type);
-            }
-
-            Ok(Value::Enum(value))
+            let value = String::from_utf8(self.read_str()?)?;
+            StringOrInt::String(value)
         } else {
             let value = self.deserialize_u32()?;
-            let value = if property.flags.contains(PropertyFlags::ENUM) {
-                let variant = property
-                    .enum_options
-                    .iter()
-                    .find(|(_, v)| {
-                        if let StringOrInt::Int(v) = v {
-                            *v == value
-                        } else {
-                            false
-                        }
-                    })
-                    .ok_or_else(|| anyhow!("unknown enum variant received: {value}"))?;
+            StringOrInt::Int(value)
+        };
 
-                let mut value = variant.0.to_owned();
-                value.insert_str(0, "::");
-                value.insert_str(0, &property.r#type);
-
-                value
-            } else {
-                let mut bits = String::new();
-                let mut first = true;
-                for b in 0..u32::BITS as usize {
-                    if !first {
-                        bits.push_str(" | ");
-                    }
-
-                    if value & 1 << b != 0 {
-                        let variant = property
-                            .enum_options
-                            .iter()
-                            .find(|(_, v)| {
-                                if let StringOrInt::Int(v) = v {
-                                    *v == value
-                                } else {
-                                    false
-                                }
-                            })
-                            .ok_or_else(|| anyhow!("unknown enum variant received: {value}"))?;
-
-                        bits.push_str(variant.0);
-                        first = false;
-                    }
-                }
-
-                bits
-            };
-
-            Ok(Value::Enum(value))
-        }
+        property.decode_enum_variant(value).map(Value::Enum)
     }
 
     fn deserialize_data(&mut self, property: &Property) -> anyhow::Result<Value> {
