@@ -24,7 +24,7 @@ pub use type_tag::*;
 /// A list of values with a non-recursive drop impl.
 #[derive(Clone, Debug)]
 pub struct List {
-    inner: Vec<Value>,
+    pub inner: Vec<Value>,
 }
 
 impl Drop for List {
@@ -37,7 +37,7 @@ impl Drop for List {
 /// drop impl.
 #[derive(Clone, Debug)]
 pub struct Object {
-    inner: BTreeMap<String, Value>,
+    pub inner: BTreeMap<String, Value>,
 }
 
 impl Drop for Object {
