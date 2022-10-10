@@ -137,7 +137,7 @@ impl Default for DeserializerOptions {
         Self {
             flags: SerializerFlags::empty(),
             property_mask: PropertyFlags::TRANSMIT | PropertyFlags::PRIVILEGED_TRANSMIT,
-            shallow: false,
+            shallow: true,
             manual_compression: false,
             recursion_limit: u8::MAX / 2,
         }

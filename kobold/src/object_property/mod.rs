@@ -114,7 +114,7 @@ impl pyo3::IntoPy<pyo3::PyObject> for Value {
                 Value::Signed(i) => i.into_py(py),
                 Value::Float(f) => f.into_py(py),
                 Value::Bool(b) => b.into_py(py),
-                Value::String(str) => str.into_py(py),
+                Value::String(str) => str.as_slice().into_py(py),
                 Value::WString(wstr) => wstr.into_py(py),
                 Value::Enum(str) => str.into_py(py),
                 Value::List(list) => {

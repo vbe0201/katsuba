@@ -22,7 +22,8 @@ macro_rules! impl_read_literal {
             #[inline]
             pub fn $de(&mut self) -> io::Result<$ty> {
                 self.realign_to_byte();
-                self.data.$read::<LittleEndian>()
+                let value = self.data.$read::<LittleEndian>()?;
+                Ok(value)
             }
         )*
     };
@@ -74,9 +75,9 @@ impl BitReader {
     pub fn read_value_bits(&mut self, n: usize) -> io::Result<usize> {
         let mut result = 0;
         self.read_bits(n)?
-            .iter()
+            .into_iter()
             .enumerate()
-            .for_each(|(i, b)| result |= (*b as usize) << i);
+            .for_each(|(i, b)| result |= (b as usize) << i);
 
         Ok(result)
     }
@@ -85,6 +86,7 @@ impl BitReader {
     pub(super) fn realign_to_byte(&mut self) {
         let pad_bits = self.data.len() - align_down(self.data.len(), u8::BITS as _);
         self.data = self.data.split_off(pad_bits);
+        self.data.force_align();
     }
 
     /// Attempts to read `n` bytes from the internal buffer and returns a slice

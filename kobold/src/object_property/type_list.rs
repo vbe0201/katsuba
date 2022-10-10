@@ -7,6 +7,7 @@ use serde::{Deserialize, Deserializer};
 bitflags! {
     /// The configuration bits for [`Property`] values.
     #[derive(Deserialize)]
+    #[serde(transparent)]
     pub struct PropertyFlags: u32 {
         const SAVE = 1 << 0;
         const COPY = 1 << 1;
@@ -38,7 +39,7 @@ bitflags! {
 #[derive(Clone, Deserialize)]
 pub struct TypeList {
     /// A mapping of type definitions.
-    #[serde(deserialize_with = "deserialize_type_list")]
+    #[serde(flatten, deserialize_with = "deserialize_type_list")]
     pub list: HashMap<u32, TypeDef>,
 }
 
@@ -125,11 +126,10 @@ impl Property {
                 let variant = self
                     .enum_options
                     .iter()
-                    .find(|(_, v)| {
-                        if let StringOrInt::Int(v) = v {
-                            *v == value
-                        } else {
-                            false
+                    .find(|(_, v)| match v {
+                        StringOrInt::Int(v) => *v == value,
+                        StringOrInt::String(v) => {
+                            v.parse::<u32>().map(|v| v == value).unwrap_or(false)
                         }
                     })
                     .ok_or_else(|| anyhow!("unknown enum variant received: {value}"))?;
@@ -156,11 +156,10 @@ impl Property {
                         let variant = self
                             .enum_options
                             .iter()
-                            .find(|(_, v)| {
-                                if let StringOrInt::Int(v) = v {
-                                    *v == value
-                                } else {
-                                    false
+                            .find(|(_, v)| match v {
+                                StringOrInt::Int(v) => *v == value,
+                                StringOrInt::String(v) => {
+                                    v.parse::<u32>().map(|v| v == value).unwrap_or(false)
                                 }
                             })
                             .ok_or_else(|| anyhow!("unknown enum variant received: {value}"))?;
@@ -187,16 +186,7 @@ fn deserialize_type_list<'de, D>(deserializer: D) -> Result<HashMap<u32, TypeDef
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
-    struct Helper {
-        #[serde(flatten)]
-        inner: HashMap<String, TypeDef>,
-    }
-
-    let mut helper = Helper::deserialize(deserializer)?;
-
-    Ok(helper
-        .inner
+    Ok(<HashMap<String, TypeDef>>::deserialize(deserializer)?
         .drain()
         .map(|(name, mut t)| {
             t.name = name;
