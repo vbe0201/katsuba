@@ -38,7 +38,7 @@ bitflags! {
 #[derive(Clone, Deserialize)]
 pub struct TypeList {
     /// A mapping of type definitions.
-    #[serde(flatten)]
+    #[serde(deserialize_with = "deserialize_type_list")]
     pub list: HashMap<u32, TypeDef>,
 }
 
@@ -61,7 +61,10 @@ pub struct TypeDef {
     /// The base classes of a type, if any.
     pub bases: Vec<String>,
     /// The type name.
+    #[serde(skip)]
     pub name: String,
+    /// The hash of the type name.
+    pub hash: u32,
     /// The properties of the class.
     #[serde(deserialize_with = "deserialize_property_list")]
     pub properties: Vec<Property>,
@@ -178,6 +181,28 @@ impl Property {
 pub enum StringOrInt {
     String(String),
     Int(u32),
+}
+
+fn deserialize_type_list<'de, D>(deserializer: D) -> Result<HashMap<u32, TypeDef>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Helper {
+        #[serde(flatten)]
+        inner: HashMap<String, TypeDef>,
+    }
+
+    let mut helper = Helper::deserialize(deserializer)?;
+
+    Ok(helper
+        .inner
+        .drain()
+        .map(|(name, mut t)| {
+            t.name = name;
+            (t.hash, t)
+        })
+        .collect())
 }
 
 fn deserialize_property_list<'de, D>(deserializer: D) -> Result<Vec<Property>, D::Error>

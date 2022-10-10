@@ -29,7 +29,7 @@ pub struct Deserializer;
 #[pymethods]
 impl Deserializer {
     #[new]
-    pub fn new(_options: kobold::DeserializerOptions, _types: PyRef<TypeList>) -> Self {
+    pub fn new(_options: kobold::DeserializerOptions, _types: &TypeList) -> Self {
         Self
     }
 
@@ -48,10 +48,7 @@ pub struct BinaryDeserializer {
 #[pymethods]
 impl BinaryDeserializer {
     #[new]
-    pub fn new(
-        options: kobold::DeserializerOptions,
-        types: PyRef<TypeList>,
-    ) -> (Self, Deserializer) {
+    pub fn new(options: kobold::DeserializerOptions, types: &TypeList) -> (Self, Deserializer) {
         (
             Self {
                 inner: kobold::Deserializer::new(options, types.inner.clone()),
