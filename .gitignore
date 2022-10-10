@@ -28,6 +28,8 @@ __pycache__/
 *$py.class
 *.egg
 *.egg-info
+venv/
+.tox/
 
 # WASM
 bin/

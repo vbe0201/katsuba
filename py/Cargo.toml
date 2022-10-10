@@ -1,0 +1,17 @@
+[package]
+name = "kobold-py"
+version = "0.1.0"
+authors = ["Valentin B. <valentin.be@protonmail.com>"]
+description = "Python bindings to the kobold library"
+license = "ISC"
+repository = "https://github.com/vbe0201/kobold"
+edition = "2021"
+
+[lib]
+name = "kobold_py"
+crate-type = ["cdylib"]
+
+[dependencies]
+kobold = { path = "../kobold", features = ["python"] }
+
+pyo3 = { version = "0.17", features = ["extension-module"] }
