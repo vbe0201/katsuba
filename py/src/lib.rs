@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use kobold::object_property as kobold;
 use pyo3::{
     create_exception,
@@ -10,7 +12,7 @@ create_exception!(kobold_py, KoboldError, PyException);
 #[derive(Clone)]
 #[pyclass(module = "kobold_py")]
 pub struct TypeList {
-    inner: kobold::TypeList,
+    inner: Arc<kobold::TypeList>,
 }
 
 #[pymethods]
@@ -18,7 +20,9 @@ impl TypeList {
     #[new]
     pub fn new(data: &str) -> PyResult<Self> {
         kobold::TypeList::from_str(data)
-            .map(|inner| Self { inner })
+            .map(|inner| Self {
+                inner: Arc::new(inner),
+            })
             .map_err(|e| KoboldError::new_err(e.to_string()))
     }
 }
@@ -51,7 +55,7 @@ impl BinaryDeserializer {
     pub fn new(options: kobold::DeserializerOptions, types: &TypeList) -> (Self, Deserializer) {
         (
             Self {
-                inner: kobold::Deserializer::new(options, types.inner.clone()),
+                inner: kobold::Deserializer::new(options, Arc::clone(&types.inner)),
             },
             Deserializer,
         )

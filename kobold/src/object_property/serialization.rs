@@ -2,6 +2,7 @@ use std::{
     collections::BTreeMap,
     io::{self, Write},
     marker::PhantomData,
+    sync::Arc,
 };
 
 use anyhow::{anyhow, bail};
@@ -149,7 +150,7 @@ impl Default for DeserializerOptions {
 pub struct Deserializer<T> {
     reader: BitReader,
     options: DeserializerOptions,
-    pub(crate) types: TypeList,
+    pub(crate) types: Arc<TypeList>,
     _t: PhantomData<T>,
 }
 
@@ -179,7 +180,7 @@ impl<T> Deserializer<T> {
     /// No data for deserialization has been loaded at this
     /// point. [`Deserializer::feed_data`] should be called
     /// next.
-    pub fn new(options: DeserializerOptions, types: TypeList) -> Self {
+    pub fn new(options: DeserializerOptions, types: Arc<TypeList>) -> Self {
         Self {
             reader: BitReader::default(),
             types,
