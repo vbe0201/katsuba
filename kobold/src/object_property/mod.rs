@@ -11,6 +11,7 @@ use std::{
 mod drop;
 
 mod reader;
+pub use reader::*;
 
 mod serialization;
 pub use serialization::*;
@@ -101,6 +102,41 @@ pub enum Value {
     Object(Object),
     /// An empty value with no further information.
     Empty,
+}
+
+#[cfg(feature = "python")]
+impl pyo3::IntoPy<pyo3::PyObject> for Value {
+    fn into_py(self, py: pyo3::Python<'_>) -> pyo3::PyObject {
+        let mut this = ManuallyDrop::new(self);
+        unsafe {
+            match ManuallyDrop::take(&mut this) {
+                Value::Unsigned(i) => i.into_py(py),
+                Value::Signed(i) => i.into_py(py),
+                Value::Float(f) => f.into_py(py),
+                Value::Bool(b) => b.into_py(py),
+                Value::String(str) => str.into_py(py),
+                Value::WString(wstr) => wstr.into_py(py),
+                Value::Enum(str) => str.into_py(py),
+                Value::List(list) => {
+                    let list = ManuallyDrop::new(list);
+                    ptr::read(&list.inner).into_py(py)
+                }
+                Value::Color { r, g, b, a } => (r, g, b, a).into_py(py),
+                Value::Vec3 { x, y, z } => (x, y, z).into_py(py),
+                Value::Quat { x, y, z, w } => (x, y, z, w).into_py(py),
+                Value::Euler { pitch, roll, yaw } => (pitch, roll, yaw).into_py(py),
+                Value::Mat3x3 { i, j, k } => [i, j, k].into_py(py),
+                Value::Point { xy } => xy.into_py(py),
+                Value::Size { wh } => wh.into_py(py),
+                Value::Rect { inner } => inner.into_py(py),
+                Value::Object(object) => {
+                    let object = ManuallyDrop::new(object);
+                    ptr::read(&object.inner).into_py(py)
+                }
+                Value::Empty => py.None(),
+            }
+        }
+    }
 }
 
 impl Deref for List {

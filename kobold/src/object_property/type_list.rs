@@ -35,7 +35,7 @@ bitflags! {
 
 /// Representation of a type list for all the embedded
 /// type information in the game client.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct TypeList {
     /// A mapping of type definitions.
     #[serde(flatten)]
@@ -44,13 +44,19 @@ pub struct TypeList {
 
 impl TypeList {
     /// Deserializes a type list in JSON format from a given reader.
-    pub fn read<R: io::Read>(reader: R) -> anyhow::Result<Self> {
+    pub fn from_reader<R: io::Read>(reader: R) -> anyhow::Result<Self> {
         serde_json::from_reader(reader).map_err(Into::into)
+    }
+
+    /// Deserializes a type list in JSON format from a given string.
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(data: &str) -> anyhow::Result<Self> {
+        serde_json::from_str(data).map_err(Into::into)
     }
 }
 
 /// An individual type definition inside the list.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct TypeDef {
     /// The base classes of a type, if any.
     pub bases: Vec<String>,
@@ -62,7 +68,7 @@ pub struct TypeDef {
 }
 
 /// A property that represents a member of a class.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Property {
     /// The name of the property.
     #[serde(skip)]

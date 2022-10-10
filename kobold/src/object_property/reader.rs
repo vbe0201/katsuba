@@ -1,4 +1,4 @@
-use std::{io, ops::Deref};
+use std::{io, mem, ops::Deref};
 
 use bitvec::{domain::Domain, prelude::*};
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -31,34 +31,34 @@ macro_rules! impl_read_literal {
 /// A binary reader that provides bit-level operations on
 /// byte-sized input.
 #[derive(Default)]
-pub struct BitReader<'de> {
-    data: &'de BitSlice<u8, Lsb0>,
+pub struct BitReader {
+    data: BitVec<u8, Lsb0>,
 }
 
-impl<'de> BitReader<'de> {
+impl BitReader {
     /// Creates a new bit reader over a given slice of bytes.
-    pub fn new(data: &'de [u8]) -> Self {
+    pub fn new(data: Vec<u8>) -> Self {
         Self {
-            data: data.view_bits(),
+            data: BitVec::from_vec(data),
         }
     }
 
     /// Attempts to read a single bit from this buffer.
     pub fn read_bit(&mut self) -> io::Result<bool> {
-        let (first, remainder) = self.data.split_first().ok_or_else(premature_eof)?;
-        self.data = remainder;
-
-        Ok(*first)
+        if self.data.is_empty() {
+            Err(premature_eof())
+        } else {
+            Ok(self.data.remove(0))
+        }
     }
 
     /// Attempts to read `n` bits from this buffer and returns a bit slice
     /// holding the data on success.
     #[allow(unsafe_code)]
-    pub fn read_bits(&mut self, n: usize) -> io::Result<&'de BitSlice<u8, Lsb0>> {
+    pub fn read_bits(&mut self, n: usize) -> io::Result<BitVec<u8, Lsb0>> {
         if n <= self.len() {
-            // SAFETY: `n` does not exceed buffer boundaries.
-            let (chunk, remainder) = unsafe { self.data.split_at_unchecked(n) };
-            self.data = remainder;
+            let mut chunk = self.data.split_off(n);
+            mem::swap(&mut chunk, &mut self.data);
 
             Ok(chunk)
         } else {
@@ -84,8 +84,7 @@ impl<'de> BitReader<'de> {
     #[inline]
     pub(super) fn realign_to_byte(&mut self) {
         let pad_bits = self.data.len() - align_down(self.data.len(), u8::BITS as _);
-        // SAFETY: `pad_bits` is guaranteed to be always <= buffer length.
-        self.data = unsafe { self.data.split_at_unchecked(pad_bits).1 };
+        self.data = self.data.split_off(pad_bits);
     }
 
     /// Attempts to read `n` bytes from the internal buffer and returns a slice
@@ -137,10 +136,10 @@ impl<'de> BitReader<'de> {
     }
 }
 
-impl<'de> Deref for BitReader<'de> {
+impl Deref for BitReader {
     type Target = BitSlice<u8, Lsb0>;
 
     fn deref(&self) -> &Self::Target {
-        self.data
+        &self.data
     }
 }

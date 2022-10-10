@@ -8,6 +8,8 @@ use anyhow::{anyhow, bail};
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
 use flate2::write::ZlibDecoder;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use super::{reader::BitReader, type_list::*, List, Object, TypeTag, Value};
 
@@ -20,8 +22,8 @@ fn extract_type_argument(ty: &str) -> Option<&str> {
 }
 
 #[inline]
-fn zlib_decompress<W: Write>(data: &[u8], buf: W) -> io::Result<W> {
-    let mut decoder = ZlibDecoder::new(buf);
+fn zlib_decompress(data: &[u8], expected_size: usize) -> io::Result<Vec<u8>> {
+    let mut decoder = ZlibDecoder::new(Vec::with_capacity(expected_size));
     decoder.write_all(data)?;
     decoder.finish()
 }
@@ -48,6 +50,8 @@ bitflags! {
 }
 
 /// Configuration for the [`Deserializer`].
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "python", pyclass(module = "kobold_py"))]
 pub struct DeserializerOptions {
     /// The [`SerializerFlags`] to use.
     pub flags: SerializerFlags,
@@ -64,6 +68,70 @@ pub struct DeserializerOptions {
     pub recursion_limit: u8,
 }
 
+#[cfg(feature = "python")]
+#[pymethods]
+impl DeserializerOptions {
+    #[new]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[getter]
+    pub fn get_flags(&self) -> PyResult<u32> {
+        Ok(self.flags.bits())
+    }
+
+    #[setter]
+    pub fn set_flags(&mut self, new: u32) -> PyResult<()> {
+        self.flags = SerializerFlags::from_bits_truncate(new);
+        Ok(())
+    }
+
+    #[getter]
+    pub fn get_property_mask(&self) -> PyResult<u32> {
+        Ok(self.property_mask.bits())
+    }
+
+    #[setter]
+    pub fn set_property_mask(&mut self, new: u32) -> PyResult<()> {
+        self.property_mask = PropertyFlags::from_bits_truncate(new);
+        Ok(())
+    }
+
+    #[getter]
+    pub fn get_shallow(&self) -> PyResult<bool> {
+        Ok(self.shallow)
+    }
+
+    #[setter]
+    pub fn set_shallow(&mut self, new: bool) -> PyResult<()> {
+        self.shallow = new;
+        Ok(())
+    }
+
+    #[getter]
+    pub fn get_manual_compression(&self) -> PyResult<bool> {
+        Ok(self.manual_compression)
+    }
+
+    #[setter]
+    pub fn set_manual_compression(&mut self, new: bool) -> PyResult<()> {
+        self.manual_compression = new;
+        Ok(())
+    }
+
+    #[getter]
+    pub fn get_recursion_limit(&self) -> PyResult<u8> {
+        Ok(self.recursion_limit)
+    }
+
+    #[setter]
+    pub fn set_recursion_limit(&mut self, new: u8) -> PyResult<()> {
+        self.recursion_limit = new;
+        Ok(())
+    }
+}
+
 impl Default for DeserializerOptions {
     fn default() -> Self {
         Self {
@@ -78,10 +146,10 @@ impl Default for DeserializerOptions {
 
 /// A configurable deserializer for the ObjectProperty binary
 /// format, producing [`Value`]s.
-pub struct Deserializer<'de, T> {
-    reader: BitReader<'de>,
+pub struct Deserializer<T> {
+    reader: BitReader,
     options: DeserializerOptions,
-    types: &'de TypeList,
+    pub(crate) types: TypeList,
     _t: PhantomData<T>,
 }
 
@@ -105,13 +173,13 @@ macro_rules! impl_read_len {
     };
 }
 
-impl<'de, T> Deserializer<'de, T> {
+impl<T> Deserializer<T> {
     /// Creates a new deserializer with its configuration.
     ///
     /// No data for deserialization has been loaded at this
     /// point. [`Deserializer::feed_data`] should be called
     /// next.
-    pub fn new(options: DeserializerOptions, types: &'de TypeList) -> Self {
+    pub fn new(options: DeserializerOptions, types: TypeList) -> Self {
         Self {
             reader: BitReader::default(),
             types,
@@ -120,16 +188,9 @@ impl<'de, T> Deserializer<'de, T> {
         }
     }
 
-    fn decompress_data(
-        mut data: &'de [u8],
-        scratch: &'de mut Vec<u8>,
-    ) -> anyhow::Result<BitReader<'de>> {
+    fn decompress_data(mut data: &[u8]) -> anyhow::Result<BitReader> {
         let size = data.read_u32::<LE>()? as usize;
-
-        // Decompress into the scratch buffer.
-        scratch.clear();
-        scratch.reserve(size);
-        let decompressed = zlib_decompress(data, scratch)?;
+        let decompressed = zlib_decompress(data, size)?;
 
         // Assert correct size expectations.
         if decompressed.len() != size {
@@ -140,16 +201,12 @@ impl<'de, T> Deserializer<'de, T> {
             );
         }
 
-        Ok(BitReader::new(&decompressed[..]))
+        Ok(BitReader::new(decompressed))
     }
 
-    pub fn feed_data(
-        &mut self,
-        mut data: &'de [u8],
-        scratch: &'de mut Vec<u8>,
-    ) -> anyhow::Result<()> {
+    fn configure(&mut self, mut data: &[u8]) -> anyhow::Result<()> {
         let reader = if self.options.manual_compression {
-            let mut reader = Self::decompress_data(data, scratch)?;
+            let mut reader = Self::decompress_data(data)?;
 
             // If configuration flags are stateful, deserialize them.
             if self.options.flags.contains(SerializerFlags::STATEFUL_FLAGS) {
@@ -170,9 +227,9 @@ impl<'de, T> Deserializer<'de, T> {
                 .contains(SerializerFlags::WITH_COMPRESSION)
                 && data.read_u8()? != 0
             {
-                Self::decompress_data(data, scratch)?
+                Self::decompress_data(data)?
             } else {
-                BitReader::new(data)
+                BitReader::new(data.to_owned())
             }
         };
 
@@ -259,17 +316,22 @@ macro_rules! impl_deserialize {
     };
 }
 
-impl<'de, T: TypeTag> Deserializer<'de, T> {
+impl<T: TypeTag> Deserializer<T> {
     /// Deserializes an object [`Value`] from previously
     /// loaded data.
-    pub fn deserialize(&mut self) -> anyhow::Result<Value> {
+    pub fn deserialize(&mut self, data: &[u8]) -> anyhow::Result<Value> {
+        self.configure(data)?;
+        self.deserialize_impl()
+    }
+
+    fn deserialize_impl(&mut self) -> anyhow::Result<Value> {
         check_recursion! {
             let this = self;
 
-            let type_def = T::object_identity(this, this.types)?;
-            let res = if let Some(type_def) = type_def {
-                let object_size = (!this.options.shallow).then(|| this.deserialize_u32()).unwrap_or(Ok(0))?;
-                let object = this.deserialize_properties(object_size as _, type_def)?;
+            let res = if let Some(type_def) = T::object_identity(&mut this.reader, &this.types)? {
+                let object_size = (!this.options.shallow).then(|| this.reader.load_u32()).unwrap_or(Ok(0))?;
+                let object = this.deserialize_properties(object_size as _, &type_def)?;
+
                 Value::Object(Object { name: type_def.name.to_owned(), inner: object })
             } else {
                 Value::Empty
@@ -449,7 +511,7 @@ impl<'de, T: TypeTag> Deserializer<'de, T> {
             // Try to interpret the value as simple data and if that
             // fails, deserialize a new object as a fallback strategy.
             self.deserialize_simple_data(&property.r#type)
-                .or_else(|_| self.deserialize())
+                .or_else(|_| self.deserialize_impl())
         }
     }
 
