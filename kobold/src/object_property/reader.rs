@@ -49,7 +49,9 @@ impl BitReader {
         if self.data.is_empty() {
             Err(premature_eof())
         } else {
-            Ok(self.data.remove(0))
+            let result = self.data.remove(0);
+            self.data.force_align();
+            Ok(result)
         }
     }
 
@@ -60,6 +62,7 @@ impl BitReader {
         if n <= self.len() {
             let mut chunk = self.data.split_off(n);
             mem::swap(&mut chunk, &mut self.data);
+            self.data.force_align();
 
             Ok(chunk)
         } else {
