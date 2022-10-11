@@ -3,27 +3,14 @@
 use binrw::{
     binread,
     io::{Read, Seek},
-    BinReaderExt, FilePtr, NullString,
+    BinReaderExt,
 };
 
-mod sealed {
-    use std::io::SeekFrom;
-
-    #[binrw::binread]
-    #[derive(Clone, Copy, Debug)]
-    pub struct CurrentPosition;
-
-    impl binrw::file_ptr::IntoSeekFrom for CurrentPosition {
-        fn into_seek_from(self) -> SeekFrom {
-            SeekFrom::Current(0)
-        }
-    }
-}
+use super::utils;
 
 /// The header of a WAD [`Archive`].
 #[binread]
 #[derive(Debug, PartialEq, Eq)]
-#[br(magic = b"KIWAD")]
 pub struct Header {
     /// The version of the WAD file format in use.
     pub version: u32,
@@ -40,7 +27,7 @@ pub struct Header {
 
 /// A file encoded in a WAD [`Archive`].
 #[binread]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct File {
     #[br(temp)]
     start_offset: u32,
@@ -59,16 +46,19 @@ pub struct File {
     #[br(temp)]
     name_len: u32,
     /// The name of the file in the archive.
-    pub name: NullString,
-    /// The data referenced by this file.
-    #[br(offset = start_offset as u64)]
-    #[br(count = if compressed { size_compressed } else { size_uncompressed })]
-    pub data: FilePtr<sealed::CurrentPosition, Vec<u8>>,
+    #[br(args(name_len as usize), parse_with = utils::parse_string)]
+    #[br(map = |mut x: String| {
+        // Get rid of the null terminator byte.
+        x.truncate(name_len as usize - 1);
+        x
+    })]
+    pub name: String,
 }
 
 /// Representation of a KIWAD archive.
 #[binread]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
+#[br(magic = b"KIWAD")]
 pub struct Archive {
     /// The archive [`Header`].
     pub header: Header,

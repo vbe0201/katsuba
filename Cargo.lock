@@ -177,6 +177,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "kobold-cli"
+version = "0.1.0"
+dependencies = [
+ "kobold",
+]
+
+[[package]]
 name = "kobold-py"
 version = "0.1.0"
 dependencies = [

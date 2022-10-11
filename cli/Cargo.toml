@@ -1,0 +1,15 @@
+[package]
+name = "kobold-cli"
+version = "0.1.0"
+authors = ["Valentin B. <valentin.be@protonmail.com>"]
+description = "Kobold CLI tool for file format extraction"
+license = "ISC"
+repository = "https://github.com/vbe0201/kobold"
+edition = "2021"
+
+[[bin]]
+name = "kobold"
+path = "src/main.rs"
+
+[dependencies]
+kobold = { path = "../kobold" }
