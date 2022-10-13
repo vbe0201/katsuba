@@ -12,4 +12,12 @@ name = "kobold"
 path = "src/main.rs"
 
 [dependencies]
-kobold = { path = "../kobold" }
+kobold = { path = "../kobold", default-features = false, features = ["zlib-simd"] }
+
+anyhow = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+crc = "3.0"
+flate2 = { version = "1.0", default-features = false, features = ["zlib-ng-compat"] }
+memmap2 = "0.5"
+mimalloc = { version = "0.1", default-features = false }
+slab = "0.4"

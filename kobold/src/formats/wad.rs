@@ -29,8 +29,8 @@ pub struct Header {
 #[binread]
 #[derive(Debug, PartialEq, Eq)]
 pub struct File {
-    #[br(temp)]
-    start_offset: u32,
+    /// The starting offset of the file in the archive.
+    pub start_offset: u32,
     /// The uncompressed size of the file contents.
     pub size_uncompressed: u32,
     /// The compressed size of the file contents.

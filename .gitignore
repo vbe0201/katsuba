@@ -47,6 +47,8 @@ book/
 
 # Reversing stuffs
 /reversing/
+*.wad
+Root/
 
 # Miscellaneous system files
 .DS_Store
