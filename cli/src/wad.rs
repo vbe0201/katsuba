@@ -2,11 +2,12 @@ use std::{fs::File, path::PathBuf};
 
 use super::WadCommand;
 
+mod crc;
+
 mod ctx;
 use ctx::WadContext;
 
-mod driver;
-use driver::BlockingDriver;
+mod inflater;
 
 /// Processes the user's requested WAD command.
 pub fn process(cmd: WadCommand) -> anyhow::Result<()> {
@@ -26,8 +27,7 @@ pub fn process(cmd: WadCommand) -> anyhow::Result<()> {
                 new
             });
 
-            let mut ctx =
-                WadContext::<BlockingDriver>::map_for_unpack(&archive, out, verify_checksums)?;
+            let mut ctx = WadContext::map_for_unpack(&archive, out, verify_checksums)?;
             ctx.extract_all()
         }
     }

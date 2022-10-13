@@ -1,14 +1,20 @@
-use std::{collections::BTreeMap, fs::File, io, marker::PhantomData, mem, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    fs::{self, File},
+    io,
+    marker::PhantomData,
+    mem,
+    path::PathBuf,
+};
 
-use anyhow::Result;
-use flate2::{Decompress, FlushDecompress};
+use anyhow::{bail, Result};
 use kobold::formats::wad;
 use memmap2::{Mmap, MmapOptions};
 
-use super::driver::Driver;
+use super::{crc, inflater::Inflater};
 
 /// Central processing context for WAD archives.
-pub struct WadContext<'a, D> {
+pub struct WadContext<'a> {
     /// The archive file mapped to memory.
     mapping: Mmap,
 
@@ -23,20 +29,16 @@ pub struct WadContext<'a, D> {
     /// extraction.
     crc: bool,
 
-    /// The [`Driver`] for processing I/O requests.
-    driver: D,
-
     _lt: PhantomData<&'a File>,
 }
 
-impl<'a, D: Driver> WadContext<'a, D> {
+impl<'a> WadContext<'a> {
     /// Creates a WAD context for unpacking an archive
     /// with [`WadContext::extract_all`].
     pub fn map_for_unpack(file: &'a File, out: PathBuf, crc: bool) -> Result<Self> {
         debug_assert!(out.is_dir());
 
         // Create the context and map the archive file into memory.
-        // XXX: Profile populate() performance on Linux.
         let mut this = Self {
             // SAFETY: `file` lives for 'a, so it won't be dropped
             // before the mapping we're creating here.
@@ -44,7 +46,6 @@ impl<'a, D: Driver> WadContext<'a, D> {
             out,
             journal: BTreeMap::new(),
             crc,
-            driver: D::default(),
             _lt: PhantomData,
         };
 
@@ -76,30 +77,35 @@ impl<'a, D: Driver> WadContext<'a, D> {
 
     /// Extracts all files in the archive to disk.
     pub fn extract_all(&mut self) -> Result<()> {
-        let mut inflater = Decompress::new(true);
-        let mut scratch = Vec::new();
+        let mut inflater = Inflater::new();
 
         for (path, file) in &self.journal {
+            // Extract the file range we care about.
+            let contents = Self::file_contents(&self.mapping, file);
+
             // Verify CRC if we're supposed to.
-            if self.crc {
-                todo!();
+            if self.crc && crc::hash(contents) != file.crc {
+                bail!("CRC mismatch -- encoded file hash does not match actual data hash");
             }
 
-            // Get the uncompressed file contents, if necessary.
-            let contents = Self::file_contents(&self.mapping, file);
-            let contents = if file.compressed {
-                scratch.reserve(file.size_uncompressed as _);
-                inflater.decompress_vec(contents, &mut scratch, FlushDecompress::Finish)?;
-
-                &scratch[..]
+            let decompressed = if file.compressed {
+                inflater.decompress(contents, file.size_uncompressed as _)?
             } else {
                 contents
             };
 
-            self.driver.extract_file(&self.out.join(path), contents)?;
-        }
+            let out = self.out.join(path);
 
-        self.driver.wait()?;
+            // Make sure the directory for the file exists.
+            if let Some(dir) = out.parent() {
+                if !dir.exists() {
+                    fs::create_dir_all(&dir)?;
+                }
+            }
+
+            // Write the file itself.
+            fs::write(&out, decompressed)?;
+        }
 
         Ok(())
     }
