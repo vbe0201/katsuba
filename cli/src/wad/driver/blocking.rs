@@ -27,19 +27,7 @@ impl Driver for BlockingDriver {
         }
 
         // Write the file itself.
-        let mut file = File::create(out)?;
-        file.write_all(contents)?;
-
-        // Take care of setting correct permissions on UNIX systems.
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            if let Some(mode) = file.unix_mode() {
-                file.set_permissions(fs::Permissions::from_mode(mode))?;
-            }
-        }
-
-        Ok(())
+        fs::write(out, contents).map_err(Into::into)
     }
 
     fn wait(&mut self) -> anyhow::Result<()> {
