@@ -182,19 +182,6 @@ pub enum StringOrInt {
     Int(u32),
 }
 
-// fn deserialize_type_list<'de, D>(deserializer: D) -> Result<HashMap<u32, TypeDef>, D::Error>
-// where
-//     D: Deserializer<'de>,
-// {
-//     Ok(<HashMap<String, TypeDef>>::deserialize(deserializer)?
-//         .drain()
-//         .map(|(name, mut t)| {
-//             t.name = name;
-//             (t.hash, t)
-//         })
-//         .collect())
-// }
-
 fn deserialize_property_list<'de, D>(deserializer: D) -> Result<Vec<Property>, D::Error>
 where
     D: Deserializer<'de>,
