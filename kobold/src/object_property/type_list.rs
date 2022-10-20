@@ -38,9 +38,9 @@ bitflags! {
 /// type information in the game client.
 #[derive(Clone, Deserialize)]
 pub struct TypeList {
+    pub version: u32,
     /// A mapping of type definitions.
-    #[serde(flatten, deserialize_with = "deserialize_type_list")]
-    pub list: HashMap<u32, TypeDef>,
+    pub classes: HashMap<u32, TypeDef>,
 }
 
 impl TypeList {
@@ -182,18 +182,18 @@ pub enum StringOrInt {
     Int(u32),
 }
 
-fn deserialize_type_list<'de, D>(deserializer: D) -> Result<HashMap<u32, TypeDef>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Ok(<HashMap<String, TypeDef>>::deserialize(deserializer)?
-        .drain()
-        .map(|(name, mut t)| {
-            t.name = name;
-            (t.hash, t)
-        })
-        .collect())
-}
+// fn deserialize_type_list<'de, D>(deserializer: D) -> Result<HashMap<u32, TypeDef>, D::Error>
+// where
+//     D: Deserializer<'de>,
+// {
+//     Ok(<HashMap<String, TypeDef>>::deserialize(deserializer)?
+//         .drain()
+//         .map(|(name, mut t)| {
+//             t.name = name;
+//             (t.hash, t)
+//         })
+//         .collect())
+// }
 
 fn deserialize_property_list<'de, D>(deserializer: D) -> Result<Vec<Property>, D::Error>
 where
