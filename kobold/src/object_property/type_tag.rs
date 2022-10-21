@@ -22,7 +22,7 @@ impl TypeTag for PropertyClass {
         let hash = reader.load_u32()?;
         if hash == 0 {
             Ok(None)
-        } else if let Some(t) = types.list.get(&hash) {
+        } else if let Some(t) = types.classes.get(&hash) {
             Ok(Some(t.clone()))
         } else {
             bail!("Failed to identify type with hash {hash}");
