@@ -1,6 +1,6 @@
 use std::{fs::File, path::PathBuf};
 
-use super::WadCommand;
+use super::{Wad, WadCommand};
 
 mod crc;
 
@@ -10,8 +10,8 @@ use ctx::WadContext;
 mod inflater;
 
 /// Processes the user's requested WAD command.
-pub fn process(cmd: WadCommand) -> anyhow::Result<()> {
-    match cmd {
+pub fn process(wad: Wad) -> anyhow::Result<()> {
+    match wad.command {
         WadCommand::Unpack {
             input,
             out,
