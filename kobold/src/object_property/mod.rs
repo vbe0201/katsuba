@@ -2,7 +2,6 @@
 //! system through dynamic type info from the client.
 
 use std::{
-    collections::BTreeMap,
     mem::{self, ManuallyDrop},
     ops::{Deref, DerefMut},
     ptr,
@@ -22,6 +21,12 @@ pub use type_list::*;
 mod type_tag;
 pub use type_tag::*;
 
+#[cfg(target_arch = "wasm32")]
+pub(super) type HashMap<K, V> = std::collections::HashMap<K, V>;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(super) type HashMap<K, V> = std::collections::HashMap<K, V, ahash::RandomState>;
+
 /// A list of values with a non-recursive drop impl.
 #[derive(Clone, Debug)]
 pub struct List {
@@ -39,7 +44,7 @@ impl Drop for List {
 #[derive(Clone, Debug)]
 pub struct Object {
     pub name: String,
-    pub inner: BTreeMap<String, Value>,
+    pub inner: HashMap<String, Value>,
 }
 
 impl Drop for Object {
@@ -182,7 +187,7 @@ impl<'a> IntoIterator for &'a mut List {
 }
 
 impl Deref for Object {
-    type Target = BTreeMap<String, Value>;
+    type Target = HashMap<String, Value>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -197,7 +202,7 @@ impl DerefMut for Object {
 
 impl IntoIterator for Object {
     type Item = (String, Value);
-    type IntoIter = <BTreeMap<String, Value> as IntoIterator>::IntoIter;
+    type IntoIter = <HashMap<String, Value> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         let this = ManuallyDrop::new(self);
@@ -207,7 +212,7 @@ impl IntoIterator for Object {
 
 impl<'a> IntoIterator for &'a Object {
     type Item = (&'a String, &'a Value);
-    type IntoIter = <&'a BTreeMap<String, Value> as IntoIterator>::IntoIter;
+    type IntoIter = <&'a HashMap<String, Value> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -216,7 +221,7 @@ impl<'a> IntoIterator for &'a Object {
 
 impl<'a> IntoIterator for &'a mut Object {
     type Item = (&'a String, &'a mut Value);
-    type IntoIter = <&'a mut BTreeMap<String, Value> as IntoIterator>::IntoIter;
+    type IntoIter = <&'a mut HashMap<String, Value> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()

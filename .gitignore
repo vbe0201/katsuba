@@ -47,6 +47,8 @@ book/
 
 # Reversing stuffs
 /reversing/
+*.wad
+Root/
 
 # Miscellaneous system files
 .DS_Store
@@ -67,3 +69,6 @@ Thumbs.db
 /[Oo]bj/
 /[Rr]elease/
 *.zip
+
+# Types json
+*.json
