@@ -87,7 +87,7 @@ impl BitReader {
     }
 
     #[inline]
-    fn data<'a>(&self) -> &'a BitSlice<u8, Lsb0> {
+    fn data<'a, 'b: 'a>(&'a self) -> &'b BitSlice<u8, Lsb0> {
         // Make sure we aren't accidentally operating on a
         // BitReader obtained from `BitReader::dangling`.
         debug_assert_ne!(self.current, BitPtr::<Const, u8, Lsb0>::DANGLING);
