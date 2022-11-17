@@ -181,7 +181,7 @@ impl<T> Deserializer<T> {
     /// next.
     pub fn new(options: DeserializerOptions, types: Arc<TypeList>) -> Self {
         Self {
-            reader: BitReader::default(),
+            reader: BitReader::dangling(),
             types,
             options,
             _t: PhantomData,
@@ -330,7 +330,7 @@ impl<T: TypeTag> Deserializer<T> {
 
             let res = if let Some(type_def) = T::object_identity(&mut this.reader, &this.types)? {
                 let object_size = (!this.options.shallow).then(|| this.reader.load_u32()).unwrap_or(Ok(0))?;
-                let object = this.deserialize_properties(object_size as usize - T::bit_size(), &type_def)?;
+                let object = this.deserialize_properties(object_size as usize - u32::BITS as usize, &type_def)?;
 
                 Value::Object(Object { name: type_def.name.to_owned(), inner: object })
             } else {

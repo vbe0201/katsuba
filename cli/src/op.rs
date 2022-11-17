@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, File},
+    fs::File,
     io::{self, Write},
     sync::Arc,
 };
@@ -9,6 +9,7 @@ use kobold::object_property::{
     Deserializer, DeserializerOptions, PropertyClass, PropertyFlags, SerializerFlags, TypeList,
     Value,
 };
+use memmap2::MmapOptions;
 
 use super::{ObjectProperty, ObjectPropertyCommand};
 
@@ -32,7 +33,10 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
 
     match op.command {
         ObjectPropertyCommand::De { input } => {
-            let data = fs::read(&input)?;
+            let file = File::open(&input)?;
+            // SAFETY: `file` remains unmodified for the entire duration of the mapping.
+            let data = unsafe { MmapOptions::new().populate().map(&file)? };
+
             let data = if op.shallow {
                 &data
             } else {
