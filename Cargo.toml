@@ -1,5 +1,2 @@
 [workspace]
 members = ["kobold", "cli", "py", "wasm/lib"]
-
-[profile.release]
-debug = true
