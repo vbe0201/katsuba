@@ -1,9 +1,10 @@
 use std::{
     fs::{self, File},
-    io::{self, StdoutLock, Write, BufReader},
+    io::{self, Write},
     sync::Arc,
 };
 
+use anyhow::bail;
 use kobold::object_property::{
     Deserializer, DeserializerOptions, PropertyClass, PropertyFlags, SerializerFlags, TypeList,
     Value,
@@ -18,7 +19,7 @@ use self::display::*;
 pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
     let types = {
         let file = File::open(&op.type_list)?;
-        TypeList::from_reader(BufReader::new(file))?
+        TypeList::from_reader(io::BufReader::new(file))?
     };
     let options = DeserializerOptions {
         flags: SerializerFlags::from_bits_truncate(op.flags),
@@ -32,11 +33,21 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
     match op.command {
         ObjectPropertyCommand::De { input } => {
             let data = fs::read(&input)?;
+            let data = if op.shallow {
+                &data
+            } else {
+                let (magic, data) = data.split_at(4);
+                if magic != b"BINd" {
+                    bail!("File does not start with BINd magic");
+                }
+
+                data
+            };
 
             let stdout = io::stdout();
             let mut handle = stdout.lock();
 
-            let obj = deserializer.deserialize(&data)?;
+            let obj = deserializer.deserialize(data)?;
             pretty_print_value(&obj, &mut handle, None).map_err(Into::into)
         }
     }
@@ -44,7 +55,7 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
 
 fn pretty_print_value(
     value: &Value,
-    handle: &mut StdoutLock,
+    handle: &mut io::StdoutLock,
     list_property: Option<&str>,
 ) -> io::Result<()> {
     match value {

@@ -62,7 +62,6 @@ pub struct TypeDef {
     /// The base classes of a type, if any.
     pub bases: Vec<String>,
     /// The type name.
-    #[serde(skip)]
     pub name: String,
     /// The hash of the type name.
     pub hash: u32,

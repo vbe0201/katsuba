@@ -49,7 +49,7 @@ pub struct ObjectProperty {
     mask: u32,
 
     /// Whether the object is serialized shallow.
-    #[clap(short, long, default_value_t = true)]
+    #[clap(short, long, default_value_t = false)]
     shallow: bool,
 
     /// Whether the object is manually zlib-compressed.

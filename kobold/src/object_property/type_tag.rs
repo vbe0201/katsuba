@@ -9,6 +9,9 @@ pub trait TypeTag: Sized {
     /// and returns a matching type def.
     fn object_identity(reader: &mut BitReader, types: &TypeList)
         -> anyhow::Result<Option<TypeDef>>;
+
+    /// Returns the size of the tag in bits.
+    fn bit_size() -> usize;
 }
 
 /// A [`TypeTag`] that identifies regular PropertyClasses.
@@ -27,5 +30,9 @@ impl TypeTag for PropertyClass {
         } else {
             bail!("Failed to identify type with hash {hash}");
         }
+    }
+
+    fn bit_size() -> usize {
+        u32::BITS as _
     }
 }

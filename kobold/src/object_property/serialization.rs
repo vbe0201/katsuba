@@ -1,5 +1,4 @@
 use std::{
-    collections::BTreeMap,
     io::{self, Write},
     marker::PhantomData,
     sync::Arc,
@@ -12,7 +11,7 @@ use flate2::write::ZlibDecoder;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 
-use super::{reader::BitReader, type_list::*, List, Object, TypeTag, Value};
+use super::{reader::BitReader, type_list::*, HashMap, List, Object, TypeTag, Value};
 
 #[inline]
 fn extract_type_argument(ty: &str) -> Option<&str> {
@@ -51,7 +50,7 @@ bitflags! {
 }
 
 /// Configuration for the [`Deserializer`].
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "python", pyclass(module = "kobold_py"))]
 pub struct DeserializerOptions {
     /// The [`SerializerFlags`] to use.
@@ -331,7 +330,7 @@ impl<T: TypeTag> Deserializer<T> {
 
             let res = if let Some(type_def) = T::object_identity(&mut this.reader, &this.types)? {
                 let object_size = (!this.options.shallow).then(|| this.reader.load_u32()).unwrap_or(Ok(0))?;
-                let object = this.deserialize_properties(object_size as _, &type_def)?;
+                let object = this.deserialize_properties(object_size as usize - T::bit_size(), &type_def)?;
 
                 Value::Object(Object { name: type_def.name.to_owned(), inner: object })
             } else {
@@ -520,8 +519,8 @@ impl<T: TypeTag> Deserializer<T> {
         &mut self,
         mut object_size: usize,
         type_def: &TypeDef,
-    ) -> anyhow::Result<BTreeMap<String, Value>> {
-        let mut object = BTreeMap::new();
+    ) -> anyhow::Result<HashMap<String, Value>> {
+        let mut object = HashMap::default();
 
         if self.options.shallow {
             // In shallow mode, we walk masked properties in order.
@@ -566,9 +565,7 @@ impl<T: TypeTag> Deserializer<T> {
 
                 // When the size check passed, subtract the property's size from
                 // the object's total size to prepare for the next round.
-                object_size = object_size.checked_sub(property_size).ok_or_else(|| {
-                    anyhow!("object's total size does not match individual property sizes")
-                })?;
+                object_size -= property_size;
 
                 // Lastly, insert the property into our object.
                 object.insert(property.name.to_owned(), value);
@@ -591,7 +588,8 @@ impl<T: TypeTag> Deserializer<T> {
             return Ok(Value::Empty);
         }
 
-        if property.dynamic {
+        // FIXME: Restore this to dynamic check once wiztype is fixed.
+        if property.container == "Vector" || property.container == "List" {
             self.deserialize_list(property)
         } else {
             self.deserialize_data(property)
