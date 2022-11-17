@@ -49,8 +49,32 @@ pub struct BinaryDeserializer {
     inner: kobold::Deserializer<kobold::PropertyClass>,
 }
 
+#[pyclass(module = "kobold_py", extends = Deserializer, subclass)]
+pub struct CoreObjectDeserializer {
+    inner: kobold::Deserializer<kobold::CoreObject>,
+}
+
 #[pymethods]
 impl BinaryDeserializer {
+    #[new]
+    pub fn new(options: kobold::DeserializerOptions, types: &TypeList) -> (Self, Deserializer) {
+        (
+            Self {
+                inner: kobold::Deserializer::new(options, Arc::clone(&types.inner)),
+            },
+            Deserializer,
+        )
+    }
+
+    pub fn deserialize(&mut self, data: &[u8]) -> PyResult<kobold::Value> {
+        self.inner
+            .deserialize(data)
+            .map_err(|e| KoboldError::new_err(e.to_string()))
+    }
+}
+
+#[pymethods]
+impl CoreObjectDeserializer {
     #[new]
     pub fn new(options: kobold::DeserializerOptions, types: &TypeList) -> (Self, Deserializer) {
         (
@@ -75,6 +99,7 @@ fn kobold_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<TypeList>()?;
     m.add_class::<Deserializer>()?;
     m.add_class::<BinaryDeserializer>()?;
+    m.add_class::<CoreObjectDeserializer>()?;
 
     Ok(())
 }

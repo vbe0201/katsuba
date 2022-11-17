@@ -6,10 +6,12 @@ use std::{
 
 use anyhow::bail;
 use kobold::object_property::{
-    Deserializer, DeserializerOptions, PropertyClass, PropertyFlags, SerializerFlags, TypeList,
-    Value,
+    CoreObject, Deserializer, DeserializerOptions, PropertyClass, PropertyFlags, SerializerFlags,
+    TypeList, Value,
 };
 use memmap2::MmapOptions;
+
+use crate::ClassType;
 
 use super::{ObjectProperty, ObjectPropertyCommand};
 
@@ -29,7 +31,6 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
         manual_compression: op.zlib_manual,
         recursion_limit: u8::MAX,
     };
-    let mut deserializer = Deserializer::<PropertyClass>::new(options, Arc::new(types));
 
     match op.command {
         ObjectPropertyCommand::De { input } => {
@@ -51,7 +52,13 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
             let stdout = io::stdout();
             let mut handle = stdout.lock();
 
-            let obj = deserializer.deserialize(data)?;
+            let obj = match op.class_type {
+                ClassType::Basic => Deserializer::<PropertyClass>::new(options, Arc::new(types))
+                    .deserialize(data)?,
+                ClassType::Core => {
+                    Deserializer::<CoreObject>::new(options, Arc::new(types)).deserialize(data)?
+                }
+            };
             pretty_print_value(&obj, &mut handle, None).map_err(Into::into)
         }
     }

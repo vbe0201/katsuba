@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use mimalloc::MiMalloc;
 
 mod op;
@@ -36,6 +36,10 @@ pub struct ObjectProperty {
     #[clap(subcommand)]
     command: ObjectPropertyCommand,
 
+    /// The ObjectProperty class type to use.
+    #[clap(value_enum, default_value_t = ClassType::Basic)]
+    class_type: ClassType,
+
     /// The path to the type list json file.
     #[clap(short, long)]
     type_list: PathBuf,
@@ -55,6 +59,15 @@ pub struct ObjectProperty {
     /// Whether the object is manually zlib-compressed.
     #[clap(short, long, default_value_t = false)]
     zlib_manual: bool,
+}
+
+/// The class type to serialize or deserialize.
+#[derive(Clone, ValueEnum)]
+pub enum ClassType {
+    /// Ordinary PropertyClasses.
+    Basic,
+    /// CoreObject subclasses.
+    Core,
 }
 
 #[derive(Subcommand)]
