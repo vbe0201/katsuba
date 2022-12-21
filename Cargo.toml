@@ -1,2 +1,8 @@
 [workspace]
 members = ["kobold", "cli", "py"]
+
+[profile.release]
+strip = true
+codegen-units = 1
+lto = true
+panic = "abort"
