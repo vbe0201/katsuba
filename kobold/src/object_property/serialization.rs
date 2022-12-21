@@ -588,8 +588,7 @@ impl<T: TypeTag> Deserializer<T> {
             return Ok(Value::Empty);
         }
 
-        // FIXME: Restore this to dynamic check once wiztype is fixed.
-        if property.container == "Vector" || property.container == "List" {
+        if property.dynamic {
             self.deserialize_list(property)
         } else {
             self.deserialize_data(property)
