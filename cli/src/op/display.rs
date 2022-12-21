@@ -1,11 +1,8 @@
 use std::fmt::{self, Write};
 
 use serde::Serialize;
-use serde_with::serde_as;
 
-#[derive(Serialize)]
-#[serde_as]
-pub struct CxxStr<'a>(#[serde_as(as = "DisplayFromStr")] pub &'a [u8]);
+pub struct CxxStr<'a>(pub &'a [u8]);
 
 impl<'a> fmt::Display for CxxStr<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -13,13 +10,29 @@ impl<'a> fmt::Display for CxxStr<'a> {
     }
 }
 
-#[derive(Serialize)]
-#[serde_as]
-pub struct CxxWStr<'a>(#[serde_as(as = "DisplayFromStr")] pub &'a [u16]);
+impl Serialize for CxxStr<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+pub struct CxxWStr<'a>(pub &'a [u16]);
 
 impl<'a> fmt::Display for CxxWStr<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         display_utf16(self.0, f, core::iter::once)
+    }
+}
+
+impl Serialize for CxxWStr<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
 
