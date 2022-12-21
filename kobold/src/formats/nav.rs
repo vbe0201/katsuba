@@ -11,11 +11,15 @@ use binrw::{
     io::{Read, Seek},
     BinRead, BinReaderExt, BinResult,
 };
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use super::utils;
 
 /// A navigation node in the zone.
-#[derive(Clone, Debug, PartialEq, BinRead)]
+#[cfg_attr(feature = "python", pyclass)]
+#[derive(Clone, Copy, Debug, PartialEq, BinRead, Serialize, Deserialize)]
 pub struct NavigationNode {
     /// The location of the node.
     pub location: [f32; 3],
@@ -24,7 +28,8 @@ pub struct NavigationNode {
 }
 
 /// A link between two [`NavigationNode`]s.
-#[derive(Clone, Debug, PartialEq, Eq, BinRead)]
+#[cfg_attr(feature = "python", pyclass)]
+#[derive(Clone, Debug, PartialEq, Eq, BinRead, Serialize, Deserialize)]
 pub struct NavigationLink {
     first: u16,
     second: u16,
@@ -42,10 +47,23 @@ impl NavigationLink {
     }
 }
 
+#[cfg(feature = "python")]
+#[pymethods]
+impl NavigationLink {
+    pub fn find_first(&self, graph: PyRef<NavigationGraph>) -> PyResult<Option<NavigationNode>> {
+        Ok(graph.find_node(self.first).copied())
+    }
+
+    pub fn find_second(&self, graph: PyRef<NavigationGraph>) -> PyResult<Option<NavigationNode>> {
+        Ok(graph.find_node(self.second).copied())
+    }
+}
+
 /// A graph of navigation nodes and their links between
 /// each other within a zone.
 #[binread]
-#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "python", pyclass)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct NavigationGraph {
     #[br(temp)]
     last_id: u16,
@@ -57,6 +75,7 @@ pub struct NavigationGraph {
     pub nodes: Vec<NavigationNode>,
 
     #[br(calc = Self::build_node_map(&nodes))]
+    #[serde(skip)]
     nodes_map: HashMap<u16, usize>,
 
     #[br(temp)]
@@ -86,9 +105,18 @@ impl NavigationGraph {
     }
 }
 
+#[cfg(feature = "python")]
+#[pymethods]
+impl NavigationGraph {
+    pub fn get_node(&self, id: u16) -> PyResult<Option<NavigationNode>> {
+        Ok(self.find_node(id).copied())
+    }
+}
+
 /// A navigation graph across zones.
 #[binread]
-#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "python", pyclass)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ZoneNavigationGraph {
     /// The raw [`NavigationGraph`].
     pub graph: NavigationGraph,

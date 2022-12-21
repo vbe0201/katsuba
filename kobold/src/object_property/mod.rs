@@ -21,10 +21,6 @@ pub use type_list::*;
 mod type_tag;
 pub use type_tag::*;
 
-#[cfg(target_arch = "wasm32")]
-pub(super) type HashMap<K, V> = std::collections::HashMap<K, V>;
-
-#[cfg(not(target_arch = "wasm32"))]
 pub(super) type HashMap<K, V> = std::collections::HashMap<K, V, ahash::RandomState>;
 
 /// A list of values with a non-recursive drop impl.

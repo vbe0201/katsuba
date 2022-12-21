@@ -5,11 +5,15 @@ use binrw::{
     io::{Read, Seek},
     BinRead, BinReaderExt, BinResult, ReadOptions,
 };
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use super::utils;
 
 /// A zone ID as referenced in the POI format.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, BinRead)]
+#[binread]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ZoneId(pub(crate) u32);
 
 impl ZoneId {
@@ -19,12 +23,20 @@ impl ZoneId {
     }
 }
 
+#[cfg(feature = "python")]
+impl IntoPy<PyObject> for ZoneId {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        self.0.into_py(py)
+    }
+}
+
 #[binread]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct SizedString {
     #[br(temp)]
     len: u32,
     #[br(args(len as usize), parse_with = utils::parse_string)]
+    #[serde(flatten)]
     pub data: String,
 }
 
@@ -36,11 +48,20 @@ impl Deref for SizedString {
     }
 }
 
+#[cfg(feature = "python")]
+impl IntoPy<PyObject> for SizedString {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        self.data.into_py(py)
+    }
+}
+
 /// A point of interest in a [`Poi`] object.
 ///
 /// Points of Interests describe event sources for
 /// interacting with zones.
-#[derive(Clone, Debug, PartialEq, BinRead)]
+#[binread]
+#[cfg_attr(feature = "python", pyclass)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PointOfInterest {
     /// If the quest helper references this point.
     #[br(map = |x: u8| x != 0)]
@@ -62,7 +83,8 @@ pub struct PointOfInterest {
 
 /// A full POI object with all its points.
 #[binread]
-#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "python", pyclass)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Poi {
     #[br(temp)]
     zone_count: u32,

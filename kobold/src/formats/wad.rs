@@ -5,11 +5,15 @@ use binrw::{
     io::{Read, Seek},
     BinReaderExt,
 };
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
 
 use super::utils;
 
 /// The header of a WAD [`Archive`].
 #[binread]
+#[br(magic = b"KIWAD")]
+#[cfg_attr(feature = "python", pyclass)]
 #[derive(Debug, PartialEq, Eq)]
 pub struct Header {
     /// The version of the WAD file format in use.
@@ -27,6 +31,7 @@ pub struct Header {
 
 /// A file encoded in a WAD [`Archive`].
 #[binread]
+#[cfg_attr(feature = "python", pyclass)]
 #[derive(Debug, PartialEq, Eq)]
 pub struct File {
     /// The starting offset of the file in the archive.
@@ -57,8 +62,9 @@ pub struct File {
 
 /// Representation of a KIWAD archive.
 #[binread]
-#[derive(Debug, PartialEq, Eq)]
 #[br(magic = b"KIWAD")]
+#[cfg_attr(feature = "python", pyclass)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Archive {
     /// The archive [`Header`].
     pub header: Header,

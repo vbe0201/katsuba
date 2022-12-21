@@ -99,7 +99,7 @@ impl<'a> WadContext<'a> {
             // Make sure the directory for the file exists.
             if let Some(dir) = out.parent() {
                 if !dir.exists() {
-                    fs::create_dir_all(&dir)?;
+                    fs::create_dir_all(dir)?;
                 }
             }
 

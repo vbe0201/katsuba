@@ -1,6 +1,11 @@
 use std::fmt::{self, Write};
 
-pub struct CxxStr<'a>(pub &'a [u8]);
+use serde::Serialize;
+use serde_with::serde_as;
+
+#[derive(Serialize)]
+#[serde_as]
+pub struct CxxStr<'a>(#[serde_as(as = "DisplayFromStr")] pub &'a [u8]);
 
 impl<'a> fmt::Display for CxxStr<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -8,7 +13,9 @@ impl<'a> fmt::Display for CxxStr<'a> {
     }
 }
 
-pub struct CxxWStr<'a>(pub &'a [u16]);
+#[derive(Serialize)]
+#[serde_as]
+pub struct CxxWStr<'a>(#[serde_as(as = "DisplayFromStr")] pub &'a [u16]);
 
 impl<'a> fmt::Display for CxxWStr<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

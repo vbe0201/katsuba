@@ -1,105 +1,34 @@
-use std::sync::Arc;
+//! Python bindings to the `kobold` crate.
 
-use kobold::object_property as kobold;
-use pyo3::{
-    create_exception,
-    exceptions::{PyException, PyNotImplementedError},
-    prelude::*,
-};
+use pyo3::{create_exception, exceptions::PyException, prelude::*};
+
+mod nav;
+mod object_property;
+mod poi;
+mod wad;
 
 create_exception!(kobold_py, KoboldError, PyException);
 
-#[derive(Clone)]
-#[pyclass(module = "kobold_py")]
-pub struct TypeList {
-    inner: Arc<kobold::TypeList>,
-}
-
-#[pymethods]
-impl TypeList {
-    #[new]
-    pub fn new(data: &str) -> PyResult<Self> {
-        kobold::TypeList::from_str(data)
-            .map(|inner| Self {
-                inner: Arc::new(inner),
-            })
-            .map_err(|e| KoboldError::new_err(e.to_string()))
-    }
-}
-
-#[pyclass(module = "kobold_py", subclass)]
-pub struct Deserializer;
-
-#[pymethods]
-impl Deserializer {
-    #[new]
-    pub fn new(_options: kobold::DeserializerOptions, _types: &TypeList) -> Self {
-        Self
-    }
-
-    pub fn deserialize(&mut self, _data: &[u8]) -> PyResult<kobold::Value> {
-        Err(PyNotImplementedError::new_err(
-            "use a Deserializer subclass",
-        ))
-    }
-}
-
-#[pyclass(module = "kobold_py", extends = Deserializer, subclass)]
-pub struct BinaryDeserializer {
-    inner: kobold::Deserializer<kobold::PropertyClass>,
-}
-
-#[pyclass(module = "kobold_py", extends = Deserializer, subclass)]
-pub struct CoreObjectDeserializer {
-    inner: kobold::Deserializer<kobold::CoreObject>,
-}
-
-#[pymethods]
-impl BinaryDeserializer {
-    #[new]
-    pub fn new(options: kobold::DeserializerOptions, types: &TypeList) -> (Self, Deserializer) {
-        (
-            Self {
-                inner: kobold::Deserializer::new(options, Arc::clone(&types.inner)),
-            },
-            Deserializer,
-        )
-    }
-
-    pub fn deserialize(&mut self, data: &[u8]) -> PyResult<kobold::Value> {
-        self.inner
-            .deserialize(data)
-            .map_err(|e| KoboldError::new_err(e.to_string()))
-    }
-}
-
-#[pymethods]
-impl CoreObjectDeserializer {
-    #[new]
-    pub fn new(options: kobold::DeserializerOptions, types: &TypeList) -> (Self, Deserializer) {
-        (
-            Self {
-                inner: kobold::Deserializer::new(options, Arc::clone(&types.inner)),
-            },
-            Deserializer,
-        )
-    }
-
-    pub fn deserialize(&mut self, data: &[u8]) -> PyResult<kobold::Value> {
-        self.inner
-            .deserialize(data)
-            .map_err(|e| KoboldError::new_err(e.to_string()))
-    }
-}
-
 #[pymodule]
 fn kobold_py(py: Python, m: &PyModule) -> PyResult<()> {
+    // Bind the generic exception type used by all submodules.
     m.add("KoboldError", py.get_type::<KoboldError>())?;
-    m.add_class::<kobold::DeserializerOptions>()?;
-    m.add_class::<TypeList>()?;
-    m.add_class::<Deserializer>()?;
-    m.add_class::<BinaryDeserializer>()?;
-    m.add_class::<CoreObjectDeserializer>()?;
+
+    // Initialize the kobold.nav submodule.
+    let nav = PyModule::new(py, "nav")?;
+    nav::kobold_nav(nav)?;
+
+    // Initialize the kobold.op submodule.
+    let op = PyModule::new(py, "op")?;
+    object_property::kobold_op(op)?;
+
+    // Initialize the kobold.poi submodule.
+    let poi = PyModule::new(py, "poi")?;
+    poi::kobold_poi(poi)?;
+
+    // Initialize the kobold.wad submodule.
+    let wad = PyModule::new(py, "wad")?;
+    wad::kobold_wad(wad)?;
 
     Ok(())
 }

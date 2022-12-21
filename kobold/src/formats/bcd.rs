@@ -12,6 +12,9 @@ use binrw::{
     BinRead, BinReaderExt,
 };
 use bitflags::bitflags;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use super::utils;
 
@@ -36,7 +39,7 @@ mod sealed {
 
 bitflags! {
     /// Attribute flags encoded in [`Geometry`] objects.
-    #[derive(BinRead)]
+    #[derive(BinRead, Serialize, Deserialize)]
     #[br(map = CollisionFlags::from_bits_truncate)]
     pub struct CollisionFlags: u32 {
         const OBJECT = 1 << 0;
@@ -53,7 +56,9 @@ bitflags! {
 }
 
 /// A face used to describe mesh [`ShapeData`].
-#[derive(Clone, Debug, PartialEq, BinRead)]
+#[binread]
+#[cfg_attr(feature = "python", pyclass)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Face {
     /// The face vector.
     pub face: [u32; 3],
@@ -62,8 +67,9 @@ pub struct Face {
 }
 
 /// Data describing a geometric [`Shape`].
-#[derive(Clone, Debug, PartialEq, BinRead)]
+#[binread]
 #[br(import(mesh: Option<sealed::MeshShapeTheSadWay>))]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ShapeData {
     /// A box shape.
     #[br(pre_assert(mesh.is_none()), magic = 0_u32)]
@@ -109,7 +115,7 @@ impl From<sealed::MeshShapeTheSadWay> for ShapeData {
 
 /// The shape described by a [`Geometry`].
 #[binread]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[br(import(mesh: Option<sealed::MeshShapeTheSadWay>))]
 pub struct Shape {
     #[br(temp)]
@@ -135,7 +141,7 @@ pub struct Shape {
 
 /// Geometric data describing a collision.
 #[binread]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Geometry {
     #[br(map = |x: u32| x == 6, temp)]
     is_mesh: bool,
@@ -155,7 +161,7 @@ pub struct Geometry {
 
 /// A full BCD object with all its shapes.
 #[binread]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Bcd {
     #[br(temp)]
     geometry_count: u32,

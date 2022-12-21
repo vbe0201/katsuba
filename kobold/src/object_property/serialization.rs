@@ -51,7 +51,7 @@ bitflags! {
 
 /// Configuration for the [`Deserializer`].
 #[derive(Clone, Copy, Debug)]
-#[cfg_attr(feature = "python", pyclass(module = "kobold_py"))]
+#[cfg_attr(feature = "python", pyclass)]
 pub struct DeserializerOptions {
     /// The [`SerializerFlags`] to use.
     pub flags: SerializerFlags,

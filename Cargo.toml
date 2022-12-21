@@ -1,2 +1,2 @@
 [workspace]
-members = ["kobold", "cli", "py", "wasm/lib"]
+members = ["kobold", "cli", "py"]
