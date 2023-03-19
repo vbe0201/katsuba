@@ -1,6 +1,6 @@
 [package]
 name = "kobold-cli"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
 description = "Kobold CLI tool for file format extraction and inspection"
 license = "ISC"
