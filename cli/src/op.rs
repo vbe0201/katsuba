@@ -43,12 +43,14 @@ pub struct ObjectProperty {
 }
 
 /// The class type to work with.
-#[derive(Clone, ValueEnum)]
+#[derive(Clone, ValueEnum, PartialEq)]
 enum ClassType {
     /// Ordinary PropertyClasses.
     Basic,
     /// CoreObject subclasses.
     Core,
+    /// BINd XML files.
+    Bind,
 }
 
 #[derive(Subcommand)]
@@ -67,7 +69,7 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
         let file = File::open(&op.type_list)?;
         TypeList::from_reader(io::BufReader::new(file))?
     };
-    let options = DeserializerOptions {
+    let mut options = DeserializerOptions {
         flags: SerializerFlags::from_bits_truncate(op.flags),
         property_mask: PropertyFlags::from_bits_truncate(op.mask),
         shallow: op.shallow,
@@ -96,8 +98,15 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
             let mut handle = stdout.lock();
 
             let obj = match op.class_type {
-                ClassType::Basic => Deserializer::<PropertyClass>::new(options, Arc::new(types))
-                    .deserialize(data)?,
+                t @ ClassType::Basic | t @ ClassType::Bind => {
+                    if t == ClassType::Bind {
+                        options.shallow = false;
+                        options.flags |= SerializerFlags::STATEFUL_FLAGS;
+                    }
+
+                    Deserializer::<PropertyClass>::new(options, Arc::new(types))
+                        .deserialize(data)?
+                }
                 ClassType::Core => {
                     Deserializer::<CoreObject>::new(options, Arc::new(types)).deserialize(data)?
                 }

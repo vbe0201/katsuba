@@ -1,5 +1,5 @@
 [workspace]
-members = ["kobold", "cli", "py"]
+members = ["kobold", "cli"]
 
 [profile.release]
 strip = true
