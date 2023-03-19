@@ -128,7 +128,7 @@ impl Property {
                     .find(|(_, v)| match v {
                         StringOrInt::Int(v) => *v == value,
                         StringOrInt::String(v) => {
-                            v.parse::<u32>().map(|v| v == value).unwrap_or(false)
+                            v.parse::<i64>().map(|v| v == value).unwrap_or(false)
                         }
                     })
                     .ok_or_else(|| anyhow!("unknown enum variant received: {value}"))?;
@@ -158,7 +158,7 @@ impl Property {
                             .find(|(_, v)| match v {
                                 StringOrInt::Int(v) => *v == value,
                                 StringOrInt::String(v) => {
-                                    v.parse::<u32>().map(|v| v == value).unwrap_or(false)
+                                    v.parse::<i64>().map(|v| v == value).unwrap_or(false)
                                 }
                             })
                             .ok_or_else(|| anyhow!("unknown enum variant received: {value}"))?;
@@ -178,7 +178,7 @@ impl Property {
 #[serde(untagged)]
 pub enum StringOrInt {
     String(String),
-    Int(u32),
+    Int(i64),
 }
 
 fn deserialize_property_list<'de, D>(deserializer: D) -> Result<Vec<Property>, D::Error>

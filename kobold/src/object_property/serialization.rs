@@ -495,7 +495,7 @@ impl<T: TypeTag> Deserializer<T> {
             StringOrInt::String(value)
         } else {
             let value = self.deserialize_u32()?;
-            StringOrInt::Int(value)
+            StringOrInt::Int(value as i64)
         };
 
         property.decode_enum_variant(value).map(Value::Enum)
