@@ -64,7 +64,7 @@ enum ObjectPropertyCommand {
 }
 
 /// Processes the user's requested ObjectProperty command.
-pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
+pub fn process(mut op: ObjectProperty) -> anyhow::Result<()> {
     let types = {
         let file = File::open(&op.type_list)?;
         TypeList::from_reader(io::BufReader::new(file))?
@@ -83,6 +83,13 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
             // SAFETY: `file` remains unmodified for the entire duration of the mapping.
             let data = unsafe { MmapOptions::new().populate().map(&file)? };
 
+            if op.class_type == ClassType::Bind {
+                options.shallow = false;
+                options.flags |= SerializerFlags::STATEFUL_FLAGS;
+
+                op.class_type = ClassType::Basic;
+            }
+
             let data = if op.shallow {
                 &data
             } else {
@@ -98,18 +105,13 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
             let mut handle = stdout.lock();
 
             let obj = match op.class_type {
-                t @ ClassType::Basic | t @ ClassType::Bind => {
-                    if t == ClassType::Bind {
-                        options.shallow = false;
-                        options.flags |= SerializerFlags::STATEFUL_FLAGS;
-                    }
-
-                    Deserializer::<PropertyClass>::new(options, Arc::new(types))
-                        .deserialize(data)?
-                }
+                ClassType::Basic => Deserializer::<PropertyClass>::new(options, Arc::new(types))
+                    .deserialize(data)?,
                 ClassType::Core => {
                     Deserializer::<CoreObject>::new(options, Arc::new(types)).deserialize(data)?
                 }
+
+                _ => unreachable!(),
             };
             pretty_print_value(obj, &mut handle)
         }
