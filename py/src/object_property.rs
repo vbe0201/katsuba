@@ -95,5 +95,12 @@ pub fn kobold_op(m: &PyModule) -> PyResult<()> {
     m.add_class::<BinaryDeserializer>()?;
     m.add_class::<CoreObjectDeserializer>()?;
 
+    // Define serializer flag constants.
+    m.add("STATEFUL_FLAGS", 1_u32 << 0)?;
+    m.add("COMPACT_LENGTH_PREFIXES", 1_u32 << 1)?;
+    m.add("HUMAN_READABLE_ENUMS", 1_u32 << 2)?;
+    m.add("COMPRESS", 1_u32 << 3)?;
+    m.add("FORBID_DELTA_ENCODE", 1_u32 << 4)?;
+
     Ok(())
 }
