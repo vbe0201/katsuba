@@ -13,14 +13,14 @@
         };
 
         naersk' = pkgs.callPackage naersk {};
-        
+
       in rec {
         defaultPackage = naersk'.buildPackage {
+          name = "kobold-cli";
           src = ./.;
-	  buildInputs = with pkgs; [cmake python3];
+          buildInputs = with pkgs; [cmake python3];
         };
 
-        # For `nix develop` (optional, can be skipped):
         devShell = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [ rustc cargo ];
         };
