@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
-  outputs = { self, flake-utils, naersk, nixpkgs }:
+  outputs = {self, flake-utils, naersk, nixpkgs}:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = (import nixpkgs) {
@@ -16,13 +16,16 @@
 
       in rec {
         defaultPackage = naersk'.buildPackage {
-          name = "kobold-cli";
+          name = "kobold";
           src = ./.;
           buildInputs = with pkgs; [cmake python3];
+          # naersk names the derivation with an -unknown suffix without a version
+          # see https://github.com/nix-community/naersk/issues/224
+          version = "0.2.0";
         };
 
         devShell = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [ rustc cargo ];
+          nativeBuildInputs = with pkgs; [rustc cargo];
         };
       }
     );
