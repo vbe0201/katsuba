@@ -12,6 +12,7 @@ use kobold::formats::wad;
 use memmap2::{Mmap, MmapOptions};
 
 use super::{crc, inflater::Inflater};
+use crate::progress_bar::ProgressBar;
 
 /// Central processing context for WAD archives.
 pub struct WadContext<'a> {
@@ -77,9 +78,12 @@ impl<'a> WadContext<'a> {
 
     /// Extracts all files in the archive to disk.
     pub fn extract_all(&mut self) -> Result<()> {
+        let file_count = self.journal.len() as u32;
+
+        let mut progress = ProgressBar::<20>::new("Extracting KIWAD archive...", file_count)?;
         let mut inflater = Inflater::new();
 
-        for (path, file) in &self.journal {
+        for (idx, (path, file)) in self.journal.iter().enumerate() {
             // Extract the file range we care about.
             let contents = Self::file_contents(&self.mapping, file);
 
@@ -105,7 +109,13 @@ impl<'a> WadContext<'a> {
 
             // Write the file itself.
             fs::write(&out, decompressed)?;
+
+            // Update the progress bar after every file.
+            progress.update(idx as u32 + 1)?;
         }
+
+        // Update the progress one last time to display 100%.
+        progress.update(file_count)?;
 
         Ok(())
     }

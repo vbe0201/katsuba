@@ -43,12 +43,14 @@ pub struct ObjectProperty {
 }
 
 /// The class type to work with.
-#[derive(Clone, ValueEnum)]
+#[derive(Clone, ValueEnum, PartialEq)]
 enum ClassType {
     /// Ordinary PropertyClasses.
     Basic,
     /// CoreObject subclasses.
     Core,
+    /// BINd XML files.
+    Bind,
 }
 
 #[derive(Subcommand)]
@@ -62,12 +64,12 @@ enum ObjectPropertyCommand {
 }
 
 /// Processes the user's requested ObjectProperty command.
-pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
+pub fn process(mut op: ObjectProperty) -> anyhow::Result<()> {
     let types = {
         let file = File::open(&op.type_list)?;
         TypeList::from_reader(io::BufReader::new(file))?
     };
-    let options = DeserializerOptions {
+    let mut options = DeserializerOptions {
         flags: SerializerFlags::from_bits_truncate(op.flags),
         property_mask: PropertyFlags::from_bits_truncate(op.mask),
         shallow: op.shallow,
@@ -80,6 +82,13 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
             let file = File::open(&input)?;
             // SAFETY: `file` remains unmodified for the entire duration of the mapping.
             let data = unsafe { MmapOptions::new().populate().map(&file)? };
+
+            if op.class_type == ClassType::Bind {
+                options.shallow = false;
+                options.flags |= SerializerFlags::STATEFUL_FLAGS;
+
+                op.class_type = ClassType::Basic;
+            }
 
             let data = if op.shallow {
                 &data
@@ -101,6 +110,8 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
                 ClassType::Core => {
                     Deserializer::<CoreObject>::new(options, Arc::new(types)).deserialize(data)?
                 }
+
+                _ => unreachable!(),
             };
             pretty_print_value(obj, &mut handle)
         }

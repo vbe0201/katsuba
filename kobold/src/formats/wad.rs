@@ -12,7 +12,6 @@ use super::utils;
 
 /// The header of a WAD [`Archive`].
 #[binread]
-#[br(magic = b"KIWAD")]
 #[cfg_attr(feature = "python", pyclass)]
 #[derive(Debug, PartialEq, Eq)]
 pub struct Header {

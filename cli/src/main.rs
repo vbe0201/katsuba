@@ -5,6 +5,7 @@ mod bcd;
 mod nav;
 mod op;
 mod poi;
+mod progress_bar;
 mod wad;
 
 #[global_allocator]
