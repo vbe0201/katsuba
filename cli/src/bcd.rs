@@ -23,7 +23,7 @@ enum BcdCommand {
 pub fn process(bcd: Bcd) -> anyhow::Result<()> {
     match bcd.command {
         BcdCommand::De { input } => {
-            let file = File::open(&input)?;
+            let file = File::open(input)?;
 
             let bcd = BcdFormat::parse(&mut io::BufReader::new(file))?;
             serde_json::to_writer_pretty(io::stdout().lock(), &bcd)?;
