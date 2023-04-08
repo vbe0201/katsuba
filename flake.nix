@@ -14,14 +14,14 @@
 
         naersk' = pkgs.callPackage naersk {};
 
+        kobold_cli_cargo = builtins.fromTOML (builtins.readFile ./cli/Cargo.toml);
+
       in rec {
         defaultPackage = naersk'.buildPackage {
           name = "kobold";
           src = ./.;
           buildInputs = with pkgs; [cmake python3];
-          # naersk names the derivation with an -unknown suffix without a version
-          # see https://github.com/nix-community/naersk/issues/224
-          version = "0.2.0";
+          version = kobold_cli_cargo.package.version;
         };
 
         devShell = pkgs.mkShell {
