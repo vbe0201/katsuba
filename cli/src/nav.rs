@@ -36,7 +36,7 @@ enum NavCommand {
 pub fn process(nav: Nav) -> anyhow::Result<()> {
     match nav.command {
         NavCommand::De { input } => {
-            let file = File::open(&input)?;
+            let file = File::open(input)?;
             let mut reader = io::BufReader::new(file);
 
             let stdout = io::stdout();

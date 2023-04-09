@@ -23,7 +23,7 @@ enum PoiCommand {
 pub fn process(poi: Poi) -> anyhow::Result<()> {
     match poi.command {
         PoiCommand::De { input } => {
-            let file = File::open(&input)?;
+            let file = File::open(input)?;
 
             let poi = PoiFormat::parse(&mut io::BufReader::new(file))?;
             serde_json::to_writer_pretty(io::stdout().lock(), &poi)?;

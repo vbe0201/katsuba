@@ -79,7 +79,7 @@ pub fn process(mut op: ObjectProperty) -> anyhow::Result<()> {
 
     match op.command {
         ObjectPropertyCommand::De { input } => {
-            let file = File::open(&input)?;
+            let file = File::open(input)?;
             // SAFETY: `file` remains unmodified for the entire duration of the mapping.
             let data = unsafe { MmapOptions::new().populate().map(&file)? };
 
