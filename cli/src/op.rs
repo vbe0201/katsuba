@@ -40,6 +40,10 @@ pub struct ObjectProperty {
     /// Whether the object is manually zlib-compressed.
     #[clap(short, long, default_value_t = false)]
     zlib_manual: bool,
+
+    /// Skips properties with unknown types during deserialization.
+    #[clap(short, long, default_value_t = false)]
+    ignore_unknown_types: bool,
 }
 
 /// The class type to work with.
@@ -75,6 +79,7 @@ pub fn process(mut op: ObjectProperty) -> anyhow::Result<()> {
         shallow: op.shallow,
         manual_compression: op.zlib_manual,
         recursion_limit: u8::MAX,
+        skip_unknown_types: op.ignore_unknown_types,
     };
 
     match op.command {

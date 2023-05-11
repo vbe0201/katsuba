@@ -4,6 +4,8 @@ use anyhow::anyhow;
 use bitflags::bitflags;
 use serde::{Deserialize, Deserializer};
 
+use super::utils;
+
 bitflags! {
     /// The configuration bits for [`Property`] values.
     #[derive(Deserialize)]
@@ -100,6 +102,11 @@ pub struct Property {
 }
 
 impl Property {
+    /// Gets the hash of this property's type.
+    pub fn type_hash(&self) -> u32 {
+        self.hash.wrapping_sub(utils::djb2(&self.name))
+    }
+
     /// Decodes any given enum representation into a readable
     /// string, using the property's options.
     pub fn decode_enum_variant(&self, variant: StringOrInt) -> anyhow::Result<String> {

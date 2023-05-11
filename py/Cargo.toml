@@ -14,4 +14,4 @@ crate-type = ["cdylib"]
 [dependencies]
 kobold = { path = "../kobold", features = ["python"] }
 
-pyo3 = { version = "0.17", features = ["extension-module"] }
+pyo3 = { version = "0.18", features = ["extension-module"] }

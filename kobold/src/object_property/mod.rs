@@ -21,6 +21,8 @@ pub use type_list::*;
 mod type_tag;
 pub use type_tag::*;
 
+mod utils;
+
 pub(super) type HashMap<K, V> = std::collections::HashMap<K, V, ahash::RandomState>;
 
 /// A list of values with a non-recursive drop impl.
