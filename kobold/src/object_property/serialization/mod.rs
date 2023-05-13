@@ -343,10 +343,6 @@ impl<T: TypeTag> Deserializer<T> {
     /// Deserializes an object [`Value`] from previously loaded data.
     pub fn deserialize(&mut self, data: &[u8]) -> anyhow::Result<Value> {
         self.configure(data)?;
-        ObjectDeserializer {
-            de: self,
-            skipped: false,
-        }
-        .deserialize()
+        ObjectDeserializer { de: self }.deserialize()
     }
 }

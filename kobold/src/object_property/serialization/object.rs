@@ -5,7 +5,6 @@ use crate::object_property::{HashMap, Object, PropertyFlags, TypeDef, TypeTag, V
 
 pub struct ObjectDeserializer<'de, T> {
     pub(crate) de: &'de mut Deserializer<T>,
-    pub(crate) skipped: bool,
 }
 
 impl<'de, T: TypeTag> ObjectDeserializer<'de, T> {
@@ -14,9 +13,10 @@ impl<'de, T: TypeTag> ObjectDeserializer<'de, T> {
             let this = self;
 
             let res = match T::object_identity(&mut this.de.reader, &this.de.types) {
+                // If a type definition exists, read the full object.
                 Ok(Some(type_def)) => {
-                    let object_size = (!this.de.options.shallow).then(|| this.de.deserialize_u32()).unwrap_or(Ok(0))?;
-                    let object = this.deserialize_properties((object_size - u32::BITS) as usize, &type_def)?;
+                    let object_size = this.read_bit_size()? as usize;
+                    let object = this.deserialize_properties(object_size, &type_def)?;
 
                     Value::Object(Object {
                         name: type_def.name.to_owned(),
@@ -24,17 +24,31 @@ impl<'de, T: TypeTag> ObjectDeserializer<'de, T> {
                     })
                 }
 
+                // If we encountered a null pointer, return an empty value.
                 Ok(None) => Value::Empty,
+
+                // If no type definition exists but we're allowed to skip it,
+                // consume the bits the object is supposed to occupy.
                 Err(_) if this.de.options.skip_unknown_types => {
-                    this.skipped = true;
+                    let object_size = this.read_bit_size()? as usize;
+                    this.de.reader.read_bits(object_size)?;
+
                     Value::Empty
                 }
 
+                // If no type definition was found but we're also not allowed
+                // to skip the object, return an error.
                 Err(e) => return Err(e),
             };
         }
 
         Ok(res)
+    }
+
+    fn read_bit_size(&mut self) -> anyhow::Result<u32> {
+        (!self.de.options.shallow)
+            .then(|| Ok(self.de.deserialize_u32()? - u32::BITS))
+            .unwrap_or(Ok(0))
     }
 
     fn deserialize_properties(
@@ -54,11 +68,7 @@ impl<'de, T: TypeTag> ObjectDeserializer<'de, T> {
             {
                 object.insert(
                     property.name.to_owned(),
-                    PropertyDeserializer {
-                        de: self.de,
-                        skipped: false,
-                    }
-                    .deserialize(property)?,
+                    PropertyDeserializer { de: self.de }.deserialize(property)?,
                 );
             }
         } else {
@@ -79,23 +89,14 @@ impl<'de, T: TypeTag> ObjectDeserializer<'de, T> {
                     .ok_or_else(|| anyhow!("received unknown property hash {property_hash}"))?;
 
                 // Deserialize the property's value.
-                let mut de = PropertyDeserializer {
-                    de: self.de,
-                    skipped: false,
-                };
-                let value = de.deserialize(property)?;
-                let skipped = de.skipped;
+                let value = PropertyDeserializer { de: self.de }.deserialize(property)?;
 
                 // Validate the size expectations.
                 let actual_size = previous_buf_len - self.de.reader.len();
-                let delta = property_size.wrapping_sub(actual_size);
-                if !skipped && delta != 0 {
+                if property_size != actual_size {
                     bail!(
                         "size mismatch for property; expected {property_size}, got {actual_size}"
                     );
-                } else {
-                    // Consume the bits we skipped over.
-                    self.de.reader.read_bits(delta)?;
                 }
 
                 // When the size check passed, subtract the property's size from
