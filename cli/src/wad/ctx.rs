@@ -37,8 +37,6 @@ impl<'a> WadContext<'a> {
     /// Creates a WAD context for unpacking an archive
     /// with [`WadContext::extract_all`].
     pub fn map_for_unpack(file: &'a File, out: PathBuf, crc: bool) -> Result<Self> {
-        debug_assert!(out.is_dir());
-
         // Create the context and map the archive file into memory.
         let mut this = Self {
             // SAFETY: `file` lives for 'a, so it won't be dropped
