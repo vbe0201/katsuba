@@ -7,7 +7,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Result, Ok};
 use kobold::formats::wad;
 use memmap2::{Mmap, MmapOptions};
 
@@ -88,8 +88,11 @@ impl<'a> WadContext<'a> {
 
             // TODO: fix this for repacking
             // this skips over unpached files which are just 0s * size
-            if contents[0..4] == [0_u8; 4] {
-                continue;
+            if let Some(first_4) = contents.get(0..4) {
+                // TODO: see https://github.com/rust-lang/rust/issues/53667
+                if first_4 ==  [0_u8; 4] {
+                    continue;
+                }
             }
 
             // Verify CRC if we're supposed to.
