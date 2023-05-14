@@ -20,7 +20,7 @@ pub enum WadCommand {
     /// Unpacks a given KIWAD archive file.
     Unpack {
         /// Path to the archive file to unpack.
-        input: PathBuf,
+        input: Vec<PathBuf>,
 
         /// An optional path to extract the archived files to.
         ///
@@ -52,18 +52,22 @@ pub fn process(wad: Wad) -> anyhow::Result<()> {
             out,
             verify_checksums,
         } => {
-            let archive = File::open(&input)?;
-            let out = out.unwrap_or_else(|| {
-                let mut new = PathBuf::new();
-                // We opened `input` as a file prior to this, so
-                // we can be sure that it actually is a file here.
-                new.push(input.parent().unwrap());
-                new.push(input.file_stem().unwrap());
-                new
-            });
+            let out = match out {
+                Some(out) => out,
+                None => std::env::current_dir()?,
+            };
 
-            let mut ctx = WadContext::map_for_unpack(&archive, out, verify_checksums)?;
-            ctx.extract_all()
+            for file in input {
+                let archive = File::open(&file)?;
+                // We opened `file` as a file prior to this, so
+                // we can be sure it actually is a file here.
+                let out = out.join(file.file_stem().unwrap());
+
+                let mut ctx = WadContext::map_for_unpack(&archive, out, verify_checksums)?;
+                ctx.extract_all()?;
+            }
+
+            Ok(())
         }
     }
 }
