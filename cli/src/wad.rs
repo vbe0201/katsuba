@@ -2,6 +2,8 @@ use std::{fs::File, path::PathBuf};
 
 use clap::{Args, Subcommand};
 
+use glob::glob;
+
 mod crc;
 
 mod ctx;
@@ -20,7 +22,7 @@ pub enum WadCommand {
     /// Unpacks a given KIWAD archive file.
     Unpack {
         /// Path to the archive file to unpack.
-        input: Vec<PathBuf>,
+        input: Vec<String>,
 
         /// An optional path to extract the archived files to.
         ///
@@ -58,13 +60,15 @@ pub fn process(wad: Wad) -> anyhow::Result<()> {
             };
 
             for file in input {
-                let archive = File::open(&file)?;
-                // We opened `file` as a file prior to this, so
-                // we can be sure it actually is a file here.
-                let out = out.join(file.file_stem().unwrap());
-
-                let mut ctx = WadContext::map_for_unpack(&archive, out, verify_checksums)?;
-                ctx.extract_all()?;
+                for file in glob(&file)?.flatten() {
+                    let archive = File::open(&file)?;
+                    // We opened `file` as a file prior to this, so
+                    // we can be sure it actually is a file here.
+                    let out = out.join(file.file_stem().unwrap());
+    
+                    let mut ctx = WadContext::map_for_unpack(&archive, out, verify_checksums)?;
+                    ctx.extract_all()?;
+                }
             }
 
             Ok(())
