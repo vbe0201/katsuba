@@ -82,8 +82,15 @@ impl<'a> WadContext<'a> {
         let mut inflater = Inflater::new();
 
         for (idx, (path, file)) in self.journal.iter().enumerate() {
+
             // Extract the file range we care about.
             let contents = Self::file_contents(&self.mapping, file);
+
+            // TODO: fix this for repacking
+            // this skips over unpached files which are just 0s * size
+            if contents[0..4] == [0_u8; 4] {
+                continue;
+            }
 
             // Verify CRC if we're supposed to.
             if self.crc && crc::hash(contents) != file.crc {
