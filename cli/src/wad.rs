@@ -65,7 +65,7 @@ pub fn process(wad: Wad) -> anyhow::Result<()> {
                     // We opened `file` as a file prior to this, so
                     // we can be sure it actually is a file here.
                     let out = out.join(file.file_stem().unwrap());
-    
+
                     let mut ctx = WadContext::map_for_unpack(&archive, out, verify_checksums)?;
                     ctx.extract_all()?;
                 }

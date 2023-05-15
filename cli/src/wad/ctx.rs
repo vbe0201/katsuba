@@ -85,6 +85,15 @@ impl<'a> WadContext<'a> {
             // Extract the file range we care about.
             let contents = Self::file_contents(&self.mapping, file);
 
+            // TODO: fix this for repacking
+            // this skips over unpached files which are just 0s * size
+            if let Some(first_4) = contents.get(0..4) {
+                // TODO: see https://github.com/rust-lang/rust/issues/53667
+                if first_4 == [0_u8; 4] {
+                    continue;
+                }
+            }
+
             // Verify CRC if we're supposed to.
             if self.crc && crc::hash(contents) != file.crc {
                 bail!("CRC mismatch -- encoded file hash does not match actual data hash");

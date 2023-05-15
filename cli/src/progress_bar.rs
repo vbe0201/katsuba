@@ -49,7 +49,7 @@ impl<const WIDTH: usize> ProgressBar<WIDTH> {
         // Write the buffered progress bar to stdout.
         write!(self.out, "\r[")?;
         self.out.write_all(&self.bar)?;
-        write!(self.out, "] {}/{}", current, self.total)?;
+        write!(self.out, "] {}/{} ", current, self.total)?;
 
         // Flush to display the changes.
         self.out.flush()
