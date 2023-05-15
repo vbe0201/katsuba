@@ -7,7 +7,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{bail, Ok, Result};
+use anyhow::{bail, Result};
 use kobold::formats::wad;
 use memmap2::{Mmap, MmapOptions};
 
