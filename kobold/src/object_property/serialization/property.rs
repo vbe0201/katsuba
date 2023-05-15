@@ -13,6 +13,7 @@ fn deserialize_value<T: TypeTag>(
     if property
         .flags
         .intersects(PropertyFlags::BITS | PropertyFlags::ENUM)
+        || property.r#type.starts_with("enum")
     {
         EnumVariantDeserializer { de }.deserialize(property)
     } else {

@@ -88,19 +88,6 @@ impl<'de, T: TypeTag> ObjectDeserializer<'de, T> {
                     .find(|p| p.hash == property_hash)
                     .ok_or_else(|| anyhow!("received unknown property hash {property_hash}"))?;
 
-                // 64 bits for size + hash
-                // 32 bits for the int itself
-                // 103 - 96 = 7 and where the fuck are THOSE coming from
-
-                // delta encode works by writing one bit before the value to indicate if it is present
-                // but the thing is for int it would have to add 7 padding bits after it
-                //if property.name == "m_levelRestriction" {
-                //    println!(
-                //        "delta encode? {}",
-                //        property.flags.contains(PropertyFlags::DELTA_ENCODE)
-                //    );
-                //}
-
                 // Deserialize the property's value.
                 let value = PropertyDeserializer { de: self.de }.deserialize(property)?;
 
