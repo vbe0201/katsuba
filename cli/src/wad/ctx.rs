@@ -7,7 +7,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{bail, Result, Ok};
+use anyhow::{bail, Ok, Result};
 use kobold::formats::wad;
 use memmap2::{Mmap, MmapOptions};
 
@@ -82,7 +82,6 @@ impl<'a> WadContext<'a> {
         let mut inflater = Inflater::new();
 
         for (idx, (path, file)) in self.journal.iter().enumerate() {
-
             // Extract the file range we care about.
             let contents = Self::file_contents(&self.mapping, file);
 
@@ -90,7 +89,7 @@ impl<'a> WadContext<'a> {
             // this skips over unpached files which are just 0s * size
             if let Some(first_4) = contents.get(0..4) {
                 // TODO: see https://github.com/rust-lang/rust/issues/53667
-                if first_4 ==  [0_u8; 4] {
+                if first_4 == [0_u8; 4] {
                     continue;
                 }
             }
