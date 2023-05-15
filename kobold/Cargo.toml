@@ -1,6 +1,6 @@
 [package]
 name = "kobold"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
 description = "Kobold core that implements all the file formats"
 license = "ISC"

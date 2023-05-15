@@ -110,10 +110,10 @@ pub fn process(mut op: ObjectProperty) -> anyhow::Result<()> {
             let mut handle = stdout.lock();
 
             let obj = match op.class_type {
-                ClassType::Basic => Deserializer::<PropertyClass>::new(options, Arc::new(types))
+                ClassType::Basic => Deserializer::<PropertyClass>::new(options, Arc::new(types))?
                     .deserialize(data)?,
                 ClassType::Core => {
-                    Deserializer::<CoreObject>::new(options, Arc::new(types)).deserialize(data)?
+                    Deserializer::<CoreObject>::new(options, Arc::new(types))?.deserialize(data)?
                 }
 
                 _ => unreachable!(),

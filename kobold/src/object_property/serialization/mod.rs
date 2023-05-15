@@ -207,13 +207,17 @@ impl<T> Deserializer<T> {
     /// No data for deserialization has been loaded at this
     /// point. [`Deserializer::feed_data`] should be called
     /// next.
-    pub fn new(options: DeserializerOptions, types: Arc<TypeList>) -> Self {
-        Self {
+    pub fn new(options: DeserializerOptions, types: Arc<TypeList>) -> anyhow::Result<Self> {
+        if options.shallow && options.skip_unknown_types {
+            bail!("Cannot skip unknown types in shallow mode");
+        }
+
+        Ok(Self {
             reader: BitReader::dangling(),
             types,
             options,
             _t: PhantomData,
-        }
+        })
     }
 
     fn decompress_data(mut data: &[u8]) -> anyhow::Result<BitReader> {

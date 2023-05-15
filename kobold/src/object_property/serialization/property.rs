@@ -33,7 +33,10 @@ pub struct PropertyDeserializer<'de, T> {
 
 impl<'de, T: TypeTag> PropertyDeserializer<'de, T> {
     pub fn deserialize(&mut self, property: &Property) -> anyhow::Result<Value> {
-        if property.flags.contains(PropertyFlags::DELTA_ENCODE) && !self.de.deserialize_bool()? {
+        if self.de.options.shallow
+            && property.flags.contains(PropertyFlags::DELTA_ENCODE)
+            && !self.de.deserialize_bool()?
+        {
             if self
                 .de
                 .options

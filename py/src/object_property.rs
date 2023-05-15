@@ -53,13 +53,17 @@ struct CoreObjectDeserializer {
 #[pymethods]
 impl BinaryDeserializer {
     #[new]
-    pub fn new(options: kobold::DeserializerOptions, types: &TypeList) -> (Self, Deserializer) {
-        (
+    pub fn new(
+        options: kobold::DeserializerOptions,
+        types: &TypeList,
+    ) -> PyResult<(Self, Deserializer)> {
+        Ok((
             Self {
-                inner: kobold::Deserializer::new(options, Arc::clone(&types.inner)),
+                inner: kobold::Deserializer::new(options, Arc::clone(&types.inner))
+                    .map_err(|e| KoboldError::new_err(e.to_string()))?,
             },
             Deserializer,
-        )
+        ))
     }
 
     pub fn deserialize(&mut self, data: &[u8]) -> PyResult<kobold::Value> {
@@ -72,13 +76,17 @@ impl BinaryDeserializer {
 #[pymethods]
 impl CoreObjectDeserializer {
     #[new]
-    pub fn new(options: kobold::DeserializerOptions, types: &TypeList) -> (Self, Deserializer) {
-        (
+    pub fn new(
+        options: kobold::DeserializerOptions,
+        types: &TypeList,
+    ) -> PyResult<(Self, Deserializer)> {
+        Ok((
             Self {
-                inner: kobold::Deserializer::new(options, Arc::clone(&types.inner)),
+                inner: kobold::Deserializer::new(options, Arc::clone(&types.inner))
+                    .map_err(|e| KoboldError::new_err(e.to_string()))?,
             },
             Deserializer,
-        )
+        ))
     }
 
     pub fn deserialize(&mut self, data: &[u8]) -> PyResult<kobold::Value> {

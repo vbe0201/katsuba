@@ -38,7 +38,7 @@ bitflags! {
 
 /// Representation of a type list for all the embedded
 /// type information in the game client.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct TypeList {
     pub version: u32,
     /// A mapping of type definitions.
@@ -59,7 +59,7 @@ impl TypeList {
 }
 
 /// An individual type definition inside the list.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct TypeDef {
     /// The base classes of a type, if any.
     pub bases: Vec<String>,
@@ -73,7 +73,7 @@ pub struct TypeDef {
 }
 
 /// A property that represents a member of a class.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Property {
     /// The name of the property.
     #[serde(skip)]
