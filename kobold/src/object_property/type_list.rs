@@ -61,12 +61,8 @@ impl TypeList {
 /// An individual type definition inside the list.
 #[derive(Clone, Debug, Deserialize)]
 pub struct TypeDef {
-    /// The base classes of a type, if any.
-    pub bases: Vec<String>,
     /// The type name.
     pub name: String,
-    /// The hash of the type name.
-    pub hash: u32,
     /// The properties of the class.
     #[serde(deserialize_with = "deserialize_property_list")]
     pub properties: Vec<Property>,
@@ -82,18 +78,10 @@ pub struct Property {
     pub r#type: String,
     /// The ID of the property.
     pub id: u32,
-    /// The offset of the property into the class.
-    pub offset: usize,
     /// The associated property flag mask.
     pub flags: PropertyFlags,
-    /// The underlying container of the property.
-    pub container: String,
     /// Whether the property's storage is dynamically allocated.
     pub dynamic: bool,
-    /// Whether the property's type is a global singleton.
-    pub singleton: bool, // FIXME: I'm at the wrong place.
-    /// Whether the property is a pointer.
-    pub pointer: bool,
     /// A combined hash of the property's name and of its type name.
     pub hash: u32,
     /// A mapping of all enum options defined on a property.
