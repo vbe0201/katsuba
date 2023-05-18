@@ -1,7 +1,10 @@
-use std::sync::Arc;
+use std::{fs, path::PathBuf, sync::Arc};
 
 use kobold::object_property as kobold;
-use pyo3::{exceptions::PyNotImplementedError, prelude::*};
+use pyo3::{
+    exceptions::{PyNotImplementedError, PyOSError},
+    prelude::*,
+};
 
 use crate::KoboldError;
 
@@ -34,6 +37,12 @@ impl Deserializer {
     }
 
     pub fn deserialize(&mut self, _data: &[u8]) -> PyResult<kobold::Value> {
+        Err(PyNotImplementedError::new_err(
+            "use a Deserializer subclass",
+        ))
+    }
+
+    pub fn deserialize_from_path(&mut self, _path: PathBuf) -> PyResult<kobold::Value> {
         Err(PyNotImplementedError::new_err(
             "use a Deserializer subclass",
         ))
@@ -71,6 +80,13 @@ impl BinaryDeserializer {
             .deserialize(data)
             .map_err(|e| KoboldError::new_err(e.to_string()))
     }
+
+    pub fn deserialize_from_path(&mut self, path: PathBuf) -> PyResult<kobold::Value> {
+        let data = fs::read(path).map_err(PyOSError::new_err)?;
+        self.inner
+            .deserialize(&data)
+            .map_err(|e| KoboldError::new_err(e.to_string()))
+    }
 }
 
 #[pymethods]
@@ -92,6 +108,13 @@ impl CoreObjectDeserializer {
     pub fn deserialize(&mut self, data: &[u8]) -> PyResult<kobold::Value> {
         self.inner
             .deserialize(data)
+            .map_err(|e| KoboldError::new_err(e.to_string()))
+    }
+
+    pub fn deserialize_from_path(&mut self, path: PathBuf) -> PyResult<kobold::Value> {
+        let data = fs::read(path).map_err(PyOSError::new_err)?;
+        self.inner
+            .deserialize(&data)
             .map_err(|e| KoboldError::new_err(e.to_string()))
     }
 }
