@@ -15,3 +15,6 @@ mod reader;
 pub use reader::BitReader;
 
 mod utils;
+
+mod writer;
+pub use writer::{BitWriter, LengthMarker};

@@ -41,6 +41,7 @@ macro_rules! impl_read_literal {
 /// Ownership of the data buffer to read from must be transferred to
 /// this type to make FFI easier. [`BitReader::into_inner`] can be used
 /// to reclaim the memory.
+#[derive(Clone, Debug)]
 pub struct BitReader {
     // Raw parts of a `BitVec`.
     start: BitPtr<Const, u8, Lsb0>,
@@ -263,6 +264,12 @@ impl BitReader {
     #[inline]
     pub fn f64(&mut self) -> io::Result<f64> {
         self.u64().map(f64::from_bits)
+    }
+}
+
+impl Default for BitReader {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 

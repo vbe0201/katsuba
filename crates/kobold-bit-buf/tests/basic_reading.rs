@@ -1,7 +1,7 @@
 use kobold_bit_buf::BitReader;
 
 #[test]
-fn primitives() {
+fn read_primitives() {
     let mut buf = BitReader::new(vec![0xDE, 0xC0, 0xAD, 0xDE]);
 
     assert_eq!(buf.len(), buf.remaining());
