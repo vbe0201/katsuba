@@ -85,8 +85,7 @@ impl BinaryDeserializer {
         let data = fs::read(path).map_err(PyOSError::new_err)?;
 
         let mut data = &data[..];
-        if let Some(b"BINd") = data.get(..4) {
-            let (_, actual) = data.split_at(4);
+        if let (b"BINd", actual) = data.split_at(4) {
             data = actual;
         }
 
@@ -122,8 +121,7 @@ impl CoreObjectDeserializer {
         let data = fs::read(path).map_err(PyOSError::new_err)?;
 
         let mut data = &data[..];
-        if let Some(b"BINd") = data.get(..4) {
-            let (_, actual) = data.split_at(4);
+        if let (b"BINd", actual) = data.split_at(4) {
             data = actual;
         }
 
