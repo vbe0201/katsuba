@@ -1,0 +1,11 @@
+[package]
+name = "kobold-bit-buf"
+version = "0.1.0"
+authors = ["Valentin B. <valentin.be@protonmail.com>"]
+description = "Bit-level serialization and deserialization of data"
+license = "ISC"
+edition = "2021"
+
+[dependencies]
+bitvec = "1.0"
+funty = { version = "^2.0", default-features = false }

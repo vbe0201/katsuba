@@ -1,7 +1,13 @@
-use std::{fs::File, io, path::PathBuf, sync::Arc};
+use std::{
+    fs::File,
+    io::{self, BufWriter, Write},
+    path::PathBuf,
+    sync::Arc,
+};
 
 use anyhow::bail;
 use clap::{Args, Subcommand, ValueEnum};
+use glob::glob;
 use kobold::object_property::{
     CoreObject, Deserializer, DeserializerOptions, PropertyClass, PropertyFlags, SerializerFlags,
     TypeList, Value,
@@ -63,7 +69,7 @@ enum ObjectPropertyCommand {
     /// and prints its JSON representation to stdout.
     De {
         /// Path to the file to deserialize.
-        input: PathBuf,
+        input: String,
     },
 }
 
@@ -84,41 +90,46 @@ pub fn process(mut op: ObjectProperty) -> anyhow::Result<()> {
 
     match op.command {
         ObjectPropertyCommand::De { input } => {
-            let file = File::open(input)?;
-            // SAFETY: `file` remains unmodified for the entire duration of the mapping.
-            let data = unsafe { MmapOptions::new().populate().map(&file)? };
+            let types = Arc::new(types);
+            for file in glob(&input)?.flatten() {
+                let file = File::open(file)?;
+                // SAFETY: `file` remains unmodified for the entire duration of the mapping.
+                let data = unsafe { MmapOptions::new().populate().map(&file)? };
 
-            if op.class_type == ClassType::Bind {
-                options.shallow = false;
-                options.flags |= SerializerFlags::STATEFUL_FLAGS;
+                if op.class_type == ClassType::Bind {
+                    options.shallow = false;
+                    options.flags |= SerializerFlags::STATEFUL_FLAGS;
 
-                op.class_type = ClassType::Basic;
+                    op.class_type = ClassType::Basic;
+                }
+
+                let data = if op.shallow {
+                    &data
+                } else {
+                    let (magic, data) = data.split_at(4);
+                    if magic != b"BINd" {
+                        bail!("File does not start with BINd magic");
+                    }
+
+                    data
+                };
+
+                let stdout = io::stdout();
+                let mut handle = BufWriter::new(stdout.lock());
+
+                let obj = match op.class_type {
+                    ClassType::Basic => Deserializer::<PropertyClass>::new(options, types.clone())?
+                        .deserialize(data)?,
+                    ClassType::Core => Deserializer::<CoreObject>::new(options, types.clone())?
+                        .deserialize(data)?,
+
+                    _ => unreachable!(),
+                };
+
+                pretty_print_value(obj, &mut handle)?;
             }
 
-            let data = if op.shallow {
-                &data
-            } else {
-                let (magic, data) = data.split_at(4);
-                if magic != b"BINd" {
-                    bail!("File does not start with BINd magic");
-                }
-
-                data
-            };
-
-            let stdout = io::stdout();
-            let mut handle = stdout.lock();
-
-            let obj = match op.class_type {
-                ClassType::Basic => Deserializer::<PropertyClass>::new(options, Arc::new(types))?
-                    .deserialize(data)?,
-                ClassType::Core => {
-                    Deserializer::<CoreObject>::new(options, Arc::new(types))?.deserialize(data)?
-                }
-
-                _ => unreachable!(),
-            };
-            pretty_print_value(obj, &mut handle)
+            Ok(())
         }
     }
 }
@@ -171,7 +182,7 @@ fn build_json_object(value: Value) -> serde_json::Value {
     }
 }
 
-fn pretty_print_value(value: Value, handle: &mut io::StdoutLock) -> anyhow::Result<()> {
+fn pretty_print_value<W: Write>(value: Value, handle: &mut W) -> anyhow::Result<()> {
     let json = build_json_object(value);
     serde_json::to_writer_pretty(handle, &json).map_err(Into::into)
 }

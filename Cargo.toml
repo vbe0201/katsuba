@@ -1,8 +1,9 @@
 [workspace]
-members = ["kobold", "cli", "py"]
+members = ["crates/*", "kobold", "cli", "py"]
 
 [profile.release]
-strip = true
+debug = true
+#strip = true
 codegen-units = 1
 lto = true
 panic = "abort"

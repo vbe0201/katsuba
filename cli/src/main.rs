@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use mimalloc::MiMalloc;
 
 mod bcd;
 mod nav;
@@ -7,9 +6,6 @@ mod op;
 mod poi;
 mod progress_bar;
 mod wad;
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
