@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, mem};
 
 use bitvec::{
     domain::Domain,
@@ -86,6 +86,7 @@ impl BitReader {
     pub fn into_inner(self) -> Vec<u8> {
         // SAFETY: By construction invariant, we can reverse `new_from_bitvec`.
         let bv = unsafe { BitVec::from_raw_parts(self.start.to_mut(), self.len, self.cap) };
+        mem::forget(self);
 
         bv.into_vec()
     }
