@@ -83,8 +83,9 @@ impl BinaryDeserializer {
 
     pub fn deserialize_from_path(&mut self, path: PathBuf) -> PyResult<kobold::Value> {
         let data = fs::read(path).map_err(PyOSError::new_err)?;
+
         let mut data = &data[..];
-        if data.starts_with(b"BINd") {
+        if let Some(b"BINd") = data.get(..4) {
             let (_, actual) = data.split_at(4);
             data = actual;
         }
@@ -119,8 +120,9 @@ impl CoreObjectDeserializer {
 
     pub fn deserialize_from_path(&mut self, path: PathBuf) -> PyResult<kobold::Value> {
         let data = fs::read(path).map_err(PyOSError::new_err)?;
+
         let mut data = &data[..];
-        if data.starts_with(b"BINd") {
+        if let Some(b"BINd") = data.get(..4) {
             let (_, actual) = data.split_at(4);
             data = actual;
         }
