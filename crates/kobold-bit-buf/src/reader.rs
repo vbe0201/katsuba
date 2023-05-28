@@ -303,3 +303,8 @@ impl Default for BitReader<'_> {
         Self::new(&[])
     }
 }
+
+// SAFETY: The `BitReader` API does not expose the internal pointers
+// in ways which can compromise Rust's safety guarantees.
+unsafe impl Send for BitReader<'_> {}
+unsafe impl Sync for BitReader<'_> {}
