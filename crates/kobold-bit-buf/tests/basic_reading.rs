@@ -2,37 +2,39 @@ use kobold_bit_buf::BitReader;
 
 #[test]
 fn read_primitives() {
-    let mut buf = BitReader::new(vec![0xDE, 0xC0, 0xAD, 0xDE]);
+    let mut buf = BitReader::new(&[0xDE, 0xC0, 0xAD, 0xDE]);
 
-    assert_eq!(buf.len(), buf.remaining());
+    assert_eq!(buf.remaining_bits(), 32);
 
-    assert!(matches!(buf.u16(), Ok(0xC0DE)));
-    assert_eq!(buf.remaining(), buf.len() / 2);
+    assert!(matches!(buf.u16(), 0xC0DE));
+    assert_eq!(buf.remaining_bits(), 16);
 
-    assert!(matches!(buf.u8(), Ok(0xAD)));
-    assert!(matches!(buf.u8(), Ok(0xDE)));
+    assert!(matches!(buf.u8(), 0xAD));
+    assert!(matches!(buf.u8(), 0xDE));
 }
 
 #[test]
 fn read_bits_and_alignment() {
-    let mut buf = BitReader::new(vec![1, 2, 3, 4]);
+    let mut buf = BitReader::new(&[1, 2, 3, 4]);
 
-    assert!(matches!(buf.bool(), Ok(true)));
-    assert!(matches!(buf.bool(), Ok(false)));
-    assert_eq!(buf.remaining(), buf.len() - 2);
+    assert_eq!(buf.refill_bits(), 32);
 
-    assert!(matches!(buf.u8(), Ok(2)));
-    assert_eq!(buf.remaining(), buf.len() / 2);
+    assert!(matches!(buf.bool(), true));
+    assert!(matches!(buf.bool(), false));
+    assert_eq!(buf.remaining_bits(), 30);
 
-    assert!(matches!(buf.bool(), Ok(true)));
-    assert!(matches!(buf.bool(), Ok(true)));
+    buf.invalidate_and_realign_ptr();
 
-    assert!(matches!(buf.read_bytes(1), Ok(&[4])));
-    assert_eq!(buf.remaining(), 0);
-}
+    assert!(matches!(buf.u8(), 2));
+    assert_eq!(buf.remaining_bits(), 16);
+    
+    assert_eq!(buf.refill_bits(), 16);
 
-#[test]
-fn test_no_into_inner_uaf() {
-    let buf = BitReader::new(vec![1, 2, 3]);
-    assert_eq!(buf.into_inner(), &[1, 2, 3]);
+    assert!(matches!(buf.bool(), true));
+    assert!(matches!(buf.bool(), true));
+
+    buf.invalidate_and_realign_ptr();
+
+    assert!(matches!(buf.read_bytes(1), &[4]));
+    assert_eq!(buf.remaining_bits(), 0);
 }

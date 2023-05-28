@@ -1,9 +1,20 @@
-//! Provides buffers for bit-level serialization and deserialization
-//! of data.
+//! Provides high-performance bit level manipulation of data.
 //!
-//! Every operation on types from this crate starts reading at a byte's
-//! LSB, working towards the MSB. The exception are units of whole
-//! bytes, where little endian ordering is used.
+//! Bit-based serialization is fairly common in Kobold's areas
+//! of focus. Hardware often lacks dedicated support to deal
+//! with it, making performance a concern for implementations.
+//!
+//! Therefore, this crate aims to provide reusable components
+//! that take advantage of today's superscalar, out-of-order
+//! processors.
+//!
+//! # Implementation
+//!
+//! The implementation itself is based on Fabian Giesen's
+//! [writeups], specifically variant 4.
+//!
+//! Additional techniques are employed which take advantage
+//! of byte-sized reads starting at byte-aligned boundaries.
 
 #![deny(
     rust_2018_idioms,
