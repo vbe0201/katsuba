@@ -1,4 +1,4 @@
-use std::{borrow::Cow, marker::PhantomData, mem::size_of, ptr, slice};
+use std::{borrow::Cow, mem::size_of, ptr, slice};
 
 // The maximum number of bits that can be stored in lookahead.
 //
@@ -96,9 +96,6 @@ pub struct BitReader<'a> {
     // The number of bits available for consumption from
     // the `lookahead` buffer.
     remaining: u32,
-
-    // Marker to teach borrowchk we're working on a slice.
-    _m: PhantomData<&'a [u8]>,
 }
 
 impl<'a> BitReader<'a> {
@@ -116,7 +113,6 @@ impl<'a> BitReader<'a> {
                 end: ptr.add(len),
                 lookahead: 0,
                 remaining: 0,
-                _m: PhantomData,
             }
         }
     }
@@ -135,7 +131,6 @@ impl<'a> BitReader<'a> {
                 end: ptr.add(len),
                 lookahead: 0,
                 remaining: 0,
-                _m: PhantomData,
             }
         }
     }

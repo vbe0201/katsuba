@@ -47,7 +47,7 @@ pub struct LengthMarker(usize, usize);
 /// Quantities of multiple bytes (except byte slices) are always
 /// written in little-endian byte ordering. Individual bit writing
 /// starts at the LSB of the byte, working towards the MSB.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BitWriter {
     // The inner buffer where data is being written to.
     inner: Vec<u8>,
@@ -73,6 +73,13 @@ impl BitWriter {
     #[inline]
     pub fn len(&self) -> usize {
         (self.inner.len() << 3) + self.count as usize
+    }
+
+    /// Indicates how much capacity is still left for writing
+    /// bits until [`Self::flush_bits`] must be called.
+    #[inline]
+    pub fn remaining(&self) -> u32 {
+        WRITABLE_BITS.saturating_sub(self.count)
     }
 
     /// Indicates if the writer doesn't contain any bits.
@@ -104,11 +111,11 @@ impl BitWriter {
     }
 
     /// Flushes all currently buffered bits to the data buffer.
-    pub fn flush_bits(&mut self) -> u32 {
+    pub fn flush_bits(&mut self) {
         debug_assert!(self.count <= BUFFER_SIZE);
 
         let buf = self.buf.to_le_bytes();
-        self.inner.reserve(buf.len());
+        self.reserve(buf.len());
 
         // SAFETY: We reserve enough bytes in advance for this
         // write to not go out of bounds.
@@ -127,11 +134,6 @@ impl BitWriter {
 
         // Remove the written bytes from the count.
         self.count &= 7;
-
-        // Our bit count is currently something between 0 and 7.
-        // We report `WRITABLE_BITS` as a conservative upper bound
-        // since more bits cannot be written at once anyway.
-        WRITABLE_BITS
     }
 
     /// Writes bits to the internal buffer, if possible.
