@@ -1,4 +1,4 @@
-use core::{marker::PhantomData, mem::size_of, ptr, slice};
+use std::{borrow::Cow, marker::PhantomData, mem::size_of, ptr, slice};
 
 // The maximum number of bits that can be stored in lookahead.
 //
@@ -43,6 +43,8 @@ macro_rules! impl_read_literal {
     ($($(#[$doc:meta])* $read_fn:ident() -> $ty:ty),* $(,)?) => {
         $(
             $(#[$doc])*
+            #[doc = "# Panics"]
+            #[doc = "Caller must check that enough bytes are left for the read."]
             #[inline]
             pub fn $read_fn(&mut self) -> $ty {
                 assert!(size_of::<$ty>() <= self.untouched_bytes());
@@ -59,8 +61,24 @@ macro_rules! impl_read_literal {
     };
 }
 
+/// A buffer which enables bit-based deserialization of data.
+///
+/// Quantities of multiple bytes (except byte slices) are always
+/// read in little-endian byte ordering. Individual bit reading
+/// starts at the LSB of the byte, working towards the MSB.
+///
+/// When reading bits, users must manually call [`Self::refill_bits`]
+/// first and do appropriate checks based on how many bits are left.
+///
+/// When wanting to read from full byte boundaries with some stale
+/// buffered bits, [`Self::invalidate_and_realign_ptr`] can help.
 #[derive(Debug)]
 pub struct BitReader<'a> {
+    // The underlying data buffer; either an owned Vec or
+    // a borrowed slice.
+    // Invariant: This must never be modified.
+    data: Cow<'a, [u8]>,
+
     // Pointer to the next byte where the bit lookahead
     // buffer will be fetched from.
     ptr: *const u8,
@@ -84,14 +102,15 @@ pub struct BitReader<'a> {
 }
 
 impl<'a> BitReader<'a> {
-    /// Creates a new [`BitReader`] over a given byte slice.
-    pub const fn new(data: &'a [u8]) -> Self {
+    /// Creates a new [`BitReader`] over an owned buffer.
+    pub fn new(data: Vec<u8>) -> Self {
         let (ptr, len) = (data.as_ptr(), data.len());
 
         // SAFETY: All pointer arithmetic is within bounds
         // or one past the end of the allocated slice object.
         unsafe {
             Self {
+                data: Cow::Owned(data),
                 ptr,
                 safeguard: ptr.add(len.saturating_sub(7)),
                 end: ptr.add(len),
@@ -100,6 +119,33 @@ impl<'a> BitReader<'a> {
                 _m: PhantomData,
             }
         }
+    }
+
+    /// Creates a new [`BitReader`] over a given byte slice.
+    pub const fn new_borrowed(data: &'a [u8]) -> Self {
+        let (ptr, len) = (data.as_ptr(), data.len());
+
+        // SAFETY: All pointer arithmetic is within bounds
+        // or one past the end of the allocated slice object.
+        unsafe {
+            Self {
+                data: Cow::Borrowed(data),
+                ptr,
+                safeguard: ptr.add(len.saturating_sub(7)),
+                end: ptr.add(len),
+                lookahead: 0,
+                remaining: 0,
+                _m: PhantomData,
+            }
+        }
+    }
+
+    /// Consumes the reader and returns its inner data.
+    ///
+    /// This may be used to reclaim memory of a moved [`Vec`].
+    #[inline]
+    pub fn into_inner(self) -> Cow<'a, [u8]> {
+        self.data
     }
 
     #[inline(always)]
@@ -218,7 +264,13 @@ impl<'a> BitReader<'a> {
         self.remaining -= count;
     }
 
-    pub fn read_bytes(&mut self, nbytes: usize) -> &'a [u8] {
+    /// Reads `nbytes` raw bytes from the byte buffer and copies
+    /// them into a [`Vec`], if possible.
+    ///
+    /// # Panics
+    ///
+    /// Caller must check that enough bytes are left for the read.
+    pub fn read_bytes(&mut self, nbytes: usize) -> Vec<u8> {
         assert!(nbytes <= self.untouched_bytes());
 
         // SAFETY: A bounds check was done and an appropriate lifetime is
@@ -226,14 +278,18 @@ impl<'a> BitReader<'a> {
         unsafe {
             let value = slice::from_raw_parts(self.ptr, nbytes);
             self.ptr = self.ptr.add(nbytes);
-            value
+            value.to_vec()
         }
     }
 
     /// Reads `nbits` from the bit lookahead and consumes them.
     ///
-    /// Use [`.refill_bits()`] to ensure enough bits are buffered
-    /// for consumption before calling this method.
+    /// Use [`Self::refill_bits()`] to ensure enough bits are
+    /// buffered for consumption before calling this method.
+    ///
+    /// # Panics
+    ///
+    /// Caller must check that enough bits are left for the read.
     #[inline]
     pub fn read_bits(&mut self, nbits: u32) -> u64 {
         let value = self.peek(nbits);
@@ -244,8 +300,12 @@ impl<'a> BitReader<'a> {
 
     /// Reads an `nbits` sized value from the bit lookahead.
     ///
-    /// Use [`.refill_bits()`] to ensure enough bits are buffered
-    /// for consumption before calling this method.
+    /// Use [`Self::refill_bits()`] to ensure enough bits are
+    /// buffered for consumption before calling this method.
+    ///
+    /// # Panics
+    ///
+    /// Caller must check that enough bits are left for the read.
     #[inline]
     pub fn read_signed_bits(&mut self, nbits: u32) -> i64 {
         sign_extend(self.read_bits(nbits), nbits)
@@ -254,12 +314,13 @@ impl<'a> BitReader<'a> {
     /// Reads a [`bool`] value from the bit lookahead, if possible.
     ///
     /// Booleans are represented as individual bits.
+    ///
+    /// # Panics
+    ///
+    /// Caller must check that enough bits are left for the read.
     #[inline]
     pub fn bool(&mut self) -> bool {
-        let value = self.peek(1);
-        self.consume(1);
-
-        value != 0
+        self.read_bits(1) != 0
     }
 
     // fn $read_fn(&mut self) -> $ty
@@ -286,12 +347,20 @@ impl<'a> BitReader<'a> {
     }
 
     /// Reads a [`f32`] value from the byte buffer, if possible.
+    ///
+    /// # Panics
+    ///
+    /// Caller must check that enough bytes are left for the read.
     #[inline]
     pub fn f32(&mut self) -> f32 {
         f32::from_bits(self.u32())
     }
 
     /// Reads a [`f64`] value from the byte buffer, if possible.
+    ///
+    /// # Panics
+    ///
+    /// Caller must check that enough bytes are left for the read.
     #[inline]
     pub fn f64(&mut self) -> f64 {
         f64::from_bits(self.u64())
@@ -300,7 +369,7 @@ impl<'a> BitReader<'a> {
 
 impl Default for BitReader<'_> {
     fn default() -> Self {
-        Self::new(&[])
+        Self::new_borrowed(&[])
     }
 }
 
