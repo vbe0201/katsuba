@@ -15,11 +15,11 @@ fn write_primitives() {
 fn write_length_prefix() {
     let mut writer = BitWriter::new();
 
-    let len = writer.mark_len::<u16>();
+    let len = writer.mark_len();
     writer.u32(0xDEADBEEF);
     writer.commit_len(len);
 
-    assert_eq!(writer.view(), &[0x30, 0x00, 0xEF, 0xBE, 0xAD, 0xDE]);
+    assert_eq!(writer.view(), &[0x40, 0x00, 0x00, 0x00, 0xEF, 0xBE, 0xAD, 0xDE]);
 }
 
 #[test]
@@ -29,11 +29,15 @@ fn write_bytes_and_alignment() {
     writer.bool(true);
     assert_eq!(writer.len(), 1);
 
+    writer.realign_to_byte();
+
     writer.u8(3);
     assert_eq!(writer.len(), 16);
 
     writer.bool(false);
     writer.bool(true);
+
+    writer.realign_to_byte();
 
     writer.write_bytes(&[4, 5]);
 

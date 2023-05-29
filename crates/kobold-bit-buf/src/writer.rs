@@ -1,235 +1,268 @@
-use std::marker::PhantomData;
+use std::{mem::size_of, ptr};
 
-use bitvec::prelude::*;
-use funty::Integral;
+// The maximum number of bits that can be buffered before
+// committing to the output vector.
+//
+// We target to have an amount between 56 and 63 bits in the
+// buffer. Since we only commit whole bytes, it means the
+// low 3 bits never change.
+//
+// The choice of 63 instead of 64 is conscious because the
+// logic for advancing the bit pointer obeys several traits
+// for algebraic refactoring to improve codegen.
+const BUFFER_SIZE: u32 = u64::BITS - 1;
 
-use crate::utils::{align_up, IntCast};
-
-macro_rules! write_bytes_to_bitslice {
-    ($bs:ident, $buf:expr) => {
-        // SAFETY: The iterator is consumed while only ever holding
-        // onto one `slot` at the same time.
-        unsafe { $bs.chunks_exact_mut(u8::BITS as _).remove_alias() }
-            .zip($buf)
-            .for_each(|(slot, byte)| slot.store_be(byte));
-    };
-}
+// The maximum number of bits that can be committed at once.
+//
+// Since we write whole bytes only, this is the smallest
+// value where a whole byte doesn't fit in anymore.
+const WRITABLE_BITS: u32 = BUFFER_SIZE & !7;
 
 macro_rules! impl_write_literal {
     ($($(#[$doc:meta])* $write_fn:ident($ty:ty)),* $(,)?) => {
         $(
             $(#[$doc])*
             #[inline]
-            pub fn $write_fn(&mut self, v: $ty) {
-                self.realign_to_byte();
+            pub fn $write_fn(&mut self, value: $ty) {
+                self.inner.reserve(size_of::<$ty>());
 
-                let len = self.inner.len();
-                self.inner.resize(len + <$ty>::BITS as usize, false);
+                // SAFETY: We pre-allocated the needed memory.
+                unsafe {
+                    let buf = value.to_le_bytes();
+                    let dest = self.inner.as_mut_ptr().add(self.inner.len());
 
-                // SAFETY: `len` was the former end of the buffer before reallocation,
-                // now it denotes where the newly allocated memory starts.
-                let bs = unsafe { self.inner.get_unchecked_mut(len..) };
-                write_bytes_to_bitslice!(bs, v.to_le_bytes());
+                    ptr::copy_nonoverlapping(buf.as_ptr(), dest, buf.len());
+                    self.inner.set_len(self.inner.len() + size_of::<$ty>());
+                }
             }
         )*
     };
 }
 
 /// A reserved length prefix, which can be committed at a later time.
-pub struct LengthMarker<I>(usize, usize, PhantomData<I>);
+pub struct LengthMarker(usize, usize);
 
 /// A buffer which enables bit-based serialization of data.
 ///
-/// Quantities of multiple bytes (except byte slices) are always written
-/// in little-endian byte ordering. Individual bit writing starts at
-/// the LSB of the byte, working towards the MSB.
-#[derive(Clone, Debug, Default)]
+/// Quantities of multiple bytes (except byte slices) are always
+/// written in little-endian byte ordering. Individual bit writing
+/// starts at the LSB of the byte, working towards the MSB.
+#[derive(Debug)]
 pub struct BitWriter {
-    inner: BitVec<u8, Lsb0>,
+    // The inner buffer where data is being written to.
+    inner: Vec<u8>,
+
+    // A buffer for bits which are not committed to the
+    // data buffer yet.
+    buf: u64,
+
+    // How many bits in `buf` are currently filled.
+    count: u32,
 }
 
 impl BitWriter {
-    /// Creates a new, empty [`BitWriter`].
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            inner: Vec::new(),
+            buf: 0,
+            count: 0,
+        }
     }
 
-    /// Returns the number of bits in the buffer.
+    /// Gets the number of bits currently in the buffer.
     #[inline]
     pub fn len(&self) -> usize {
-        self.inner.len()
+        (self.inner.len() << 3) + self.count as usize
     }
 
-    /// Indicates whether the buffer is empty.
+    /// Indicates if the writer doesn't contain any bits.
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
+        self.len() == 0
     }
 
     /// Gets a view of the buffer's storage as a byte slice.
     #[inline]
     pub fn view(&self) -> &[u8] {
-        self.inner.as_raw_slice()
+        &self.inner
     }
 
     /// Consumes the [`BitWriter`] and returns the byte buffer.
     #[inline]
     pub fn into_inner(self) -> Vec<u8> {
-        self.inner.into_vec()
+        self.inner
     }
 
-    /// Writes a single bit to the buffer.
-    #[inline]
-    pub fn write_bit(&mut self, b: bool) {
-        self.inner.push(b);
-    }
-
-    /// Writes all bits in `buf` to the buffer.
-    #[inline]
-    pub fn write_bits(&mut self, buf: &BitSlice<u8, Lsb0>) {
-        self.inner.extend_from_bitslice(buf);
-    }
-
-    /// Writes a given number of bits from `value` to the buffer.
-    #[inline]
-    pub fn write_bitint<I: Integral>(&mut self, value: I, nbits: usize) {
-        let len = self.inner.len();
-        self.inner.resize(len + nbits, false);
-
-        // SAFETY: `len` was the former end of the buffer before reallocation,
-        // now it denotes where the newly allocated memory starts.
-        let bs = unsafe { self.inner.get_unchecked_mut(len..) };
-        bs.store_le(value);
-    }
-
-    #[inline]
-    fn realign_to_byte(&mut self) {
-        let new_len = align_up(self.inner.len(), u8::BITS as _);
-        self.inner.resize(new_len, false);
-    }
-
-    /// Writes the bytes from `buf` to the buffer.
+    /// Reserves capacity for at least `nbytes` more bytes in the
+    /// output buffer.
     ///
-    /// This will force-align the underlying buffer to full byte boundaries
-    /// before writing; effectively filling skipped bits with zeroes.
+    /// When the data format allows making educated guesses about
+    /// size consumption, use this to optimize memory allocation.
     #[inline]
-    pub fn write_bytes(&mut self, buf: &[u8]) {
-        self.realign_to_byte();
-
-        let len = self.inner.len();
-        self.inner.resize(len + buf.len() * 8, false);
-
-        // SAFETY: `len` was the former end of the buffer before reallocation,
-        // now it denotes where the newly allocated memory starts.
-        let bs = unsafe { self.inner.get_unchecked_mut(len..) };
-        write_bytes_to_bitslice!(bs, buf.iter().copied());
+    pub fn reserve(&mut self, nbytes: usize) {
+        self.inner.reserve(nbytes);
     }
 
-    /// Reserves a length prefix of a literal type `I` at the current
-    /// buffer position.
+    /// Flushes all currently buffered bits to the data buffer.
+    pub fn flush_bits(&mut self) -> u32 {
+        debug_assert!(self.count <= BUFFER_SIZE);
+
+        let buf = self.buf.to_le_bytes();
+        self.inner.reserve(buf.len());
+
+        // SAFETY: We reserve enough bytes in advance for this
+        // write to not go out of bounds.
+        unsafe {
+            let dest = self.inner.as_mut_ptr().add(self.inner.len());
+            ptr::copy_nonoverlapping(buf.as_ptr(), dest, buf.len());
+        }
+
+        // Remove the bits we just wrote from the buffer.
+        self.buf >>= self.count & WRITABLE_BITS;
+
+        unsafe {
+            self.inner
+                .set_len(self.inner.len() + (self.count as usize >> 3));
+        }
+
+        // Remove the written bytes from the count.
+        self.count &= 7;
+
+        // Our bit count is currently something between 0 and 7.
+        // We report `WRITABLE_BITS` as a conservative upper bound
+        // since more bits cannot be written at once anyway.
+        WRITABLE_BITS
+    }
+
+    /// Writes bits to the internal buffer, if possible.
     ///
-    /// The returned [`LengthMarker`] can be passed to [`BitWriter::commit_len`]
+    /// These will not show up in the output bytes until
+    /// [`Self::flush_bits`] was called.
+    ///
+    /// # Panics
+    ///
+    /// The caller must ensure enough capacity is left for
+    /// `nbits` bits in the data buffer.
+    #[inline]
+    pub fn write_bits(&mut self, value: u64, nbits: u32) {
+        assert!(nbits <= WRITABLE_BITS);
+        assert!(nbits <= (BUFFER_SIZE - self.count));
+
+        self.buf |= (value & ((1 << nbits) - 1)) << self.count;
+        self.count += nbits;
+    }
+
+    /// Realigns the buffer to the boundaries of the next
+    /// untouched byte.
+    ///
+    /// Untouched byte in this case means no partial bit
+    /// writes overlap with its memory region.
+    pub fn realign_to_byte(&mut self) {
+        // Flush whole bytes to the buffer.
+        self.flush_bits();
+
+        // The remainder of our buffer is a partial byte with at
+        // most 7 bits set. In the case of 0, the buffer is
+        // already aligned, otherwise we need to discard the bits.
+        if self.count != 0 {
+            // SAFETY: Since we partially started the next byte already,
+            // the memory for it is reserved and initialized.
+            unsafe {
+                self.inner.set_len(self.inner.len() + 1);
+            }
+
+            self.buf = 0;
+            self.count = 0;
+        }
+    }
+
+    /// Appends a given slice of bytes to the output buffer.
+    #[inline]
+    pub fn write_bytes(&mut self, bytes: &[u8]) {
+        self.inner.extend_from_slice(bytes);
+    }
+
+    /// Reserves a [`u32`] length prefix at the current buffer position.
+    ///
+    /// The returned [`LengthMarker`] can be passed to [`Self::commit_len`]
     /// at a later time to patch back the amount of bits that have been
     /// written since marking.
-    pub fn mark_len<I: Integral>(&mut self) -> LengthMarker<I> {
+    pub fn mark_len(&mut self) -> LengthMarker {
         // Back up the current bit position for length calculation.
         let bit_start = self.len();
 
-        // Write the `I` placeholder value and remember its start offset.
+        // Write the placeholder value and remember its start offset.
         self.realign_to_byte();
         let bit_pos = self.len();
-        self.inner.resize(bit_pos + I::BITS as usize, false);
+        self.u32(0);
 
-        LengthMarker(bit_start, bit_pos, PhantomData)
+        LengthMarker(bit_start, bit_pos)
     }
 
     /// Commits a previously reserved length prefix to the buffer.
-    pub fn commit_len<I: Integral>(&mut self, len: LengthMarker<I>)
-    where
-        usize: IntCast<I>,
-        I::Bytes: IntoIterator<Item = u8>,
-    {
-        let LengthMarker(bit_start, bit_pos, ..) = len;
+    pub fn commit_len(&mut self, len: LengthMarker) {
+        let LengthMarker(bit_start, bit_pos) = len;
 
         // Calculate the length prefix value.
-        let prefix: I = (self.inner.len() - bit_start).cast_as();
+        let prefix = (self.len() - bit_start) as u32;
+        let prefix = prefix.to_le_bytes();
 
         // SAFETY: We created `LengthMarker` ourselves, so we
         // can trust `bit_pos` to be a valid offset.
-        let bs = unsafe { self.inner.get_unchecked_mut(bit_pos..) };
-        write_bytes_to_bitslice!(bs, prefix.to_le_bytes());
+        unsafe {
+            let dest = self.inner.as_mut_ptr().add(bit_pos >> 3);
+            ptr::copy_nonoverlapping(prefix.as_ptr(), dest, prefix.len());
+        }
     }
 
-    /// Writes a given [`bool`] value to the buffer.
-    ///
-    /// Booleans are represented as single bits and do not force a realign
-    /// to full byte boundaries.
+    /// Writes a [`bool`] value to the bit buffer.
     #[inline]
-    pub fn bool(&mut self, v: bool) {
-        self.write_bit(v);
+    pub fn bool(&mut self, value: bool) {
+        self.write_bits(value as u64, 1);
     }
 
+    // fn $write_fn(&mut self, value: $ty)
     impl_write_literal! {
-        /// Writes a given [`u8`] value to the buffer.
-        ///
-        /// This will force-align the buffer to full byte boundaries before
-        /// writing; effectively filling remaining bits with zeroes.
+        /// Writes a [`u8`] value to the current position in
+        /// the byte buffer.
         u8(u8),
-        /// Writes a given [`i8`] value to the buffer.
-        ///
-        /// This will force-align the buffer to full byte boundaries before
-        /// writing; effectively filling remaining bits with zeroes.
+        /// Writes a [`i8`] value to the current position in
+        /// the byte buffer.
         i8(i8),
 
-        /// Writes a given [`u16`] value to the buffer.
-        ///
-        /// This will force-align the buffer to full byte boundaries before
-        /// writing; effectively filling remaining bits with zeroes.
+        /// Writes a [`u16`] value to the current position in
+        /// the byte buffer.
         u16(u16),
-        /// Writes a given [`i16`] value to the buffer.
-        ///
-        /// This will force-align the buffer to full byte boundaries before
-        /// writing; effectively filling remaining bits with zeroes.
+        /// Writes a [`i16`] value to the current position in
+        /// the byte buffer.
         i16(i16),
 
-        /// Writes a given [`u32`] value to the buffer.
-        ///
-        /// This will force-align the buffer to full byte boundaries before
-        /// writing; effectively filling remaining bits with zeroes.
+        /// Writes a [`u32`] value to the current position in
+        /// the byte buffer.
         u32(u32),
-        /// Writes a given [`i32`] value to the buffer.
-        ///
-        /// This will force-align the buffer to full byte boundaries before
-        /// writing; effectively filling remaining bits with zeroes.
+        /// Writes a [`i32`] value to the current position in
+        /// the byte buffer.
         i32(i32),
 
-        /// Writes a given [`u64`] value to the buffer.
-        ///
-        /// This will force-align the buffer to full byte boundaries before
-        /// writing; effectively filling remaining bits with zeroes.
+        /// Writes a [`u64`] value to the current position in
+        /// the byte buffer.
         u64(u64),
-        /// Writes a given [`i64`] value to the buffer.
-        ///
-        /// This will force-align the buffer to full byte boundaries before
-        /// writing; effectively filling remaining bits with zeroes.
+        /// Writes a [`i64`] value to the current position in
+        /// the byte buffer.
         i64(i64),
     }
 
-    /// Writes the bits of a given [`f32`] value to the buffer.
-    ///
-    /// This will force-align the buffer to full byte boundaries before
-    /// writing; effectively filling remaining bits with zeroes.
+    /// Writes a [`f32`] value to the current position in
+    /// the byte buffer.
     #[inline]
-    pub fn f32(&mut self, v: f32) {
-        self.u32(v.to_bits());
+    pub fn f32(&mut self, value: f32) {
+        self.u32(value.to_bits());
     }
 
-    /// Writes the bits of a given [`f64`] value to the buffer.
-    ///
-    /// This will force-align the buffer to full byte boundaries before
-    /// writing; effectively filling remaining bits with zeroes.
+    /// Writes a [`f64`] value to the current position in
+    /// the byte buffer.
     #[inline]
-    pub fn f64(&mut self, v: f64) {
-        self.u64(v.to_bits());
+    pub fn f64(&mut self, value: f64) {
+        self.u64(value.to_bits());
     }
 }

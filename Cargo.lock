@@ -257,10 +257,6 @@ dependencies = [
 [[package]]
 name = "kobold-bit-buf"
 version = "0.1.0"
-dependencies = [
- "bitvec",
- "funty",
-]
 
 [[package]]
 name = "kobold-cli"
