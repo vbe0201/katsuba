@@ -9,3 +9,7 @@
     rustdoc::broken_intra_doc_links,
     unsafe_op_in_unsafe_fn
 )]
+
+pub mod hash;
+
+pub mod type_list;
