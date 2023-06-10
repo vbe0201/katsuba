@@ -13,3 +13,7 @@
 pub mod hash;
 
 pub mod type_list;
+pub use type_list::TypeList;
+
+pub mod value;
+pub use value::Value;

@@ -259,13 +259,17 @@ impl<'a> BitReader<'a> {
         self.remaining -= count;
     }
 
-    /// Reads `nbytes` raw bytes from the byte buffer and copies
-    /// them into a [`Vec`], if possible.
+    /// Reads `nbytes` raw bytes from the byte buffer.
+    ///
+    /// They are borrowed from the underlying byte view without
+    /// copying them; however we cannot safely hand it out for
+    /// `'a` since a `'static` lifetime with an owned underlying
+    /// buffer would cause unsoundness.
     ///
     /// # Panics
     ///
     /// Caller must check that enough bytes are left for the read.
-    pub fn read_bytes(&mut self, nbytes: usize) -> Vec<u8> {
+    pub fn read_bytes(&mut self, nbytes: usize) -> &[u8] {
         assert!(nbytes <= self.untouched_bytes());
 
         // SAFETY: A bounds check was done and an appropriate lifetime is
@@ -273,7 +277,7 @@ impl<'a> BitReader<'a> {
         unsafe {
             let value = slice::from_raw_parts(self.ptr, nbytes);
             self.ptr = self.ptr.add(nbytes);
-            value.to_vec()
+            value
         }
     }
 
