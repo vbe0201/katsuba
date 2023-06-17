@@ -21,11 +21,7 @@ fn deserialize_value<T: TypeTag>(
     property: &Property,
     reader: &mut BitReader<'_>,
 ) -> anyhow::Result<Value> {
-    if property
-        .flags
-        .intersects(PropertyFlags::BITS | PropertyFlags::ENUM)
-        || property.r#type.starts_with("enum")
-    {
+    if property.is_enum() {
         enum_variant::deserialize(de, property, reader)
     } else {
         // Try to interpret the value as simple data and if that fails,
