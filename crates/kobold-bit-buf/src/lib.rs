@@ -15,7 +15,7 @@
 //!
 //! Additional techniques are employed which take advantage
 //! of byte-sized reads starting at byte-aligned boundaries.
-//! 
+//!
 //! [writeups]: https://fgiesen.wordpress.com/2018/02/20/reading-bits-in-far-too-many-ways-part-2/
 
 #![deny(

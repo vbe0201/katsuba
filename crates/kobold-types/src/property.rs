@@ -1,0 +1,105 @@
+use std::collections::HashMap;
+
+use anyhow::anyhow;
+use bitflags::bitflags;
+use kobold_utils::hash;
+use serde::{de::Error, Deserialize, Deserializer};
+use smartstring::alias::String;
+
+use super::StringOrInt;
+
+bitflags! {
+    /// The configuration bits for [`Property`] values.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[repr(transparent)]
+    pub struct PropertyFlags: u32 {
+        const SAVE = 1 << 0;
+        const COPY = 1 << 1;
+        const PUBLIC = 1 << 2;
+        const TRANSMIT = 1 << 3;
+        const PRIVILEGED_TRANSMIT = 1 << 4;
+        const PERSIST = 1 << 5;
+        const DEPRECATED = 1 << 6;
+        const NOSCRIPT = 1 << 7;
+        const DELTA_ENCODE = 1 << 8;
+        const BLOB = 1 << 9;
+
+        const NOEDIT = 1 << 16;
+        const FILENAME = 1 << 17;
+        const COLOR = 1 << 18;
+        const BITS = 1 << 20;
+        const ENUM = 1 << 21;
+        const LOCALIZED = 1 << 22;
+        const STRING_KEY = 1 << 23;
+        const OBJECT_ID = 1 << 24;
+        const REFERENCE_ID = 1 << 25;
+        const OBJECT_NAME = 1 << 27;
+        const HAS_BASECLASS = 1 << 28;
+    }
+}
+
+/// A property that represents a member of a class.
+#[derive(Clone, Debug, Deserialize)]
+pub struct Property {
+    /// The name of the property.
+    #[serde(skip)]
+    pub name: String,
+    /// The type of the property.
+    pub r#type: String,
+    /// The ID of the property.
+    pub id: u32,
+    /// The associated property flag mask.
+    #[serde(deserialize_with = "deserialize_property_flags")]
+    pub flags: PropertyFlags,
+    /// Whether the property's storage is dynamically allocated.
+    pub dynamic: bool,
+    /// A combined hash of the property's name and of its type.
+    pub hash: u32,
+    /// A mapping of all enum options defined on a property.
+    #[serde(default)]
+    pub enum_options: HashMap<String, StringOrInt>,
+}
+
+impl Property {
+    /// Gets the hash of this property's type.
+    pub fn type_hash(&self) -> u32 {
+        self.hash.wrapping_sub(hash::djb2(self.name.as_bytes()))
+    }
+
+    /// Decodes a given enum variant from its string representation to
+    /// an integer value through the property's defined options.
+    pub fn decode_enum_variant(&self, variant: &str) -> anyhow::Result<i64> {
+        if self.flags.contains(PropertyFlags::BITS) {
+            // For bitflags in string format, we convert them into
+            // their integral representation.
+            let mut res = 0;
+
+            for bit in variant.split('|') {
+                let bit = bit.trim();
+                res |= self
+                    .enum_options
+                    .get(bit)
+                    .and_then(|v| v.to_int())
+                    .ok_or_else(|| anyhow!("unknown bit in sequence: '{bit}'"))?;
+            }
+
+            Ok(res)
+        } else {
+            // When we got an enum in string format, we look up the
+            // corresponding value and return as-is.
+            self.enum_options
+                .get(variant)
+                .and_then(|v| v.to_int())
+                .ok_or_else(|| anyhow!("received unknown enum variant: '{variant}'"))
+        }
+    }
+}
+
+fn deserialize_property_flags<'de, D>(deserializer: D) -> Result<PropertyFlags, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let flags = u32::deserialize(deserializer)?;
+    PropertyFlags::from_bits(flags)
+        .ok_or_else(|| D::Error::custom(format!("unknown property flags: {:?}", flags)))
+}

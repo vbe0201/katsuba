@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/*", "kobold", "cli", "py"]
+members = ["crates/*"]
 
 [profile.release]
 debug = true

@@ -10,10 +10,7 @@
     unsafe_op_in_unsafe_fn
 )]
 
-pub mod hash;
-
-pub mod type_list;
-pub use type_list::TypeList;
+pub mod serde;
 
 pub mod value;
 pub use value::Value;

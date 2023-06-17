@@ -1,4 +1,4 @@
-use std::{borrow::Cow, mem::size_of, ptr, slice};
+use std::{marker::PhantomData, mem::size_of, ptr, slice};
 
 // The maximum number of bits that can be stored in lookahead.
 //
@@ -74,11 +74,6 @@ macro_rules! impl_read_literal {
 /// buffered bits, [`Self::invalidate_and_realign_ptr`] can help.
 #[derive(Debug)]
 pub struct BitReader<'a> {
-    // The underlying data buffer; either an owned Vec or
-    // a borrowed slice.
-    // Invariant: This must never be modified.
-    data: Cow<'a, [u8]>,
-
     // Pointer to the next byte where the bit lookahead
     // buffer will be fetched from.
     ptr: *const u8,
@@ -96,51 +91,28 @@ pub struct BitReader<'a> {
     // The number of bits available for consumption from
     // the `lookahead` buffer.
     remaining: u32,
+
+    // Marker to teach borrowchk this is holding onto a slice.
+    _m: PhantomData<&'a [u8]>,
 }
 
 impl<'a> BitReader<'a> {
-    /// Creates a new [`BitReader`] over an owned buffer.
-    pub fn new(data: Vec<u8>) -> Self {
-        let (ptr, len) = (data.as_ptr(), data.len());
-
-        // SAFETY: All pointer arithmetic is within bounds
-        // or one past the end of the allocated slice object.
-        unsafe {
-            Self {
-                data: Cow::Owned(data),
-                ptr,
-                safeguard: ptr.add(len.saturating_sub(7)),
-                end: ptr.add(len),
-                lookahead: 0,
-                remaining: 0,
-            }
-        }
-    }
-
     /// Creates a new [`BitReader`] over a given byte slice.
-    pub const fn new_borrowed(data: &'a [u8]) -> Self {
+    pub const fn new(data: &'a [u8]) -> Self {
         let (ptr, len) = (data.as_ptr(), data.len());
 
         // SAFETY: All pointer arithmetic is within bounds
         // or one past the end of the allocated slice object.
         unsafe {
             Self {
-                data: Cow::Borrowed(data),
                 ptr,
                 safeguard: ptr.add(len.saturating_sub(7)),
                 end: ptr.add(len),
                 lookahead: 0,
                 remaining: 0,
+                _m: PhantomData,
             }
         }
-    }
-
-    /// Consumes the reader and returns its inner data.
-    ///
-    /// This may be used to reclaim memory of a moved [`Vec`].
-    #[inline]
-    pub fn into_inner(self) -> Cow<'a, [u8]> {
-        self.data
     }
 
     #[inline(always)]
@@ -160,6 +132,12 @@ impl<'a> BitReader<'a> {
     #[inline]
     pub fn remaining_bits(&self) -> usize {
         (self.untouched_bytes() << 3) + self.remaining as usize
+    }
+
+    /// Gets the bits currently buffered in the reader.
+    #[inline]
+    pub fn buffered_bits(&self) -> u32 {
+        self.remaining
     }
 
     /// Invalidates the current bit lookahead and resets the pointer
@@ -368,7 +346,7 @@ impl<'a> BitReader<'a> {
 
 impl Default for BitReader<'_> {
     fn default() -> Self {
-        Self::new_borrowed(&[])
+        Self::new(&[])
     }
 }
 

@@ -3,6 +3,8 @@
 //! Values have dynamic types and can be composed, at the cost of
 //! incurring memory and performance overhead.
 
+pub use smartstring::alias::String;
+
 mod color;
 pub use color::*;
 
@@ -43,7 +45,7 @@ pub enum Value {
     WString(Vec<u16>),
 
     /// An enum variant or bitflags.
-    Enum(u32),
+    Enum(i64),
 
     /// A homogenous list of elements.
     List(List),
@@ -55,7 +57,7 @@ pub enum Value {
     Vec3(Vec3),
     Quat(Quaternion),
     Euler(Euler),
-    Mat3x3(Matrix),
+    Mat3x3(Box<Matrix>),
 
     /// A 2D point.
     Point {
