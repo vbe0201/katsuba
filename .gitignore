@@ -74,3 +74,6 @@ Thumbs.db
 
 # Types json
 *.json
+
+# ObjectProperty state
+*.xml

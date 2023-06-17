@@ -96,6 +96,8 @@ fn deserialize_properties_shallow<T: TypeTag>(
             property.name.clone(),
             property::deserialize(de, property, reader)?,
         );
+
+        reader.invalidate_and_realign_ptr();
     }
 
     Ok(())
