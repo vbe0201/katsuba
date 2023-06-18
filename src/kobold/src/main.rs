@@ -2,9 +2,9 @@ use clap::{Parser, Subcommand};
 
 mod wad;
 
-// When not stuck with MSVC, use a more performant global
+// When not stuck with Windows, use a more performant global
 // allocator than the default one Rust uses.
-#[cfg(not(target_env = "msvc"))]
+#[cfg(not(target_os = "windows"))]
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 

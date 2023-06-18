@@ -10,5 +10,5 @@ kobold-wad = { path = "../kobold-wad" }
 anyhow = "1.0"
 clap = { version = "4.3", features = ["derive"] }
 
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
+[target.'cfg(not(target_os = "windows"))'.dependencies]
 tikv-jemallocator = "0.5"
