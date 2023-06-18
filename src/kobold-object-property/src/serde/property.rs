@@ -1,5 +1,5 @@
 use kobold_bit_buf::BitReader;
-use kobold_types::{Property, PropertyFlags};
+use kobold_types::Property;
 
 use super::{enum_variant, object, simple_data, Deserializer, TypeTag};
 use crate::value::{List, Value};
