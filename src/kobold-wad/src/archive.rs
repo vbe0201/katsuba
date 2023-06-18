@@ -10,10 +10,10 @@ use memmap2::{Mmap, MmapOptions};
 use crate::types as wad_types;
 
 /// Representation of a KIWAD archive loaded into memory.
-/// 
+///
 /// This type is designed for reading existing archives
 /// and querying file information from them.
-/// 
+///
 /// It supports two modes of interacting with an underlying
 /// archive file: read or mmap.
 pub struct Archive(ArchiveInner);
@@ -81,14 +81,20 @@ impl Archive {
         self.len() == 0
     }
 
+    /// Creates an iterator over all files and their relative paths
+    /// in the archive.
+    pub fn files(&self) -> impl Iterator<Item = (&String, &wad_types::File)> {
+        self.journal().inner.iter()
+    }
+
     /// Gets the raw contents of an archived file by its string name.
-    ///
-    /// This returns a `(is_compressed, contents)` tuple to give the
-    /// user maximum flexibility in how to process the results.
-    pub fn file_raw(&self, name: &str) -> Option<(bool, &[u8])> {
-        self.journal()
-            .find(name)
-            .map(|f| (f.compressed, f.extract(self.raw_archive())))
+    pub fn file_raw(&self, name: &str) -> Option<&wad_types::File> {
+        self.journal().find(name)
+    }
+
+    /// Extracts the raw file contents out of the archive.
+    pub fn file_contents(&self, file: &wad_types::File) -> &[u8] {
+        file.extract(self.raw_archive())
     }
 }
 

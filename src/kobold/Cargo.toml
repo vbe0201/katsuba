@@ -5,5 +5,10 @@ authors = ["Valentin B. <valentin.be@protonmail.com>"]
 edition = "2021"
 
 [dependencies]
-kobold-object-property = { path = "../kobold-object-property" }
-kobold-types = { path = "../kobold-types" }
+kobold-wad = { path = "../kobold-wad" }
+
+anyhow = "1.0"
+clap = { version = "4.3", features = ["derive"] }
+
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.5"

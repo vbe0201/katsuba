@@ -1,28 +1,30 @@
-use std::{fs::File, io::BufReader, sync::Arc};
+use clap::{Parser, Subcommand};
 
-use kobold_object_property::serde::*;
-use kobold_types::TypeList;
+mod wad;
 
-fn main() {
-    let file = File::open("types.json").unwrap();
-    let reader = BufReader::new(file);
+// When not stuck with MSVC, use a more performant global
+// allocator than the default one Rust uses.
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
-    let types = Arc::new(TypeList::from_reader(reader).unwrap());
+#[derive(Debug, Parser)]
+#[clap(author, version, about, long_about = None)]
+#[clap(propagate_version = true)]
+struct Cli {
+    #[clap(subcommand)]
+    command: Command,
+}
 
-    let mut de = Deserializer::<PropertyClass>::new(
-        SerializerOptions {
-            flags: SerializerFlags::STATEFUL_FLAGS,
-            shallow: false,
-            skip_unknown_types: true,
-            ..Default::default()
-        },
-        types,
-    )
-    .unwrap();
-    let mut scratch = Vec::new();
+#[derive(Debug, Subcommand)]
+enum Command {
+    /// Subcommand for working with KIWAD archives.
+    Wad(wad::Wad),
+}
 
-    let data = std::fs::read("GDN_SM_MoonflowerTemplate.xml").unwrap();
-    let obj = de.deserialize(&mut scratch, &data[4..]).unwrap();
-
-    println!("{obj:?}");
+fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+    match cli.command {
+        Command::Wad(wad) => wad::process(wad),
+    }
 }
