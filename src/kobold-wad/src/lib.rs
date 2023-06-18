@@ -10,6 +10,9 @@
     unsafe_op_in_unsafe_fn
 )]
 
+mod archive;
+pub use archive::*;
+
 pub mod crc;
 
 pub mod types;
