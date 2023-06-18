@@ -15,4 +15,7 @@ pub use archive::*;
 
 pub mod crc;
 
+mod inflater;
+pub use inflater::*;
+
 pub mod types;
