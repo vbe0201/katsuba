@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 
+mod op;
 mod wad;
 
 // When not stuck with Windows, use a more performant global
@@ -20,11 +21,14 @@ struct Cli {
 enum Command {
     /// Subcommand for working with KIWAD archives.
     Wad(wad::Wad),
+    /// Subcommand for working with ObjectProperty binary state.
+    Op(op::ObjectProperty),
 }
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Wad(wad) => wad::process(wad),
+        Command::Op(op) => op::process(op),
     }
 }

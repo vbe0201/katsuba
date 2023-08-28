@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::bail;
 use byteorder::{ReadBytesExt, LE};
@@ -6,7 +6,7 @@ use kobold_bit_buf::BitReader;
 use kobold_types::TypeList;
 use libdeflater::Decompressor;
 
-use super::{object, SerializerFlags, SerializerOptions, TypeTag};
+use super::{object, Diagnostics, SerializerFlags, SerializerOptions, TypeTag};
 use crate::Value;
 
 #[inline]
@@ -17,18 +17,24 @@ fn zlib_decompress(out: &mut [u8], data: &[u8]) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub struct Deserializer<T> {
-    pub(crate) options: SerializerOptions,
+/// A deserializer for dynamic ObjectProperty [`Value`]s.
+pub struct Deserializer<D> {
+    /// The serializer configuration in use.
+    pub options: SerializerOptions,
     pub(crate) types: Arc<TypeList>,
-    _t: PhantomData<T>,
+    pub(crate) diagnostics: Option<D>,
 }
 
-impl<T> Deserializer<T> {
+impl<D> Deserializer<D> {
     /// Creates a new deserializer with its configuration.
     ///
     /// No data for deserialization has been loaded at this point.
     /// [`Deserializer::load_data`] should be called next.
-    pub fn new(options: SerializerOptions, types: Arc<TypeList>) -> anyhow::Result<Self> {
+    pub fn new(
+        options: SerializerOptions,
+        types: Arc<TypeList>,
+        diagnostics: D,
+    ) -> anyhow::Result<Self> {
         if options.shallow && options.skip_unknown_types {
             bail!("cannot skip unknown types in shallow mode");
         }
@@ -36,12 +42,12 @@ impl<T> Deserializer<T> {
         Ok(Self {
             types,
             options,
-            _t: PhantomData,
+            diagnostics: Some(diagnostics),
         })
     }
 }
 
-impl<T: TypeTag> Deserializer<T> {
+impl<D: Diagnostics> Deserializer<D> {
     fn decompress_data(scratch: &mut Vec<u8>, mut data: &[u8]) -> anyhow::Result<()> {
         let size = data.read_u32::<LE>()? as usize;
 
@@ -90,8 +96,17 @@ impl<T: TypeTag> Deserializer<T> {
     }
 
     /// Deserializes an object [`Value`] from the given data.
-    pub fn deserialize(&mut self, scratch: &mut Vec<u8>, data: &[u8]) -> anyhow::Result<Value> {
+    pub fn deserialize<T: TypeTag>(
+        &mut self,
+        scratch: &mut Vec<u8>,
+        data: &[u8],
+    ) -> anyhow::Result<Value> {
         let mut reader = self.configure(scratch, data)?;
-        object::deserialize(self, &mut reader)
+        let mut diagnostics = self.diagnostics.take().unwrap();
+
+        let res = object::deserialize::<_, T>(self, &mut reader, &mut diagnostics);
+        self.diagnostics = Some(diagnostics);
+
+        res
     }
 }

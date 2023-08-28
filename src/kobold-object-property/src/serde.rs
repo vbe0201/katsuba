@@ -11,6 +11,9 @@ pub use de::*;
 
 mod enum_variant;
 
+mod diagnostic;
+pub use diagnostic::*;
+
 mod object;
 
 mod property;

@@ -4,8 +4,8 @@ use kobold_types::Property;
 use super::{simple_data, Deserializer, SerializerFlags};
 use crate::Value;
 
-pub fn deserialize<T>(
-    de: &Deserializer<T>,
+pub fn deserialize<D>(
+    de: &Deserializer<D>,
     property: &Property,
     reader: &mut BitReader<'_>,
 ) -> anyhow::Result<Value> {

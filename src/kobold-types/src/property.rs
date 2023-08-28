@@ -42,7 +42,7 @@ bitflags! {
 }
 
 /// A property that represents a member of a class.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct Property {
     /// The name of the property.
     #[serde(skip)]

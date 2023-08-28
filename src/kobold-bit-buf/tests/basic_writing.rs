@@ -16,10 +16,15 @@ fn write_length_prefix() {
     let mut writer = BitWriter::new();
 
     let len = writer.mark_len();
-    writer.u32(0xDEADBEEF);
+    writer.write_bits(0xDEADBEEF, 31);
     writer.commit_len(len);
+    writer.bool(true);
+    writer.flush_bits();
 
-    assert_eq!(writer.view(), &[0x40, 0x00, 0x00, 0x00, 0xEF, 0xBE, 0xAD, 0xDE]);
+    assert_eq!(
+        writer.view(),
+        &[0x3F, 0x00, 0x00, 0x00, 0xEF, 0xBE, 0xAD, 0xDE]
+    );
 }
 
 #[test]

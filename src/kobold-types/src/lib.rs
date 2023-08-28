@@ -67,7 +67,7 @@ impl<'de> Deserialize<'de> for TypeList {
 }
 
 /// An individual type definition inside the list.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct TypeDef {
     /// The type name.
     #[serde(default)]

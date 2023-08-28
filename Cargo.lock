@@ -260,6 +260,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "kobold-object-property",
+ "kobold-types",
  "kobold-wad",
  "tikv-jemallocator",
 ]
