@@ -24,7 +24,6 @@ pub fn process<D: serde::Diagnostics>(
         de.serde_parts.options.shallow = false;
         de.serde_parts.options.flags |= serde::SerializerFlags::STATEFUL_FLAGS;
 
-        // SAFETY: Checking `.get(0..4)` ensures we have at least 4 bytes.
         data = data.get(4..).unwrap();
     }
 

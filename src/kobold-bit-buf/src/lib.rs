@@ -28,4 +28,6 @@ mod reader;
 pub use reader::BitReader;
 
 mod writer;
-pub use writer::{BitWriter, LengthMarker};
+pub use writer::BitWriter;
+
+pub mod utils;

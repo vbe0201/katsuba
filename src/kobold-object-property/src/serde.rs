@@ -23,6 +23,8 @@ mod simple_data;
 mod type_tag;
 pub use type_tag::*;
 
+mod utils;
+
 bitflags! {
     /// Configuration bits to customize serialization behavior.
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]

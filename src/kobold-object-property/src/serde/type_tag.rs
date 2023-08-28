@@ -1,6 +1,8 @@
 use kobold_bit_buf::BitReader;
 use kobold_types::{TypeDef, TypeList};
 
+use super::utils;
+
 /// A type tag which defines the encoding of an object
 /// identity scheme.
 pub trait TypeTag: Sized {
@@ -20,7 +22,7 @@ impl TypeTag for PropertyClass {
         reader: &mut BitReader<'_>,
         types: &'a TypeList,
     ) -> anyhow::Result<Option<&'a TypeDef>> {
-        let hash = reader.u32();
+        let hash = utils::read_bits(reader, u32::BITS)? as u32;
         find_class_def(types, hash)
     }
 }

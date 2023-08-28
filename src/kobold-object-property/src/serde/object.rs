@@ -6,7 +6,7 @@ use kobold_types::{PropertyFlags, TypeDef};
 use kobold_utils::align::align_up;
 use smartstring::alias::String;
 
-use super::{property, simple_data, DeserializerParts, Diagnostics, SerializerFlags, TypeTag};
+use super::{property, utils, DeserializerParts, Diagnostics, SerializerFlags, TypeTag};
 use crate::{value::Object, Value};
 
 pub fn deserialize<D: Diagnostics, T: TypeTag>(
@@ -15,7 +15,7 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
     diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
     de.with_recursion_limit(|de| {
-        reader.invalidate_and_realign_ptr();
+        reader.realign_to_byte();
 
         let types = de.types.clone();
         let res = match T::identity(reader, &types) {
@@ -23,7 +23,7 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
             Ok(Some(type_def)) => {
                 diagnostics.object(Some(type_def));
 
-                let object_size = read_bit_size(de, reader) as usize;
+                let object_size = read_bit_size(de, reader)? as usize;
                 deserialize_properties::<_, T>(de, object_size, type_def, reader, diagnostics)?
             }
 
@@ -33,12 +33,12 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
             // If no type definition exists but we're allowed to skip it,
             // consume the bits the object is supposed to occupy.
             Err(_) if de.options.skip_unknown_types => {
-                let object_size = read_bit_size(de, reader) as usize;
+                let object_size = read_bit_size(de, reader)? as usize;
 
                 // When skipping an object at any position, it means that
                 // we either start with a new aligned object or reach EOF.
                 // In either case, we have to consume whole bytes anyway.
-                let raw = reader.read_bytes(align_up(object_size, u8::BITS as _) >> 3);
+                let raw = reader.read_bytes(align_up(object_size, u8::BITS as _) >> 3)?;
 
                 // SAFETY: Mutable `de` reference ensures exclusivity in
                 // accessing the `diagnostics` object until we put it back.
@@ -102,7 +102,7 @@ fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
         diagnostics.property(property);
 
         if property.flags.contains(PropertyFlags::DELTA_ENCODE)
-            && !simple_data::bool(reader)
+            && !utils::read_bool(reader)?
             && de
                 .options
                 .flags
@@ -134,10 +134,10 @@ fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
         // Back up the current buffer length and read the property size.
         // This will also count padding bits to byte boundaries.
         let previous_buf_len = reader.remaining_bits();
-        let property_size = reader.u32() as usize;
+        let property_size = utils::read_bits(reader, u32::BITS)? as usize;
 
         // Read the property's hash and find the object in type defs.
-        let property_hash = reader.u32();
+        let property_hash = utils::read_bits(reader, u32::BITS)? as u32;
         let property = type_def
             .properties
             .iter()
@@ -160,7 +160,7 @@ fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
         object_size = object_size
             .checked_sub(property_size)
             .ok_or_else(|| anyhow!("property size exceeds object size"))?;
-        reader.invalidate_and_realign_ptr();
+        reader.realign_to_byte();
 
         diagnostics.property_finished(&value);
 
@@ -172,8 +172,11 @@ fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
 }
 
 #[inline]
-pub(crate) fn read_bit_size<D>(de: &DeserializerParts<D>, reader: &mut BitReader<'_>) -> u32 {
+pub(crate) fn read_bit_size<D>(
+    de: &DeserializerParts<D>,
+    reader: &mut BitReader<'_>,
+) -> anyhow::Result<u32> {
     (!de.options.shallow)
-        .then(|| reader.u32() - u32::BITS)
-        .unwrap_or(0)
+        .then(|| Ok(utils::read_bits(reader, u32::BITS)? as u32 - u32::BITS))
+        .unwrap_or(Ok(0))
 }

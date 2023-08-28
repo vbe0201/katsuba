@@ -3,100 +3,107 @@ use phf::phf_map;
 
 use crate::value::*;
 
-use super::{DeserializerParts, SerializerFlags, SerializerOptions};
+use super::{utils, DeserializerParts, SerializerOptions};
 
-type ReadCallback = fn(&SerializerOptions, &mut BitReader<'_>) -> Value;
+type ReadCallback = fn(&mut BitReader<'_>, &SerializerOptions) -> anyhow::Result<Value>;
 
 static DESERIALIZER_LUT: phf::Map<&'static str, (bool, ReadCallback)> = phf_map! {
     // Primitive C++ types
-    "bool" => (true, |_, r| Value::Bool(bool(r))),
-    "char" => (false, |_, r| Value::Signed(r.i8() as _)),
-    "unsigned char" => (false, |_, r| Value::Unsigned(r.u8() as _)),
-    "short" => (false, |_, r| Value::Signed(r.i16() as _)),
-    "unsigned short" => (false,|_, r| Value::Unsigned(r.u16() as _)),
-    "wchar_t" => (false,|_, r| Value::Unsigned(r.u16() as _)),
-    "int" => (false,|_, r| Value::Signed(r.i32() as _)),
-    "unsigned int" => (false,|_, r| Value::Unsigned(r.u32() as _)),
-    "long" => (false, |_, r| Value::Signed(r.i32() as _)),
-    "unsigned long" => (false, |_, r| Value::Unsigned(r.u32() as _)),
-    "float" => (false, |_, r| Value::Float(r.f32() as _)),
-    "double" => (false, |_, r| Value::Float(r.f64())),
-    "unsigned __int64" => (false, |_, r| Value::Unsigned(r.u64())),
-    "gid" => (false, |_, r| Value::Unsigned(r.u64())),
-    "union gid" => (false, |_, r| Value::Unsigned(r.u64())),
+    "bool" => (true, |r, _| utils::read_bool(r).map(Value::Bool)),
+    "char" => (false, |r, _| utils::read_signed_bits(r, i8::BITS).map(Value::Signed)),
+    "unsigned char" => (false, |r, _| utils::read_bits(r, u8::BITS).map(Value::Unsigned)),
+    "short" => (false, |r, _| utils::read_signed_bits(r, i16::BITS).map(Value::Signed)),
+    "unsigned short" => (false, |r, _| utils::read_bits(r, u16::BITS).map(Value::Unsigned)),
+    "wchar_t" => (false, |r, _| utils::read_bits(r, u16::BITS).map(Value::Unsigned)),
+    "int" => (false, |r, _| utils::read_signed_bits(r, i32::BITS).map(Value::Signed)),
+    "unsigned int" => (false, |r, _| utils::read_bits(r, u32::BITS).map(Value::Unsigned)),
+    "long" => (false, |r, _| utils::read_signed_bits(r, i32::BITS).map(Value::Signed)),
+    "unsigned long" => (false, |r, _| utils::read_bits(r, u32::BITS).map(Value::Unsigned)),
+    "float" => (false, |r, _| utils::read_bits(r, u32::BITS).map(|v| Value::Float(f32::from_bits(v as _) as f64))),
+    "double" => (false, |r, _| utils::read_u64(r).map(|v| Value::Float(f64::from_bits(v)))),
+    "unsigned __int64" => (false, |r, _| utils::read_u64(r).map(Value::Unsigned)),
+    "gid" => (false, |r, _| utils::read_u64(r).map(Value::Unsigned)),
+    "union gid" => (false, |r, _| utils::read_u64(r).map(Value::Unsigned)),
 
     // Bit integers
-    "bi2" => (true, |_, r| Value::Signed(signed_bits(r, 2))),
-    "bui2" =>(true,  |_, r| Value::Unsigned(bits(r, 2))),
-    "bi3" => (true, |_, r| Value::Signed(signed_bits(r, 3))),
-    "bui3" =>(true,  |_, r| Value::Unsigned(bits(r, 3))),
-    "bi4" => (true, |_, r| Value::Signed(signed_bits(r, 4))),
-    "bui4" =>(true,  |_, r| Value::Unsigned(bits(r, 4))),
-    "bi5" => (true, |_, r| Value::Signed(signed_bits(r, 5))),
-    "bui5" =>(true,  |_, r| Value::Unsigned(bits(r, 5))),
-    "bi6" => (true, |_, r| Value::Signed(signed_bits(r, 6))),
-    "bui6" =>(true,  |_, r| Value::Unsigned(bits(r, 6))),
-    "bi7" => (true, |_, r| Value::Signed(signed_bits(r, 7))),
-    "bui7" =>(true,  |_, r| Value::Unsigned(bits(r, 7))),
-    "s24" => (true, |_, r| Value::Signed(signed_bits(r, 24))),
-    "u24" => (true, |_, r| Value::Unsigned(bits(r, 24))),
+    "bi2" => (true, |r, _| utils::read_signed_bits(r, 2).map(Value::Signed)),
+    "bui2" => (true, |r, _| utils::read_bits(r, 2).map(Value::Unsigned)),
+    "bi3" => (true, |r, _| utils::read_signed_bits(r, 3).map(Value::Signed)),
+    "bui3" => (true, |r, _| utils::read_bits(r, 3).map(Value::Unsigned)),
+    "bi4" => (true, |r, _| utils::read_signed_bits(r, 4).map(Value::Signed)),
+    "bui4" => (true, |r, _| utils::read_bits(r, 4).map(Value::Unsigned)),
+    "bi5" => (true, |r, _| utils::read_signed_bits(r, 5).map(Value::Signed)),
+    "bui5" => (true, |r, _| utils::read_bits(r, 5).map(Value::Unsigned)),
+    "bi6" => (true, |r, _| utils::read_signed_bits(r, 6).map(Value::Signed)),
+    "bui6" => (true, |r, _| utils::read_bits(r, 6).map(Value::Unsigned)),
+    "bi7" => (true, |r, _| utils::read_signed_bits(r, 7).map(Value::Signed)),
+    "bui7" => (true, |r, _| utils::read_bits(r, 7).map(Value::Unsigned)),
+    "s24" => (true, |r, _| utils::read_signed_bits(r, 24).map(Value::Signed)),
+    "u24" => (true, |r, _| utils::read_bits(r, 24).map(Value::Unsigned)),
 
     // Strings
-    "std::string" => (false, |opts, r| Value::String(deserialize_str(opts, r).to_owned())),
-    "std::wstring" =>(false,  |opts, r| Value::WString(deserialize_wstr(opts, r))),
+    "std::string" => (false, |r, opts| utils::read_string(r, opts).map(|v| Value::String(v.to_owned()))),
+    "std::wstring" => (false, |r, opts| utils::read_wstring(r, opts).map(Value::WString)),
 
     // Miscellaneous leaf types that are not PropertyClasses
-    "class Color" => (false, |_, r| Value::Color(Color {
-        b: r.u8(),
-        g: r.u8(),
-        r: r.u8(),
-        a: r.u8(),
-    })),
-    "class Vector3D" => (false, |_, r| Value::Vec3(Vec3 {
-        x: r.f32(),
-        y: r.f32(),
-        z: r.f32(),
-    })),
-    "class Quaternion" => (false, |_, r| Value::Quat(Quaternion {
-        x: r.f32(),
-        y: r.f32(),
-        z: r.f32(),
-        w: r.f32(),
-    })),
-    "class Euler" => (false, |_, r| Value::Euler(Euler {
-        pitch: r.f32(),
-        roll: r.f32(),
-        yaw: r.f32(),
-    })),
-    "class Matrix3x3" => (false, |_, r| Value::Mat3x3(Box::new(Matrix {
-        i: [r.f32(), r.f32(), r.f32()],
-        j: [r.f32(), r.f32(), r.f32()],
-        k: [r.f32(), r.f32(), r.f32()],
-    }))),
-    "class Size<int>" =>(false, |_, r| Value::Size {
-        wh: Box::new((Value::Signed(r.i32() as _), Value::Signed(r.i32() as _))),
+    "class Color" => (false, |r, _| utils::read_color(r).map(Value::Color)),
+    "class Vector3D" => (false, |r, _| utils::read_vec3(r).map(Value::Vec3)),
+    "class Quaternion" => (false, |r, _| utils::read_quat(r).map(Value::Quat)),
+    "class Euler" => (false, |r, _| utils::read_euler(r).map(Value::Euler)),
+    "class Matrix3x3" => (false, |r, _| utils::read_matrix(r).map(|v| Value::Mat3x3(Box::new(v)))),
+    "class Size<int>" => (false, |r, _| {
+        let width = utils::read_signed_bits(r, i32::BITS)?;
+        let height = utils::read_signed_bits(r, i32::BITS)?;
+
+        Ok(Value::Size {
+            wh: Box::new((Value::Signed(width), Value::Signed(height)))
+        })
     }),
-    "class Point<int>" => (false, |_, r| Value::Point {
-        xy: Box::new((Value::Signed(r.i32() as _), Value::Signed(r.i32() as _))),
+    "class Point<int>" => (false, |r, _| {
+        let x = utils::read_signed_bits(r, i32::BITS)?;
+        let y = utils::read_signed_bits(r, i32::BITS)?;
+
+        Ok(Value::Size {
+            wh: Box::new((Value::Signed(x), Value::Signed(y)))
+        })
     }),
-    "class Point<float>" => (false, |_, r| Value::Point {
-        xy: Box::new((Value::Float(r.f32() as _), Value::Float(r.f32() as _))),
+    "class Point<float>" => (false, |r, _| {
+        let x = f32::from_bits(utils::read_bits(r, u32::BITS)? as _);
+        let y = f32::from_bits(utils::read_bits(r, u32::BITS)? as _);
+
+        Ok(Value::Size {
+            wh: Box::new((Value::Float(x as _), Value::Float(y as _)))
+        })
     }),
-    "class Rect<int>" => (false, |_, r| Value::Rect {
-        inner: Box::new((
-            Value::Signed(r.i32() as _),
-            Value::Signed(r.i32() as _),
-            Value::Signed(r.i32() as _),
-            Value::Signed(r.i32() as _),
-        )),
+    "class Rect<int>" => (false, |r, _| {
+        let left = utils::read_signed_bits(r, i32::BITS)?;
+        let top = utils::read_signed_bits(r, i32::BITS)?;
+        let right = utils::read_signed_bits(r, i32::BITS)?;
+        let bottom = utils::read_signed_bits(r, i32::BITS)?;
+
+        Ok(Value::Rect {
+            inner: Box::new((
+                Value::Signed(left),
+                Value::Signed(top),
+                Value::Signed(right),
+                Value::Signed(bottom),
+            )),
+        })
     }),
-    "class Rect<float>" => (false, |_, r| Value::Rect {
-        inner: Box::new((
-            Value::Float(r.f32() as _),
-            Value::Float(r.f32() as _),
-            Value::Float(r.f32() as _),
-            Value::Float(r.f32() as _),
-        )),
+    "class Rect<float>" => (false, |r, _| {
+        let left = f32::from_bits(utils::read_signed_bits(r, u32::BITS)? as _);
+        let top = f32::from_bits(utils::read_signed_bits(r, u32::BITS)? as _);
+        let right = f32::from_bits(utils::read_signed_bits(r, u32::BITS)? as _);
+        let bottom = f32::from_bits(utils::read_signed_bits(r, u32::BITS)? as _);
+
+        Ok(Value::Rect {
+            inner: Box::new((
+                Value::Float(left as _),
+                Value::Float(top as _),
+                Value::Float(right as _),
+                Value::Float(bottom as _),
+            )),
+        })
     }),
 };
 
@@ -104,98 +111,12 @@ pub fn deserialize<D>(
     de: &DeserializerParts<D>,
     ty: &str,
     reader: &mut BitReader<'_>,
-) -> Option<Value> {
+) -> Option<anyhow::Result<Value>> {
     DESERIALIZER_LUT.get(ty).map(|(bits, f)| {
         if de.options.shallow && !bits {
-            reader.invalidate_and_realign_ptr();
+            reader.realign_to_byte();
         }
 
-        f(&de.options, reader)
+        f(reader, &de.options)
     })
-}
-
-macro_rules! impl_read_len {
-    ($($de:ident() = $read:ident()),* $(,)*) => {
-        $(
-            #[inline]
-            pub fn $de(options: &SerializerOptions, reader: &mut BitReader<'_>) -> usize {
-                if options.flags.contains(SerializerFlags::COMPACT_LENGTH_PREFIXES) {
-                    read_compact_length_prefix(reader)
-                } else {
-                    reader.invalidate_and_realign_ptr();
-                    reader.$read() as usize
-                }
-            }
-        )*
-    };
-}
-
-#[inline]
-pub fn bool(reader: &mut BitReader<'_>) -> bool {
-    if reader.buffered_bits() == 0 {
-        reader.refill_bits();
-    }
-
-    reader.bool()
-}
-
-#[inline]
-pub fn bits(reader: &mut BitReader<'_>, nbits: u32) -> u64 {
-    if reader.buffered_bits() < nbits {
-        reader.refill_bits();
-    }
-
-    reader.read_bits(nbits)
-}
-
-#[inline]
-pub fn signed_bits(reader: &mut BitReader<'_>, nbits: u32) -> i64 {
-    if reader.buffered_bits() < nbits {
-        reader.refill_bits();
-    }
-
-    reader.read_signed_bits(nbits)
-}
-
-#[inline]
-fn read_compact_length_prefix(reader: &mut BitReader<'_>) -> usize {
-    if reader.buffered_bits() < u32::BITS {
-        reader.refill_bits();
-    }
-
-    let res = if reader.bool() {
-        reader.read_bits(u32::BITS - 1) as usize
-    } else {
-        reader.read_bits(u8::BITS - 1) as usize
-    };
-
-    reader.invalidate_and_realign_ptr();
-
-    res
-}
-
-impl_read_len! {
-    // Used for strings, where the length is written as `u16`.
-    read_str_len() = u16(),
-
-    // Used for sequences, where the length is written as `u32`.
-    read_seq_len() = u32(),
-}
-
-#[inline]
-pub fn deserialize_str<'a>(opts: &SerializerOptions, reader: &'a mut BitReader<'_>) -> &'a [u8] {
-    let len = read_str_len(opts, reader);
-    reader.read_bytes(len)
-}
-
-#[inline]
-pub fn deserialize_wstr(opts: &SerializerOptions, reader: &mut BitReader<'_>) -> Vec<u16> {
-    let len = read_str_len(opts, reader);
-
-    let mut res = Vec::with_capacity(len);
-    for _ in 0..len {
-        res.push(reader.u16());
-    }
-
-    res
 }

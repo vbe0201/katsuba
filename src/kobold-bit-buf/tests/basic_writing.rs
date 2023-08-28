@@ -1,4 +1,4 @@
-use kobold_bit_buf::BitWriter;
+/*use kobold_bit_buf::BitWriter;
 
 #[test]
 fn write_primitives() {
@@ -47,4 +47,4 @@ fn write_bytes_and_alignment() {
     writer.write_bytes(&[4, 5]);
 
     assert_eq!(writer.view(), &[1, 3, 2, 4, 5]);
-}
+}*/

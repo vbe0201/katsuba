@@ -1,7 +1,10 @@
 use kobold_bit_buf::BitReader;
 use kobold_types::Property;
 
-use super::{enum_variant, object, simple_data, DeserializerParts, Diagnostics, TypeTag};
+use super::{
+    enum_variant, object, simple_data, utils, DeserializerParts, Diagnostics, SerializerFlags,
+    TypeTag,
+};
 use crate::value::{List, Value};
 
 pub fn deserialize<D: Diagnostics, T: TypeTag>(
@@ -29,7 +32,7 @@ fn deserialize_value<D: Diagnostics, T: TypeTag>(
         // Try to interpret the value as simple data and if that fails,
         // deserialize a new object as a fallback strategy.
         match simple_data::deserialize(de, &property.r#type, reader) {
-            Some(v) => Ok(v),
+            Some(v) => v,
             None => object::deserialize::<_, T>(de, reader, diagnostics),
         }
     }
@@ -41,7 +44,12 @@ fn deserialize_list<D: Diagnostics, T: TypeTag>(
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
-    let len = simple_data::read_seq_len(&de.options, reader);
+    let len = utils::read_container_length(
+        reader,
+        de.options
+            .flags
+            .contains(SerializerFlags::COMPACT_LENGTH_PREFIXES),
+    )?;
     let mut inner = Vec::with_capacity(len);
 
     de.with_recursion_limit(|de| {
