@@ -1,11 +1,11 @@
 use kobold_bit_buf::BitReader;
 use kobold_types::Property;
 
-use super::{enum_variant, object, simple_data, Deserializer, Diagnostics, TypeTag};
+use super::{enum_variant, object, simple_data, DeserializerParts, Diagnostics, TypeTag};
 use crate::value::{List, Value};
 
 pub fn deserialize<D: Diagnostics, T: TypeTag>(
-    de: &mut Deserializer<D>,
+    de: &mut DeserializerParts<D>,
     property: &Property,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
@@ -18,7 +18,7 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
 }
 
 fn deserialize_value<D: Diagnostics, T: TypeTag>(
-    de: &mut Deserializer<D>,
+    de: &mut DeserializerParts<D>,
     property: &Property,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
@@ -36,7 +36,7 @@ fn deserialize_value<D: Diagnostics, T: TypeTag>(
 }
 
 fn deserialize_list<D: Diagnostics, T: TypeTag>(
-    de: &mut Deserializer<D>,
+    de: &mut DeserializerParts<D>,
     property: &Property,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
@@ -44,12 +44,18 @@ fn deserialize_list<D: Diagnostics, T: TypeTag>(
     let len = simple_data::read_seq_len(&de.options, reader);
     let mut inner = Vec::with_capacity(len);
 
-    check_recursion! {
-        let de = de;
+    de.with_recursion_limit(|de| {
         for _ in 0..len {
-            inner.push(deserialize_value::<_, T>(de, property, reader, diagnostics)?);
+            inner.push(deserialize_value::<_, T>(
+                de,
+                property,
+                reader,
+                diagnostics,
+            )?);
         }
-    }
+
+        Ok(())
+    })?;
 
     Ok(Value::List(List { inner }))
 }

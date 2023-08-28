@@ -6,17 +6,15 @@ use kobold_types::{PropertyFlags, TypeDef};
 use kobold_utils::align::align_up;
 use smartstring::alias::String;
 
-use super::{property, simple_data, Deserializer, Diagnostics, SerializerFlags, TypeTag};
+use super::{property, simple_data, DeserializerParts, Diagnostics, SerializerFlags, TypeTag};
 use crate::{value::Object, Value};
 
 pub fn deserialize<D: Diagnostics, T: TypeTag>(
-    de: &mut Deserializer<D>,
+    de: &mut DeserializerParts<D>,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
-    check_recursion! {
-        let de = de;
-
+    de.with_recursion_limit(|de| {
         reader.invalidate_and_realign_ptr();
 
         let types = de.types.clone();
@@ -53,13 +51,13 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
             // to skip the object, return an error.
             Err(e) => return Err(e),
         };
-    }
 
-    Ok(res)
+        Ok(res)
+    })
 }
 
 fn deserialize_properties<D: Diagnostics, T: TypeTag>(
-    de: &mut Deserializer<D>,
+    de: &mut DeserializerParts<D>,
     object_size: usize,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
@@ -89,7 +87,7 @@ fn deserialize_properties<D: Diagnostics, T: TypeTag>(
 #[inline]
 fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
     obj: &mut BTreeMap<String, Value>,
-    de: &mut Deserializer<D>,
+    de: &mut DeserializerParts<D>,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
@@ -125,7 +123,7 @@ fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
 #[inline]
 fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
     obj: &mut BTreeMap<String, Value>,
-    de: &mut Deserializer<D>,
+    de: &mut DeserializerParts<D>,
     mut object_size: usize,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
@@ -174,7 +172,7 @@ fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
 }
 
 #[inline]
-pub(crate) fn read_bit_size<D>(de: &Deserializer<D>, reader: &mut BitReader<'_>) -> u32 {
+pub(crate) fn read_bit_size<D>(de: &DeserializerParts<D>, reader: &mut BitReader<'_>) -> u32 {
     (!de.options.shallow)
         .then(|| reader.u32() - u32::BITS)
         .unwrap_or(0)

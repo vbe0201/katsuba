@@ -3,7 +3,7 @@ use phf::phf_map;
 
 use crate::value::*;
 
-use super::{Deserializer, SerializerFlags, SerializerOptions};
+use super::{DeserializerParts, SerializerFlags, SerializerOptions};
 
 type ReadCallback = fn(&SerializerOptions, &mut BitReader<'_>) -> Value;
 
@@ -100,7 +100,11 @@ static DESERIALIZER_LUT: phf::Map<&'static str, (bool, ReadCallback)> = phf_map!
     }),
 };
 
-pub fn deserialize<D>(de: &Deserializer<D>, ty: &str, reader: &mut BitReader<'_>) -> Option<Value> {
+pub fn deserialize<D>(
+    de: &DeserializerParts<D>,
+    ty: &str,
+    reader: &mut BitReader<'_>,
+) -> Option<Value> {
     DESERIALIZER_LUT.get(ty).map(|(bits, f)| {
         if de.options.shallow && !bits {
             reader.invalidate_and_realign_ptr();

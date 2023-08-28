@@ -21,8 +21,8 @@ pub fn process<D: serde::Diagnostics>(
     // If the data starts with the `BINd` prefix, it is a serialized file
     // in the local game data. These always use a fixed base configuration.
     if data.get(0..4) == Some(b"BINd") {
-        de.options.shallow = false;
-        de.options.flags |= serde::SerializerFlags::STATEFUL_FLAGS;
+        de.serde_parts.options.shallow = false;
+        de.serde_parts.options.flags |= serde::SerializerFlags::STATEFUL_FLAGS;
 
         // SAFETY: Checking `.get(0..4)` ensures we have at least 4 bytes.
         data = data.get(4..).unwrap();
@@ -30,8 +30,7 @@ pub fn process<D: serde::Diagnostics>(
 
     // Deserialize the type from the given data.
     // TODO: Different class types?
-    let mut scratch = Vec::new();
-    let value = de.deserialize::<serde::PropertyClass>(&mut scratch, data)?;
+    let value = de.deserialize::<serde::PropertyClass>(data)?;
 
     // Format the resulting object to stdout.
     {

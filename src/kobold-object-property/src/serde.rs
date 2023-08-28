@@ -3,9 +3,6 @@
 use bitflags::bitflags;
 use kobold_types::PropertyFlags;
 
-#[macro_use]
-mod macros;
-
 mod de;
 pub use de::*;
 

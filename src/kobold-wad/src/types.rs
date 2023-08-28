@@ -1,6 +1,5 @@
 //! Common types and structures in the KIWAD format.
 
-use anyhow::bail;
 use binrw::{
     binrw,
     io::{Read, Seek, SeekFrom, Write},
@@ -106,11 +105,13 @@ impl Archive {
     pub fn verify_crcs(&self, raw_archive: &[u8]) -> anyhow::Result<()> {
         self.files.iter().try_for_each(|f| {
             let hash = crc::hash(f.extract(raw_archive));
-            if hash == f.crc {
-                Ok(())
-            } else {
-                bail!("CRC mismatch - expected {hash}, got {}", f.crc)
-            }
+            anyhow::ensure!(
+                hash == f.crc,
+                "CRC mismatch - expected {hash}, got {}",
+                f.crc
+            );
+
+            Ok(())
         })
     }
 }

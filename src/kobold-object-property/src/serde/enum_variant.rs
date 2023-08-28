@@ -1,11 +1,11 @@
 use kobold_bit_buf::BitReader;
 use kobold_types::Property;
 
-use super::{simple_data, Deserializer, SerializerFlags};
+use super::{simple_data, DeserializerParts, SerializerFlags};
 use crate::Value;
 
 pub fn deserialize<D>(
-    de: &Deserializer<D>,
+    de: &DeserializerParts<D>,
     property: &Property,
     reader: &mut BitReader<'_>,
 ) -> anyhow::Result<Value> {
