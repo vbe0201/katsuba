@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 
+mod cs;
 mod op;
 mod wad;
 
@@ -23,6 +24,8 @@ enum Command {
     Wad(wad::Wad),
     /// Subcommand for working with ObjectProperty binary state.
     Op(op::ObjectProperty),
+    /// Subcommand for working with ClientSig binary state.
+    Cs(cs::ClientSig),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -30,5 +33,6 @@ fn main() -> anyhow::Result<()> {
     match cli.command {
         Command::Wad(wad) => wad::process(wad),
         Command::Op(op) => op::process(op),
+        Command::Cs(cs) => cs::process(cs),
     }
 }

@@ -8,7 +8,7 @@ mod extract;
 #[derive(Debug, Args)]
 pub struct Wad {
     #[clap(subcommand)]
-    pub command: WadCommand,
+    command: WadCommand,
 }
 
 #[derive(Debug, Subcommand)]
