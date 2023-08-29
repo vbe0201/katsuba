@@ -1,11 +1,13 @@
 //! Common types and structures in the KIWAD format.
 
-use binrw::{
-    binrw,
-    io::{Read, Seek, SeekFrom, Write},
-    BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, VecArgs,
+use kobold_utils::{
+    anyhow,
+    binrw::{
+        self, binrw,
+        io::{Read, Seek, SeekFrom, Write},
+        BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, VecArgs,
+    },
 };
-use kobold_utils::anyhow;
 
 use crate::crc;
 

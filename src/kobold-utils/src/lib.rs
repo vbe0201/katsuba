@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 pub use anyhow;
+pub use binrw;
 pub use libdeflater;
 
 pub mod align;
