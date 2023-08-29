@@ -77,10 +77,14 @@ impl Archive {
         self.len() == 0
     }
 
-    /// Creates an iterator over all files and their relative paths
+    /// Gets a raw mapping of archive files from path to file metadata.
     /// in the archive.
-    pub fn files(&self) -> impl Iterator<Item = (&String, &wad_types::File)> {
-        self.journal().inner.iter()
+    ///
+    /// Note that the [`wad_types::File::name`] fields are empty strings,
+    /// use the map key for an entry to obtain this information.
+    #[inline]
+    pub fn files(&self) -> &BTreeMap<String, wad_types::File> {
+        &self.journal().inner
     }
 
     /// Gets the raw contents of an archived file by its string name.

@@ -45,6 +45,10 @@ pub struct File {
     name_len: u32,
 
     /// The name of the file in the archive.
+    ///
+    /// When accessing this by going through an archive's journal,
+    /// expect this string to be empty. Instead, use the map key
+    /// for this value.
     #[br(args(name_len as usize), parse_with = parse_file_name)]
     #[bw(write_with = write_file_name)]
     pub name: String,

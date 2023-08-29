@@ -10,7 +10,7 @@
 #![deny(rust_2018_idioms, rustdoc::broken_intra_doc_links)]
 #![forbid(unsafe_code)]
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{prelude::BASE64_STANDARD, Engine};
 use byteorder::{ReadBytesExt, LE};
 use kobold_utils::anyhow;
 use rsa::{
@@ -46,7 +46,7 @@ impl PrivateKey {
         let signing_key = SigningKey::<Sha1>::new(self.0);
 
         let signature = signing_key.sign_with_rng(&mut rand::thread_rng(), SECRET);
-        Ok(STANDARD.encode(signature.to_bytes()))
+        Ok(BASE64_STANDARD.encode(signature.to_bytes()))
     }
 
     /// Decrypts the contents of an encrypted `ClientSig.bin` file and returns
