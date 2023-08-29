@@ -1,6 +1,7 @@
 use std::{fs, io::BufReader, path::PathBuf};
 
 use kobold_types::TypeList;
+use kobold_utils::anyhow;
 
 pub fn merge_type_lists(mut paths: Vec<PathBuf>) -> anyhow::Result<TypeList> {
     anyhow::ensure!(

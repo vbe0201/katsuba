@@ -1,5 +1,7 @@
 use std::{mem::size_of, ptr};
 
+use kobold_utils::anyhow;
+
 // The maximum number of bits that can be buffered before comitting to the
 // output sink.
 //

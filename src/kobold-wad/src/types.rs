@@ -5,6 +5,7 @@ use binrw::{
     io::{Read, Seek, SeekFrom, Write},
     BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, VecArgs,
 };
+use kobold_utils::anyhow;
 
 use crate::crc;
 

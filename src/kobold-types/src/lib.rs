@@ -18,6 +18,7 @@
 
 use std::{collections::HashMap, io};
 
+use kobold_utils::anyhow;
 use serde::{Deserialize, Deserializer};
 use smartstring::alias::String;
 

@@ -12,6 +12,7 @@
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use byteorder::{ReadBytesExt, LE};
+use kobold_utils::anyhow;
 use rsa::{
     pkcs1::DecodeRsaPrivateKey,
     pkcs1v15::SigningKey,
@@ -34,10 +35,7 @@ impl PrivateKey {
     pub fn new(key: &str) -> anyhow::Result<Self> {
         RsaPrivateKey::from_pkcs1_pem(key)
             .map_err(Into::into)
-            .and_then(|mut key| {
-                key.precompute()?;
-                Ok(Self(key))
-            })
+            .map(Self)
     }
 
     /// Prepares an access key for invoking the `-CS` CLI flag in order to dump

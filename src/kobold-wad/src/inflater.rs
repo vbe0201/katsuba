@@ -1,11 +1,12 @@
+use kobold_utils::anyhow;
 use libdeflater::Decompressor;
 
 /// A zlib inflater for decompressing archive files.
-/// 
+///
 /// This maintains an internal scratch buffer whose allocation
 /// will be re-used for subsequent decompression on the same
 /// [`Inflater`] object.
-/// 
+///
 /// This however comes at the caveat that only one decompressed
 /// file can be borrowed from the archive at a given moment.
 pub struct Inflater {

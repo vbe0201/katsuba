@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use kobold_utils::anyhow;
 use kobold_wad::{Archive, Inflater};
 
 pub fn extract_all(archive: Archive, out: PathBuf) -> anyhow::Result<()> {

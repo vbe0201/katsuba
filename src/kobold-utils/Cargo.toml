@@ -7,3 +7,4 @@ license = "ISC"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0"

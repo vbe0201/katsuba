@@ -1,5 +1,6 @@
 use kobold_bit_buf::BitReader;
 use kobold_types::{TypeDef, TypeList};
+use kobold_utils::anyhow;
 
 use super::utils;
 

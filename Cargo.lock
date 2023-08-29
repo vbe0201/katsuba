@@ -347,11 +347,11 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 name = "kobold"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "clap",
  "kobold-client-sig",
  "kobold-object-property",
  "kobold-types",
+ "kobold-utils",
  "kobold-wad",
  "tikv-jemallocator",
 ]
@@ -360,16 +360,16 @@ dependencies = [
 name = "kobold-bit-buf"
 version = "0.1.0"
 dependencies = [
- "anyhow",
+ "kobold-utils",
 ]
 
 [[package]]
 name = "kobold-client-sig"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "base64",
  "byteorder",
+ "kobold-utils",
  "rand",
  "rsa",
  "sha1",
@@ -379,7 +379,6 @@ dependencies = [
 name = "kobold-object-property"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bitflags 2.3.1",
  "byteorder",
  "kobold-bit-buf",
@@ -394,7 +393,6 @@ dependencies = [
 name = "kobold-types"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bitflags 2.3.1",
  "kobold-utils",
  "serde",
@@ -405,14 +403,17 @@ dependencies = [
 [[package]]
 name = "kobold-utils"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
 
 [[package]]
 name = "kobold-wad"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "binrw",
  "crc32fast",
+ "kobold-utils",
  "libdeflater",
  "memmap2",
 ]

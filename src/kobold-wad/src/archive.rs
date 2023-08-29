@@ -5,6 +5,7 @@ use std::{
     path::Path,
 };
 
+use kobold_utils::anyhow;
 use memmap2::{Mmap, MmapOptions};
 
 use crate::types as wad_types;

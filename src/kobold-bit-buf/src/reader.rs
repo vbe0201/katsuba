@@ -1,5 +1,7 @@
 use std::{marker::PhantomData, ptr, slice};
 
+use kobold_utils::anyhow;
+
 // The maximum number of bits that can be stored in lookahead.
 //
 // We target to have an amount between 56 and 63 bits in the

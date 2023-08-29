@@ -8,9 +8,9 @@ edition = "2021"
 kobold-client-sig = { path = "../kobold-client-sig" }
 kobold-object-property = { path = "../kobold-object-property" }
 kobold-types = { path = "../kobold-types" }
+kobold-utils = { path = "../kobold-utils" }
 kobold-wad = { path = "../kobold-wad" }
 
-anyhow = "1.0"
 clap = { version = "4.3", features = ["derive"] }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]

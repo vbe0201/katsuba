@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::anyhow;
 use kobold_bit_buf::BitReader;
 use kobold_types::{PropertyFlags, TypeDef};
-use kobold_utils::align::align_up;
+use kobold_utils::{align::align_up, anyhow};
 use smartstring::alias::String;
 
 use super::{property, utils, DeserializerParts, Diagnostics, SerializerFlags, TypeTag};

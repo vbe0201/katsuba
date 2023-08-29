@@ -7,7 +7,8 @@ license = "ISC"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0"
+kobold-utils = { path = "../kobold-utils" }
+
 base64 = "0.21"
 byteorder = "1.4"
 rand = "0.8"

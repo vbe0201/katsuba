@@ -3,6 +3,7 @@ use std::{path::PathBuf, sync::Arc};
 use clap::{Args, Subcommand, ValueEnum};
 use kobold_object_property::serde;
 use kobold_types::PropertyFlags;
+use kobold_utils::anyhow;
 
 mod de;
 mod display;

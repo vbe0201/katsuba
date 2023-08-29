@@ -4,6 +4,7 @@ use anyhow::bail;
 use byteorder::{ReadBytesExt, LE};
 use kobold_bit_buf::BitReader;
 use kobold_types::TypeList;
+use kobold_utils::anyhow;
 use libdeflater::Decompressor;
 
 use super::{object, Diagnostics, SerializerFlags, SerializerOptions, TypeTag};

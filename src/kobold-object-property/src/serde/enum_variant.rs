@@ -1,5 +1,6 @@
 use kobold_bit_buf::BitReader;
 use kobold_types::Property;
+use kobold_utils::anyhow;
 
 use super::{utils, DeserializerParts, SerializerFlags};
 use crate::Value;

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use bitflags::bitflags;
-use kobold_utils::hash;
+use kobold_utils::{anyhow, hash};
 use serde::{de::Error, Deserialize, Deserializer};
 use smartstring::alias::String;
 

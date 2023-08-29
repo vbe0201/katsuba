@@ -2,6 +2,7 @@ use std::{env, fs, path::PathBuf};
 
 use clap::{Args, Subcommand};
 use kobold_client_sig::PrivateKey;
+use kobold_utils::anyhow;
 
 const PRIVATE_KEY_ENV: &str = "KOBOLD_CLIENTSIG_PRIVATE_KEY";
 

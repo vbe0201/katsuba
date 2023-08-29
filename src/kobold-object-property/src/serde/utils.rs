@@ -1,5 +1,6 @@
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use kobold_bit_buf::{utils::sign_extend, BitReader};
+use kobold_utils::anyhow;
 
 use super::{SerializerFlags, SerializerOptions};
 use crate::value::*;

@@ -5,6 +5,7 @@ use std::{
 };
 
 use kobold_object_property::serde;
+use kobold_utils::anyhow;
 
 use super::{format, ClassType};
 

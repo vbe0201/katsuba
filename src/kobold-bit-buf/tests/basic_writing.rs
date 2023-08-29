@@ -1,4 +1,5 @@
 use kobold_bit_buf::BitWriter;
+use kobold_utils::anyhow;
 
 #[test]
 fn write_primitives() -> anyhow::Result<()> {

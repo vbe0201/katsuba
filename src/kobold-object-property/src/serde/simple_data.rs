@@ -1,4 +1,5 @@
 use kobold_bit_buf::BitReader;
+use kobold_utils::anyhow;
 use phf::phf_map;
 
 use crate::value::*;
