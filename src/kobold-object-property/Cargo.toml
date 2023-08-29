@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 kobold-bit-buf = { path = "../kobold-bit-buf" }
 kobold-types = { path = "../kobold-types" }
-kobold-utils = { path = "../kobold-utils" }
+kobold-utils = { path = "../kobold-utils", features = ["libdeflater"] }
 
 bitflags = "2.3"
 byteorder = "1.4"

@@ -4,7 +4,9 @@
 #![forbid(unsafe_code)]
 
 pub use anyhow;
+#[cfg(feature = "binrw")]
 pub use binrw;
+#[cfg(feature = "libdeflater")]
 pub use libdeflater;
 
 pub mod align;
