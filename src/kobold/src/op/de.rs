@@ -1,11 +1,10 @@
 use std::{
-    fs,
     io::{self, Write},
     path::PathBuf,
 };
 
 use kobold_object_property::serde;
-use kobold_utils::anyhow;
+use kobold_utils::{anyhow, fs};
 
 use super::{format, ClassType};
 

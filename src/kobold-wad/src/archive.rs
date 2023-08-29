@@ -1,11 +1,6 @@
-use std::{
-    collections::BTreeMap,
-    fs::{self, File},
-    io, mem,
-    path::Path,
-};
+use std::{collections::BTreeMap, fs::File, io, mem, path::Path};
 
-use kobold_utils::anyhow;
+use kobold_utils::{anyhow, fs};
 use memmap2::{Mmap, MmapOptions};
 
 use crate::types as wad_types;
@@ -139,7 +134,7 @@ struct MemoryMappedArchive {
 impl MemoryMappedArchive {
     fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> anyhow::Result<Self> {
         // Attempt to open the file at the given path.
-        let file = File::open(path)?;
+        let file = fs::open_file(path)?;
         let mut this = Self {
             // SAFETY: We own the file and keep it around until the mapping
             // is closed; see comments in `MemoryMappedArchive` above.

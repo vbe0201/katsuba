@@ -1,8 +1,8 @@
-use std::{env, fs, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use clap::{Args, Subcommand};
 use kobold_client_sig::PrivateKey;
-use kobold_utils::anyhow;
+use kobold_utils::{anyhow, fs};
 
 const PRIVATE_KEY_ENV: &str = "KOBOLD_CLIENTSIG_PRIVATE_KEY";
 

@@ -10,4 +10,5 @@ pub use binrw;
 pub use libdeflater;
 
 pub mod align;
+pub mod fs;
 pub mod hash;
