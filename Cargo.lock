@@ -384,7 +384,6 @@ dependencies = [
  "kobold-bit-buf",
  "kobold-types",
  "kobold-utils",
- "libdeflater",
  "phf",
  "smartstring",
 ]
@@ -405,6 +404,7 @@ name = "kobold-utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "libdeflater",
 ]
 
 [[package]]
@@ -414,7 +414,6 @@ dependencies = [
  "binrw",
  "crc32fast",
  "kobold-utils",
- "libdeflater",
  "memmap2",
 ]
 

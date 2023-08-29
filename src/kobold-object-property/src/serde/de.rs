@@ -4,14 +4,13 @@ use anyhow::bail;
 use byteorder::{ReadBytesExt, LE};
 use kobold_bit_buf::BitReader;
 use kobold_types::TypeList;
-use kobold_utils::anyhow;
-use libdeflater::Decompressor;
+use kobold_utils::{anyhow, libdeflater::Decompressor};
 
 use super::{object, Diagnostics, SerializerFlags, SerializerOptions, TypeTag};
 use crate::Value;
 
 #[inline]
-fn decompress(
+fn zlib_decompress(
     inflater: &mut Decompressor,
     mut data: &[u8],
     out: &mut Vec<u8>,
@@ -43,7 +42,7 @@ impl ZlibParts {
     ) -> anyhow::Result<BitReader<'a>> {
         // If the data is manually compressed, uncompress into scratch.
         if opts.manual_compression {
-            decompress(&mut self.inflater, data, &mut self.scratch1)?;
+            zlib_decompress(&mut self.inflater, data, &mut self.scratch1)?;
             data = &self.scratch1;
         }
 
@@ -54,7 +53,7 @@ impl ZlibParts {
 
         // If the data is compressed, uncompress it into scratch.
         if opts.flags.contains(SerializerFlags::WITH_COMPRESSION) && data.read_u8()? != 0 {
-            decompress(&mut self.inflater, data, &mut self.scratch2)?;
+            zlib_decompress(&mut self.inflater, data, &mut self.scratch2)?;
             data = &self.scratch2;
         }
 

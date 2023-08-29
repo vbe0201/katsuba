@@ -13,6 +13,5 @@ kobold-utils = { path = "../kobold-utils" }
 
 bitflags = "2.3"
 byteorder = "1.4"
-libdeflater = { version = "0.14", features = ["freestanding"] }
 phf = { version = "0.11", features = ["macros"] }
 smartstring = "1.0"

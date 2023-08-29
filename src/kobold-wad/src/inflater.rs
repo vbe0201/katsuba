@@ -1,5 +1,4 @@
-use kobold_utils::anyhow;
-use libdeflater::Decompressor;
+use kobold_utils::{anyhow, libdeflater::Decompressor};
 
 /// A zlib inflater for decompressing archive files.
 ///

@@ -8,3 +8,4 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
+libdeflater = { version = "0.14", features = ["freestanding"] }
