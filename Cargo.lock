@@ -353,6 +353,7 @@ dependencies = [
  "clap",
  "kobold-bcd",
  "kobold-client-sig",
+ "kobold-nav",
  "kobold-object-property",
  "kobold-types",
  "kobold-utils",
@@ -388,6 +389,14 @@ dependencies = [
  "rand",
  "rsa",
  "sha1",
+]
+
+[[package]]
+name = "kobold-nav"
+version = "0.1.0"
+dependencies = [
+ "kobold-utils",
+ "serde",
 ]
 
 [[package]]

@@ -92,7 +92,6 @@ pub enum GeomParams {
 pub struct ProxyGeometry {
     #[br(temp)]
     #[bw(calc = name.len() as u32)]
-    #[serde(skip)]
     name_len: u32,
 
     /// The name of the shape.
@@ -111,7 +110,6 @@ pub struct ProxyGeometry {
 
     #[br(temp)]
     #[bw(calc = material.len() as u32)]
-    #[serde(skip)]
     material_len: u32,
 
     /// The material name for the shape.
@@ -144,12 +142,10 @@ impl ProxyGeometry {
 pub struct ProxyMesh {
     #[br(temp)]
     #[bw(calc = self.vertices.len() as u32)]
-    #[serde(skip)]
     vertex_count: u32,
 
     #[br(temp)]
     #[bw(calc = self.faces.len() as u32)]
-    #[serde(skip)]
     face_count: u32,
 
     /// A dynamic list of vertices in the mesh.
@@ -169,7 +165,6 @@ pub struct ProxyMesh {
 pub struct Collision {
     #[br(temp)]
     #[bw(calc = self.geometry.params_type())]
-    #[serde(skip)]
     geometry_type: u32,
 
     /// The category flags for the shape.
@@ -191,7 +186,6 @@ pub struct Collision {
 pub struct Bcd {
     #[br(temp)]
     #[bw(calc = self.collisions.len() as u32)]
-    #[serde(skip)]
     collision_count: u32,
 
     /// A list of all [`Collision`] objects in the file.

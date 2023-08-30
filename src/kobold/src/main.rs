@@ -3,6 +3,7 @@ use kobold_utils::anyhow;
 
 mod bcd;
 mod cs;
+mod nav;
 mod op;
 mod utils;
 mod wad;
@@ -27,6 +28,8 @@ enum Command {
     Bcd(bcd::Bcd),
     /// Subcommand for working with ClientSig binary state.
     Cs(cs::ClientSig),
+    /// Subcommand for working with Navigation Graphs.
+    Nav(nav::Nav),
     /// Subcommand for working with ObjectProperty binary state.
     Op(op::ObjectProperty),
     /// Subcommand for working with KIWAD archives.
@@ -38,6 +41,7 @@ fn main() -> anyhow::Result<()> {
     match cli.command {
         Command::Bcd(bcd) => bcd::process(bcd),
         Command::Cs(cs) => cs::process(cs),
+        Command::Nav(nav) => nav::process(nav),
         Command::Op(op) => op::process(op),
         Command::Wad(wad) => wad::process(wad),
     }

@@ -1,0 +1,11 @@
+[package]
+name = "kobold-nav"
+version = "0.1.0"
+authors = ["Valentin B. <valentin.be@protonmail.com>"]
+description = "Crate for working with zone navigation graphs"
+edition = "2021"
+
+[dependencies]
+kobold-utils = { path = "../kobold-utils", features = ["binrw"] }
+
+serde = "1"

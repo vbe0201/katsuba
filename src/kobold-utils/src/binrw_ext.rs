@@ -30,3 +30,27 @@ pub fn write_prefixed_string(name: &String, null: bool) -> BinResult<()> {
 
     Ok(())
 }
+
+/// Reads a list of strings, each length-prefixed with a `u32`.
+#[binrw::parser(reader, endian)]
+pub fn read_string_list(count: usize, null: bool) -> BinResult<Vec<String>> {
+    let mut out = Vec::with_capacity(count);
+    for _ in 0..count {
+        let prefix = <u32>::read_options(reader, endian, ())?;
+        out.push(read_prefixed_string(reader, endian, (prefix as _, null))?);
+    }
+
+    Ok(out)
+}
+
+/// Writes a list of strings, each length-prefixed with a `u32`.
+#[binrw::writer(writer, endian)]
+pub fn write_string_list(values: &Vec<String>, null: bool) -> BinResult<()> {
+    for value in values {
+        let len = value.len() as u32;
+        len.write_options(writer, endian, ())?;
+        write_prefixed_string(value, writer, endian, (null,))?;
+    }
+
+    Ok(())
+}

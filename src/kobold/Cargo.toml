@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 kobold-bcd = { path = "../kobold-bcd" }
 kobold-client-sig = { path = "../kobold-client-sig" }
+kobold-nav = { path = "../kobold-nav" }
 kobold-object-property = { path = "../kobold-object-property" }
 kobold-types = { path = "../kobold-types" }
 kobold-utils = { path = "../kobold-utils" }
