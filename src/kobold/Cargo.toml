@@ -5,6 +5,7 @@ authors = ["Valentin B. <valentin.be@protonmail.com>"]
 edition = "2021"
 
 [dependencies]
+kobold-bcd = { path = "../kobold-bcd" }
 kobold-client-sig = { path = "../kobold-client-sig" }
 kobold-object-property = { path = "../kobold-object-property" }
 kobold-types = { path = "../kobold-types" }
@@ -12,6 +13,8 @@ kobold-utils = { path = "../kobold-utils" }
 kobold-wad = { path = "../kobold-wad" }
 
 clap = { version = "4.3", features = ["derive"] }
+serde = "1"
+serde_json = "1"
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 tikv-jemallocator = "0.5"

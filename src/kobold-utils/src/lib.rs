@@ -10,5 +10,7 @@ pub use binrw;
 pub use libdeflater;
 
 pub mod align;
+#[cfg(feature = "binrw")]
+pub mod binrw_ext;
 pub mod fs;
 pub mod hash;

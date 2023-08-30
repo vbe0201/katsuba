@@ -4,9 +4,10 @@ use kobold_utils::{
     anyhow,
     binrw::{
         self, binrw,
-        io::{Read, Seek, SeekFrom, Write},
-        BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, VecArgs,
+        io::{Read, Seek, Write},
+        BinReaderExt, BinWriterExt,
     },
+    binrw_ext::{read_prefixed_string, write_prefixed_string},
 };
 
 use crate::crc;
@@ -49,8 +50,8 @@ pub struct File {
     /// When accessing this by going through an archive's journal,
     /// expect this string to be empty. Instead, use the map key
     /// for this value.
-    #[br(args(name_len as usize), parse_with = parse_file_name)]
-    #[bw(write_with = write_file_name)]
+    #[br(args(name_len as usize, true), parse_with = read_prefixed_string)]
+    #[bw(args(true), write_with = write_prefixed_string)]
     pub name: String,
 }
 
@@ -121,25 +122,4 @@ impl Archive {
             Ok(())
         })
     }
-}
-
-#[binrw::parser(reader, endian)]
-fn parse_file_name(len: usize) -> BinResult<String> {
-    let out: Vec<u8> = <_>::read_options(
-        reader,
-        endian,
-        VecArgs::builder().count(len.saturating_sub(1)).finalize(),
-    )?;
-
-    let new_pos = reader.seek(SeekFrom::Current(1))?;
-    String::from_utf8(out).map_err(|e| binrw::Error::Custom {
-        pos: new_pos - len as u64,
-        err: Box::new(e.utf8_error()),
-    })
-}
-
-#[binrw::writer(writer, endian)]
-fn write_file_name(name: &String) -> BinResult<()> {
-    name.as_bytes().write_options(writer, endian, ())?;
-    0_u8.write_options(writer, endian, ())
 }
