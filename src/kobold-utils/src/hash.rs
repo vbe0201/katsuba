@@ -27,7 +27,8 @@ pub fn string_id(input: &[u8]) -> u32 {
 pub fn djb2(input: &[u8]) -> u32 {
     let state: u32 = input
         .iter()
-        .fold(5381, |acc, &b| acc.wrapping_mul(33).wrapping_add(b as u32));
+        .copied()
+        .fold(5381, |acc, b| acc.wrapping_mul(33).wrapping_add(b as u32));
 
     // NOTE: KI's implementation strips the MSB.
     state & (u32::MAX >> 1)
