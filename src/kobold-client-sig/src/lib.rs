@@ -42,11 +42,11 @@ impl PrivateKey {
     /// a client signature file.
     ///
     /// The resulting string must be passed as the argument to the flag.
-    pub fn make_access_key(self) -> anyhow::Result<String> {
+    pub fn make_access_key(self) -> String {
         let signing_key = SigningKey::<Sha1>::new(self.0);
 
         let signature = signing_key.sign_with_rng(&mut rand::thread_rng(), SECRET);
-        Ok(BASE64_STANDARD.encode(signature.to_bytes()))
+        BASE64_STANDARD.encode(signature.to_bytes())
     }
 
     /// Decrypts the contents of an encrypted `ClientSig.bin` file and returns
@@ -67,7 +67,6 @@ impl PrivateKey {
             data = remainder;
         }
 
-        out.shrink_to_fit();
         Ok(out)
     }
 }

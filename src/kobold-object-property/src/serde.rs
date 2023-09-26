@@ -1,10 +1,12 @@
 //! Serialization support for ObjectProperty values.
 
+use std::sync::Arc;
+
 use bitflags::bitflags;
-use kobold_types::PropertyFlags;
+use kobold_types::{PropertyFlags, TypeList};
+use kobold_utils::{anyhow, libdeflater::Decompressor};
 
 mod de;
-pub use de::*;
 
 mod enum_variant;
 
@@ -14,9 +16,6 @@ pub use diagnostic::*;
 mod object;
 
 mod property;
-
-mod ser;
-pub use ser::*;
 
 mod simple_data;
 
@@ -80,5 +79,44 @@ impl Default for SerializerOptions {
             recursion_limit: u8::MAX / 2,
             skip_unknown_types: false,
         }
+    }
+}
+
+pub(super) struct ZlibParts {
+    inflater: Decompressor,
+
+    // Most of the time, only one of these will be in use.
+    scratch1: Vec<u8>,
+    scratch2: Vec<u8>,
+}
+
+/// The inner parts of the serializer state.
+pub struct SerializerParts {
+    /// The serializer configuration in use.
+    pub options: SerializerOptions,
+    pub(crate) types: Arc<TypeList>,
+}
+
+/// A serializer and deserializer for values in the ObjectProperty system.
+pub struct Serializer {
+    /// The raw serializer state.
+    pub parts: SerializerParts,
+    zlib_parts: ZlibParts,
+}
+
+impl SerializerParts {
+    #[inline]
+    pub(super) fn with_recursion_limit<F, T>(&mut self, f: F) -> anyhow::Result<T>
+    where
+        F: FnOnce(&mut Self) -> anyhow::Result<T>,
+    {
+        self.options.recursion_limit -= 1;
+        anyhow::ensure!(self.options.recursion_limit > 0, "recursion limit exceeded");
+
+        let res = f(self);
+
+        self.options.recursion_limit += 1;
+
+        res
     }
 }

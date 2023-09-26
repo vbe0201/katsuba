@@ -1,0 +1,17 @@
+[project]
+name = "kobold"
+version = "0.1.0"
+description = "Python bindings to the Kobold libraries in Rust"
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: ISC License (ISCL)",
+    "Programming Language :: Rust",
+    "Programming Language :: Python",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+]
+
+[build-system]
+requires = ["maturin>=1,<2"]
+build-backend = "maturin"

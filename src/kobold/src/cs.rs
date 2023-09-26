@@ -54,7 +54,7 @@ pub fn process(cs: ClientSig) -> anyhow::Result<()> {
     // Execute the selected subcommand.
     match cs.command {
         ClientSigCommand::Arg => {
-            let arg = private_key.make_access_key()?;
+            let arg = private_key.make_access_key();
             println!("{arg}");
         }
 

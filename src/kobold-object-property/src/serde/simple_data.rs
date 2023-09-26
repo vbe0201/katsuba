@@ -4,7 +4,7 @@ use phf::phf_map;
 
 use crate::value::*;
 
-use super::{utils, DeserializerParts, SerializerOptions};
+use super::{utils, SerializerOptions, SerializerParts};
 
 type ReadCallback = fn(&mut BitReader<'_>, &SerializerOptions) -> anyhow::Result<Value>;
 
@@ -108,8 +108,8 @@ static DESERIALIZER_LUT: phf::Map<&'static str, (bool, ReadCallback)> = phf_map!
     }),
 };
 
-pub fn deserialize<D>(
-    de: &DeserializerParts<D>,
+pub fn deserialize(
+    de: &SerializerParts,
     ty: &str,
     reader: &mut BitReader<'_>,
 ) -> Option<anyhow::Result<Value>> {

@@ -115,7 +115,7 @@ impl Archive {
             let hash = crc::hash(f.extract(raw_archive));
             anyhow::ensure!(
                 hash == f.crc,
-                "CRC mismatch - expected {hash}, got {}",
+                "CRC mismatch - expected {}, got {hash}",
                 f.crc
             );
 

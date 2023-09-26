@@ -3,13 +3,13 @@ use kobold_types::Property;
 use kobold_utils::anyhow;
 
 use super::{
-    enum_variant, object, simple_data, utils, DeserializerParts, Diagnostics, SerializerFlags,
+    enum_variant, object, simple_data, utils, Diagnostics, SerializerFlags, SerializerParts,
     TypeTag,
 };
 use crate::value::{List, Value};
 
 pub fn deserialize<D: Diagnostics, T: TypeTag>(
-    de: &mut DeserializerParts<D>,
+    de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
@@ -22,7 +22,7 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
 }
 
 fn deserialize_value<D: Diagnostics, T: TypeTag>(
-    de: &mut DeserializerParts<D>,
+    de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
@@ -40,7 +40,7 @@ fn deserialize_value<D: Diagnostics, T: TypeTag>(
 }
 
 fn deserialize_list<D: Diagnostics, T: TypeTag>(
-    de: &mut DeserializerParts<D>,
+    de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,

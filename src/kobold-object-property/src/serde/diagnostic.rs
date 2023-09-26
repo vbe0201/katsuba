@@ -1,6 +1,6 @@
 use kobold_types::{Property, TypeDef};
 
-use super::DeserializerParts;
+use super::SerializerParts;
 use crate::{value::Object, Value};
 
 /// Defines common handlers for diagnostic events during
@@ -8,7 +8,7 @@ use crate::{value::Object, Value};
 ///
 /// Implementations can customize how they want to receive
 /// and process debug information
-pub trait Diagnostics: Sized {
+pub trait Diagnostics {
     /// Called when a new object is being deserialized.
     ///
     /// When `info` is [`None`], the object was an empty
@@ -28,7 +28,7 @@ pub trait Diagnostics: Sized {
     /// This is only invoked when skipping objects is allowed
     /// in the deserializer. Implementation may perform further
     /// examination of the raw byte slice.
-    fn unknown_object(&mut self, de: &mut DeserializerParts<Self>, raw: &[u8]);
+    fn unknown_object(&mut self, de: &mut SerializerParts, raw: &[u8]);
 
     /// Called when a property in an object is being deserialized.
     fn property(&mut self, info: &Property);
@@ -46,7 +46,7 @@ impl Diagnostics for Quiet {
 
     fn object_finished(&mut self, _value: &Object, _remaining: usize) {}
 
-    fn unknown_object(&mut self, _de: &mut DeserializerParts<Self>, _raw: &[u8]) {}
+    fn unknown_object(&mut self, _de: &mut SerializerParts, _raw: &[u8]) {}
 
     fn property(&mut self, _info: &Property) {}
 

@@ -6,11 +6,11 @@ use kobold_types::{PropertyFlags, TypeDef};
 use kobold_utils::{align::align_up, anyhow};
 use smartstring::alias::String;
 
-use super::{property, utils, DeserializerParts, Diagnostics, SerializerFlags, TypeTag};
+use super::{property, utils, Diagnostics, SerializerFlags, SerializerParts, TypeTag};
 use crate::{value::Object, Value};
 
 pub fn deserialize<D: Diagnostics, T: TypeTag>(
-    de: &mut DeserializerParts<D>,
+    de: &mut SerializerParts,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
@@ -57,7 +57,7 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
 }
 
 fn deserialize_properties<D: Diagnostics, T: TypeTag>(
-    de: &mut DeserializerParts<D>,
+    de: &mut SerializerParts,
     object_size: usize,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
@@ -87,7 +87,7 @@ fn deserialize_properties<D: Diagnostics, T: TypeTag>(
 #[inline]
 fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
     obj: &mut BTreeMap<String, Value>,
-    de: &mut DeserializerParts<D>,
+    de: &mut SerializerParts,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
     diagnostics: &mut D,
@@ -123,7 +123,7 @@ fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
 #[inline]
 fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
     obj: &mut BTreeMap<String, Value>,
-    de: &mut DeserializerParts<D>,
+    de: &mut SerializerParts,
     mut object_size: usize,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
@@ -172,8 +172,8 @@ fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
 }
 
 #[inline]
-pub(crate) fn read_bit_size<D>(
-    de: &DeserializerParts<D>,
+pub(crate) fn read_bit_size(
+    de: &SerializerParts,
     reader: &mut BitReader<'_>,
 ) -> anyhow::Result<u32> {
     (!de.options.shallow)

@@ -81,8 +81,8 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
         } => {
             options.skip_unknown_types = ignore_unknown_types;
 
-            let de = serde::Deserializer::new(options, Arc::new(type_list), serde::Quiet)?;
-            de::process(de, path, class_type)
+            let de = serde::Serializer::new(options, Arc::new(type_list))?;
+            de::process(de, path, class_type, serde::Quiet)
         }
     }
 }
