@@ -1,20 +1,42 @@
 use std::fmt::{self, Write};
 
-#[derive(Debug)]
-pub struct CxxStr<'a>(pub &'a [u8]);
+#[derive(Clone, Debug, PartialEq)]
+#[repr(transparent)]
+pub struct CxxStr(pub Vec<u8>);
 
-impl<'a> fmt::Display for CxxStr<'a> {
+impl fmt::Display for CxxStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        display_utf8(self.0, f, str::chars)
+        display_utf8(&self.0, f, str::chars)
     }
 }
 
-#[derive(Debug)]
-pub struct CxxWStr<'a>(pub &'a [u16]);
+#[cfg(feature = "serde")]
+impl serde::Serialize for CxxStr {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
 
-impl<'a> fmt::Display for CxxWStr<'a> {
+#[derive(Clone, Debug, PartialEq)]
+#[repr(transparent)]
+pub struct CxxWStr(pub Vec<u16>);
+
+impl fmt::Display for CxxWStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        display_utf16(self.0, f, core::iter::once)
+        display_utf16(&self.0, f, core::iter::once)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for CxxWStr {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
 

@@ -1,16 +1,15 @@
-use std::{
-    io::{self, Write},
-    path::PathBuf,
-};
+use std::path::PathBuf;
 
-use kobold_object_property::serde;
+use kobold_object_property::serde::{self, BIND_MAGIC};
 use kobold_utils::{anyhow, fs};
 
-use super::{format, ClassType};
+use super::ClassType;
+use crate::utils::json_to_stdout_or_output_file;
 
 pub fn process<D: serde::Diagnostics>(
     mut de: serde::Serializer,
     path: PathBuf,
+    out: Option<PathBuf>,
     _class_type: ClassType,
     diagnostics: D,
 ) -> anyhow::Result<()> {
@@ -21,7 +20,7 @@ pub fn process<D: serde::Diagnostics>(
 
     // If the data starts with the `BINd` prefix, it is a serialized file
     // in the local game data. These always use a fixed base configuration.
-    if data.get(0..4) == Some(b"BINd") {
+    if data.get(0..4) == Some(BIND_MAGIC) {
         de.parts.options.shallow = false;
         de.parts.options.flags |= serde::SerializerFlags::STATEFUL_FLAGS;
 
@@ -31,15 +30,5 @@ pub fn process<D: serde::Diagnostics>(
     // Deserialize the type from the given data.
     // TODO: Different class types?
     let value = de.deserialize::<_, serde::PropertyClass>(data, diagnostics)?;
-
-    // Format the resulting object to stdout.
-    {
-        let stdout = io::stdout();
-        let mut stdout = stdout.lock();
-
-        format::value(&mut stdout, value)?;
-        writeln!(stdout)?;
-    }
-
-    Ok(())
+    json_to_stdout_or_output_file(out, &value)
 }

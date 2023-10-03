@@ -8,10 +8,13 @@ use kobold_utils::{anyhow, libdeflater::Decompressor};
 
 mod de;
 
-mod enum_variant;
-
 mod diagnostic;
 pub use diagnostic::*;
+
+mod enum_variant;
+
+#[cfg(feature = "enable-option-guessing")]
+mod guess;
 
 mod object;
 
@@ -23,6 +26,9 @@ mod type_tag;
 pub use type_tag::*;
 
 mod utils;
+
+/// Magic header for persistent object state shipped with the client.
+pub const BIND_MAGIC: &[u8] = b"BINd";
 
 bitflags! {
     /// Configuration bits to customize serialization behavior.
@@ -88,6 +94,16 @@ pub(super) struct ZlibParts {
     // Most of the time, only one of these will be in use.
     scratch1: Vec<u8>,
     scratch2: Vec<u8>,
+}
+
+impl ZlibParts {
+    pub fn new() -> Self {
+        Self {
+            inflater: Decompressor::new(),
+            scratch1: Vec::new(),
+            scratch2: Vec::new(),
+        }
+    }
 }
 
 /// The inner parts of the serializer state.

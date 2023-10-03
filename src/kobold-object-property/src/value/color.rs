@@ -1,4 +1,5 @@
 /// Representation of an RGBA color.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Color {
     pub r: u8,

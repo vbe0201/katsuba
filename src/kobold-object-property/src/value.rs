@@ -19,12 +19,18 @@ pub use list::*;
 mod object;
 pub use object::*;
 
+mod strings;
+pub use strings::*;
+
 // TODO: Evaluate optimizations.
+// TODO: Manual serde impls if the serialization is bogus?
 
 /// A runtime value from the ObjectProperty system.
 ///
 /// Its type is dynamically assigned at runtime, which mandates
 /// appropriate checks for interpreting its contents.
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(untagged))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     /// An empty unit value.
@@ -40,9 +46,9 @@ pub enum Value {
     Bool(bool),
 
     /// A string of bytes, not null-terminated.
-    String(Vec<u8>),
+    String(CxxStr),
     /// A wide string of code points, not null-terminated.
-    WString(Vec<u16>),
+    WString(CxxWStr),
 
     /// An enum variant or bitflags.
     Enum(i64),
@@ -59,16 +65,16 @@ pub enum Value {
     Euler(Euler),
     Mat3x3(Box<Matrix>),
 
-    /// A 2D point.
-    Point {
-        xy: Box<(Value, Value)>,
-    },
-    /// A size description.
-    Size {
-        wh: Box<(Value, Value)>,
-    },
-    /// A rectangle described by its edges.
-    Rect {
-        inner: Box<(Value, Value, Value, Value)>,
-    },
+    /// A 2D point with integer coordinates.
+    PointInt(Point<i32>),
+    /// A 2D point with floating-point coordinates.
+    PointFloat(Point<f32>),
+
+    /// A size description with integer measures.
+    SizeInt(Size<i32>),
+
+    /// A rectangle described by integer edges.
+    RectInt(Rect<i32>),
+    /// A rectangle described by floating-point edges.
+    RectFloat(Rect<f32>),
 }

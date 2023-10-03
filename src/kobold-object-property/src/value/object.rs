@@ -10,6 +10,8 @@ use smartstring::alias::String;
 use super::{drop, Value};
 
 /// Representation of an object in the ObjectProperty system.
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Object {
     /// A mapping of class member names to their values.

@@ -4,22 +4,47 @@ use anyhow::bail;
 use byteorder::{ReadBytesExt, LE};
 use kobold_bit_buf::BitReader;
 use kobold_types::TypeList;
-use kobold_utils::{anyhow, libdeflater::Decompressor};
+use kobold_utils::{
+    anyhow,
+    libdeflater::{self, Decompressor},
+};
 
 use super::*;
 use crate::Value;
 
+pub(super) enum ZlibError {
+    Io(std::io::Error),
+    Decompress(libdeflater::DecompressionError),
+    Verify(anyhow::Error),
+}
+
+impl From<ZlibError> for anyhow::Error {
+    fn from(value: ZlibError) -> Self {
+        match value {
+            ZlibError::Io(e) => e.into(),
+            ZlibError::Decompress(e) => e.into(),
+            ZlibError::Verify(e) => e,
+        }
+    }
+}
+
 #[inline]
-fn zlib_decompress(
+pub(super) fn zlib_decompress(
     inflater: &mut Decompressor,
     mut data: &[u8],
     out: &mut Vec<u8>,
-) -> anyhow::Result<()> {
-    let size = data.read_u32::<LE>()? as usize;
+) -> Result<(), ZlibError> {
+    let size = data.read_u32::<LE>().map_err(ZlibError::Io)? as usize;
     out.resize(size, 0);
 
-    let decompressed = inflater.zlib_decompress(data, out)?;
-    anyhow::ensure!(decompressed == size, "size mismatch for uncompressed data");
+    let decompressed = inflater
+        .zlib_decompress(data, out)
+        .map_err(ZlibError::Decompress)?;
+    if decompressed != size {
+        return Err(ZlibError::Verify(anyhow::anyhow!(
+            "size mismatch for uncompressed data"
+        )));
+    }
 
     Ok(())
 }
@@ -63,12 +88,39 @@ impl Serializer {
 
         Ok(Self {
             parts: SerializerParts { options, types },
-            zlib_parts: ZlibParts {
-                inflater: Decompressor::new(),
-                scratch1: Vec::new(),
-                scratch2: Vec::new(),
-            },
+            zlib_parts: ZlibParts::new(),
         })
+    }
+
+    /// Attempts to guess the serializer configuration based on a
+    /// concrete data stream.
+    ///
+    /// The resulting serializer instance should be ready to use,
+    /// but the user may still need to tweak the settings themselves.
+    ///
+    /// It is generally only advised to use the resulting config as
+    /// a first fit, it is not guaranteed to be accurate.
+    #[cfg(feature = "enable-option-guessing")]
+    pub fn with_guessed_options(types: Arc<TypeList>, data: &[u8]) -> anyhow::Result<Self> {
+        Self::with_guessed_options_from_base(Default::default(), types, data)
+    }
+
+    /// Attempts to guess the serializer configuration based on a
+    /// concrete data stream.
+    ///
+    /// This one takes a base config and modifies it based on guessed
+    /// properties of the input format.
+    ///
+    /// This is generally recommended when users know something about
+    /// the format that can't be guessed precisely, like the property
+    /// filter mask.
+    #[cfg(feature = "enable-option-guessing")]
+    pub fn with_guessed_options_from_base(
+        opts: SerializerOptions,
+        types: Arc<TypeList>,
+        data: &[u8],
+    ) -> anyhow::Result<Self> {
+        super::guess::Guesser::new(opts, types).guess(data)
     }
 
     /// Deserializes an object [`Value`] from the given data.

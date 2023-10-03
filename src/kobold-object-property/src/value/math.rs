@@ -1,4 +1,5 @@
 /// A three-dimensional vector.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Vec3 {
     /// The X coordinate.
@@ -10,6 +11,7 @@ pub struct Vec3 {
 }
 
 /// A quaternion representing an orientation.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Quaternion {
     /// The X coordinate.
@@ -23,6 +25,7 @@ pub struct Quaternion {
 }
 
 /// A 3x3 matrix.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Matrix {
     /// The first row of the matrix.
@@ -34,6 +37,7 @@ pub struct Matrix {
 }
 
 /// A set of Euler angles representing a rotation.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Euler {
     /// The angle to apply around the X axis.
@@ -46,6 +50,7 @@ pub struct Euler {
 
 /// A point in two-dimensional space represented by its
 /// coordinates.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point<T> {
     /// The X coordinate.
@@ -55,6 +60,7 @@ pub struct Point<T> {
 }
 
 /// A two-dimensional size defined by its width and height.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Size<T> {
     /// The width of the shape.
@@ -64,6 +70,7 @@ pub struct Size<T> {
 }
 
 /// A rectangular shape in two-dimensional space.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Rect<T> {
     /// The location of the left edge.

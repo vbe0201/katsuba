@@ -41,6 +41,7 @@ enum Command {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+
     match cli.command {
         Command::Bcd(bcd) => bcd::process(bcd),
         Command::Cs(cs) => cs::process(cs),

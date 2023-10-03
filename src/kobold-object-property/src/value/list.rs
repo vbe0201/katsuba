@@ -10,6 +10,8 @@ use super::{drop, Value};
 ///
 /// A list can store arbitrary values in the ObjectProperty
 /// system, not necessarily being homogenous.
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct List {
     /// The inner [`Value`]s of the list.

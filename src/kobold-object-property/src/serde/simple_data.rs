@@ -43,8 +43,8 @@ static DESERIALIZER_LUT: phf::Map<&'static str, (bool, ReadCallback)> = phf_map!
     "u24" => (true, |r, _| utils::read_bits(r, 24).map(Value::Unsigned)),
 
     // Strings
-    "std::string" => (false, |r, opts| utils::read_string(r, opts).map(|v| Value::String(v.to_owned()))),
-    "std::wstring" => (false, |r, opts| utils::read_wstring(r, opts).map(Value::WString)),
+    "std::string" => (false, |r, opts| utils::read_string(r, opts).map(|v| Value::String(CxxStr(v.to_owned())))),
+    "std::wstring" => (false, |r, opts| utils::read_wstring(r, opts).map(|v| Value::WString(CxxWStr(v)))),
 
     // Miscellaneous leaf types that are not PropertyClasses
     "class Color" => (false, |r, _| utils::read_color(r).map(Value::Color)),
@@ -53,43 +53,30 @@ static DESERIALIZER_LUT: phf::Map<&'static str, (bool, ReadCallback)> = phf_map!
     "class Euler" => (false, |r, _| utils::read_euler(r).map(Value::Euler)),
     "class Matrix3x3" => (false, |r, _| utils::read_matrix(r).map(|v| Value::Mat3x3(Box::new(v)))),
     "class Size<int>" => (false, |r, _| {
-        let width = utils::read_signed_bits(r, i32::BITS)?;
-        let height = utils::read_signed_bits(r, i32::BITS)?;
+        let width = utils::read_signed_bits(r, i32::BITS)? as i32;
+        let height = utils::read_signed_bits(r, i32::BITS)? as i32;
 
-        Ok(Value::Size {
-            wh: Box::new((Value::Signed(width), Value::Signed(height)))
-        })
+        Ok(Value::SizeInt(Size { width, height }))
     }),
     "class Point<int>" => (false, |r, _| {
-        let x = utils::read_signed_bits(r, i32::BITS)?;
-        let y = utils::read_signed_bits(r, i32::BITS)?;
+        let x = utils::read_signed_bits(r, i32::BITS)? as i32;
+        let y = utils::read_signed_bits(r, i32::BITS)? as i32;
 
-        Ok(Value::Size {
-            wh: Box::new((Value::Signed(x), Value::Signed(y)))
-        })
+        Ok(Value::PointInt(Point { x, y }))
     }),
     "class Point<float>" => (false, |r, _| {
         let x = f32::from_bits(utils::read_bits(r, u32::BITS)? as _);
         let y = f32::from_bits(utils::read_bits(r, u32::BITS)? as _);
 
-        Ok(Value::Size {
-            wh: Box::new((Value::Float(x as _), Value::Float(y as _)))
-        })
+        Ok(Value::PointFloat(Point { x, y }))
     }),
     "class Rect<int>" => (false, |r, _| {
-        let left = utils::read_signed_bits(r, i32::BITS)?;
-        let top = utils::read_signed_bits(r, i32::BITS)?;
-        let right = utils::read_signed_bits(r, i32::BITS)?;
-        let bottom = utils::read_signed_bits(r, i32::BITS)?;
+        let left = utils::read_signed_bits(r, i32::BITS)? as i32;
+        let top = utils::read_signed_bits(r, i32::BITS)? as i32;
+        let right = utils::read_signed_bits(r, i32::BITS)? as i32;
+        let bottom = utils::read_signed_bits(r, i32::BITS)? as i32;
 
-        Ok(Value::Rect {
-            inner: Box::new((
-                Value::Signed(left),
-                Value::Signed(top),
-                Value::Signed(right),
-                Value::Signed(bottom),
-            )),
-        })
+        Ok(Value::RectInt(Rect { left, top, right, bottom }))
     }),
     "class Rect<float>" => (false, |r, _| {
         let left = f32::from_bits(utils::read_signed_bits(r, u32::BITS)? as _);
@@ -97,14 +84,7 @@ static DESERIALIZER_LUT: phf::Map<&'static str, (bool, ReadCallback)> = phf_map!
         let right = f32::from_bits(utils::read_signed_bits(r, u32::BITS)? as _);
         let bottom = f32::from_bits(utils::read_signed_bits(r, u32::BITS)? as _);
 
-        Ok(Value::Rect {
-            inner: Box::new((
-                Value::Float(left as _),
-                Value::Float(top as _),
-                Value::Float(right as _),
-                Value::Float(bottom as _),
-            )),
-        })
+        Ok(Value::RectFloat(Rect { left, top, right, bottom }))
     }),
 };
 

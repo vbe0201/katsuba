@@ -6,8 +6,7 @@ use kobold_types::PropertyFlags;
 use kobold_utils::anyhow;
 
 mod de;
-mod display;
-mod format;
+mod guess;
 mod utils;
 
 #[derive(Debug, Args)]
@@ -59,6 +58,25 @@ enum ObjectPropertyCommand {
         /// The ObjectProperty class type to use.
         #[clap(value_enum, default_value_t = ClassType::Basic)]
         class_type: ClassType,
+
+        /// The path to the output file, if desired.
+        #[clap(short, long)]
+        out: Option<PathBuf>,
+    },
+
+    /// Deserializes ObjectProperty binary state while trying to guess
+    /// its config.
+    Guess {
+        /// Path to the file to deserialize.
+        path: PathBuf,
+
+        /// Whether the deserialized value should be pretty-printed in the
+        /// event of success.
+        ///
+        /// Since this can get pretty spammy and distract from the actual
+        /// serializer configuration used, users may not want this.
+        #[clap(short, long)]
+        no_value: bool,
     },
 }
 
@@ -78,11 +96,14 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
             path,
             ignore_unknown_types,
             class_type,
+            out,
         } => {
             options.skip_unknown_types = ignore_unknown_types;
 
             let de = serde::Serializer::new(options, Arc::new(type_list))?;
-            de::process(de, path, class_type, serde::Quiet)
+            de::process(de, path, out, class_type, serde::Quiet)
         }
+
+        ObjectPropertyCommand::Guess { path, no_value } => guess::guess(options, Arc::new(type_list), path, no_value),
     }
 }

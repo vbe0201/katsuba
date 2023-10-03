@@ -6,6 +6,14 @@ use std::{
 use kobold_utils::{anyhow, fs};
 use serde::Serialize;
 
+pub fn human_bool(v: bool) -> &'static str {
+    if v {
+        "Yes"
+    } else {
+        "No"
+    }
+}
+
 pub fn json_to_stdout_or_output_file<T: Serialize>(
     out: Option<PathBuf>,
     v: &T,
