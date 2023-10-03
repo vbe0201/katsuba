@@ -6,12 +6,11 @@ use kobold_utils::{anyhow, fs};
 use super::ClassType;
 use crate::utils::json_to_stdout_or_output_file;
 
-pub fn process<D: serde::Diagnostics>(
+pub fn process(
     mut de: serde::Serializer,
     path: PathBuf,
     out: Option<PathBuf>,
     _class_type: ClassType,
-    diagnostics: D,
 ) -> anyhow::Result<()> {
     // Read the binary data from the given input file.
     // TODO: mmap?
@@ -29,6 +28,6 @@ pub fn process<D: serde::Diagnostics>(
 
     // Deserialize the type from the given data.
     // TODO: Different class types?
-    let value = de.deserialize::<_, serde::PropertyClass>(data, diagnostics)?;
+    let value = de.deserialize::<serde::PropertyClass>(data)?;
     json_to_stdout_or_output_file(out, &value)
 }

@@ -6,13 +6,12 @@ use kobold_types::{PropertyFlags, TypeDef};
 use kobold_utils::{align::align_up, anyhow};
 use smartstring::alias::String;
 
-use super::{property, utils, Diagnostics, SerializerFlags, SerializerParts, TypeTag};
+use super::{property, utils, SerializerFlags, SerializerParts, TypeTag};
 use crate::{value::Object, Value};
 
-pub fn deserialize<D: Diagnostics, T: TypeTag>(
+pub fn deserialize<T: TypeTag>(
     de: &mut SerializerParts,
     reader: &mut BitReader<'_>,
-    diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
     de.with_recursion_limit(|de| {
         reader.realign_to_byte();
@@ -21,10 +20,8 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
         let res = match T::identity(reader, &types) {
             // If a type definition exists, read the full object.
             Ok(Some(type_def)) => {
-                diagnostics.object(Some(type_def));
-
                 let object_size = read_bit_size(de, reader)? as usize;
-                deserialize_properties::<_, T>(de, object_size, type_def, reader, diagnostics)?
+                deserialize_properties::<T>(de, object_size, type_def, reader)?
             }
 
             // If we encountered a null pointer, return an empty value.
@@ -38,11 +35,7 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
                 // When skipping an object at any position, it means that
                 // we either start with a new aligned object or reach EOF.
                 // In either case, we have to consume whole bytes anyway.
-                let raw = reader.read_bytes(align_up(object_size, u8::BITS as _) >> 3)?;
-
-                // SAFETY: Mutable `de` reference ensures exclusivity in
-                // accessing the `diagnostics` object until we put it back.
-                diagnostics.unknown_object(de, raw);
+                reader.read_bytes(align_up(object_size, u8::BITS as _) >> 3)?;
 
                 Value::Empty
             }
@@ -56,41 +49,29 @@ pub fn deserialize<D: Diagnostics, T: TypeTag>(
     })
 }
 
-fn deserialize_properties<D: Diagnostics, T: TypeTag>(
+fn deserialize_properties<T: TypeTag>(
     de: &mut SerializerParts,
     object_size: usize,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
-    diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
     let mut inner = BTreeMap::new();
 
     if de.options.shallow {
-        deserialize_properties_shallow::<_, T>(&mut inner, de, type_def, reader, diagnostics)?;
+        deserialize_properties_shallow::<T>(&mut inner, de, type_def, reader)?;
     } else {
-        deserialize_properties_deep::<_, T>(
-            &mut inner,
-            de,
-            object_size,
-            type_def,
-            reader,
-            diagnostics,
-        )?;
+        deserialize_properties_deep::<T>(&mut inner, de, object_size, type_def, reader)?;
     }
 
-    let obj = Object { inner };
-    diagnostics.object_finished(&obj, reader.remaining_bits() >> 3);
-
-    Ok(Value::Object(obj))
+    Ok(Value::Object(Object { inner }))
 }
 
 #[inline]
-fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
+fn deserialize_properties_shallow<T: TypeTag>(
     obj: &mut BTreeMap<String, Value>,
     de: &mut SerializerParts,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
-    diagnostics: &mut D,
 ) -> anyhow::Result<()> {
     // In shallow mode, we walk masked properties in order.
     let mask = de.options.property_mask;
@@ -99,8 +80,6 @@ fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
         .iter()
         .filter(|p| p.flags.contains(mask) && !p.flags.contains(PropertyFlags::DEPRECATED))
     {
-        diagnostics.property(property);
-
         if property.flags.contains(PropertyFlags::DELTA_ENCODE)
             && !utils::read_bool(reader)?
             && de
@@ -111,8 +90,7 @@ fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
             anyhow::bail!("missing delta value which is supposed to be present");
         }
 
-        let value = property::deserialize::<_, T>(de, property, reader, diagnostics)?;
-        diagnostics.property_finished(&value);
+        let value = property::deserialize::<T>(de, property, reader)?;
 
         obj.insert(property.name.clone(), value);
     }
@@ -121,13 +99,12 @@ fn deserialize_properties_shallow<D: Diagnostics, T: TypeTag>(
 }
 
 #[inline]
-fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
+fn deserialize_properties_deep<T: TypeTag>(
     obj: &mut BTreeMap<String, Value>,
     de: &mut SerializerParts,
     mut object_size: usize,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
-    diagnostics: &mut D,
 ) -> anyhow::Result<()> {
     // In deep mode, the properties name themselves.
     while object_size > 0 {
@@ -144,10 +121,8 @@ fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
             .find(|p| p.hash == property_hash)
             .ok_or_else(|| anyhow!("received unknown property hash {property_hash}"))?;
 
-        diagnostics.property(property);
-
         // Deserialize the property's value.
-        let value = property::deserialize::<_, T>(de, property, reader, diagnostics)?;
+        let value = property::deserialize::<T>(de, property, reader)?;
 
         // Validate the size expectations.
         let actual_size = previous_buf_len - reader.remaining_bits();
@@ -161,8 +136,6 @@ fn deserialize_properties_deep<D: Diagnostics, T: TypeTag>(
             .checked_sub(property_size)
             .ok_or_else(|| anyhow!("property size exceeds object size"))?;
         reader.realign_to_byte();
-
-        diagnostics.property_finished(&value);
 
         // Lastly, insert the property into the object.
         obj.insert(property.name.clone(), value);

@@ -8,9 +8,6 @@ use kobold_utils::{anyhow, libdeflater::Decompressor};
 
 mod de;
 
-mod diagnostic;
-pub use diagnostic::*;
-
 mod enum_variant;
 
 #[cfg(feature = "enable-option-guessing")]

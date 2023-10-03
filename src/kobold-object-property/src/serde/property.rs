@@ -2,30 +2,25 @@ use kobold_bit_buf::BitReader;
 use kobold_types::Property;
 use kobold_utils::anyhow;
 
-use super::{
-    enum_variant, object, simple_data, utils, Diagnostics, SerializerFlags, SerializerParts,
-    TypeTag,
-};
+use super::{enum_variant, object, simple_data, utils, SerializerFlags, SerializerParts, TypeTag};
 use crate::value::{List, Value};
 
-pub fn deserialize<D: Diagnostics, T: TypeTag>(
+pub fn deserialize<T: TypeTag>(
     de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
-    diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
     if property.dynamic {
-        deserialize_list::<_, T>(de, property, reader, diagnostics)
+        deserialize_list::<T>(de, property, reader)
     } else {
-        deserialize_value::<_, T>(de, property, reader, diagnostics)
+        deserialize_value::<T>(de, property, reader)
     }
 }
 
-fn deserialize_value<D: Diagnostics, T: TypeTag>(
+fn deserialize_value<T: TypeTag>(
     de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
-    diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
     if property.is_enum() {
         enum_variant::deserialize(de, property, reader)
@@ -34,16 +29,15 @@ fn deserialize_value<D: Diagnostics, T: TypeTag>(
         // deserialize a new object as a fallback strategy.
         match simple_data::deserialize(de, &property.r#type, reader) {
             Some(v) => v,
-            None => object::deserialize::<_, T>(de, reader, diagnostics),
+            None => object::deserialize::<T>(de, reader),
         }
     }
 }
 
-fn deserialize_list<D: Diagnostics, T: TypeTag>(
+fn deserialize_list<T: TypeTag>(
     de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
-    diagnostics: &mut D,
 ) -> anyhow::Result<Value> {
     let len = utils::read_container_length(
         reader,
@@ -55,12 +49,7 @@ fn deserialize_list<D: Diagnostics, T: TypeTag>(
 
     de.with_recursion_limit(|de| {
         for _ in 0..len {
-            inner.push(deserialize_value::<_, T>(
-                de,
-                property,
-                reader,
-                diagnostics,
-            )?);
+            inner.push(deserialize_value::<T>(de, property, reader)?);
         }
 
         Ok(())

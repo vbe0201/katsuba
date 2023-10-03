@@ -58,7 +58,7 @@ fn try_guess(
     }
 
     // First, try to deserialize with the current config.
-    res = de.deserialize::<_, serde::PropertyClass>(data, serde::Quiet);
+    res = de.deserialize::<serde::PropertyClass>(data);
     if res.is_ok() {
         return Ok(Report {
             value: res,
@@ -70,7 +70,7 @@ fn try_guess(
     if !opts.shallow && !opts.flags.contains(serde::SerializerFlags::STATEFUL_FLAGS) {
         de.parts.options.flags |= serde::SerializerFlags::HUMAN_READABLE_ENUMS;
 
-        res = de.deserialize::<_, serde::PropertyClass>(data, serde::Quiet);
+        res = de.deserialize::<serde::PropertyClass>(data);
         if res.is_ok() {
             return Ok(Report {
                 value: res,
