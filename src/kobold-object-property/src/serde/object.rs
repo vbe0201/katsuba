@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::anyhow;
 use kobold_bit_buf::BitReader;
 use kobold_types::{PropertyFlags, TypeDef};
-use kobold_utils::{align::align_up, anyhow};
+use kobold_utils::anyhow;
 use smartstring::alias::String;
 
 use super::{property, utils, SerializerFlags, SerializerParts, TypeTag};
@@ -30,12 +30,13 @@ pub fn deserialize<T: TypeTag>(
             // If no type definition exists but we're allowed to skip it,
             // consume the bits the object is supposed to occupy.
             Err(_) if de.options.skip_unknown_types => {
-                let object_size = read_bit_size(de, reader)? as usize;
+                log::error!("Encountered unknown type; skipping it");
 
                 // When skipping an object at any position, it means that
                 // we either start with a new aligned object or reach EOF.
                 // In either case, we have to consume whole bytes anyway.
-                reader.read_bytes(align_up(object_size, u8::BITS as _) >> 3)?;
+                let object_size = read_bit_size(de, reader)? as usize;
+                reader.read_bytes(utils::bits_to_bytes(object_size))?;
 
                 Value::Empty
             }

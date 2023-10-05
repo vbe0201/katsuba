@@ -126,6 +126,7 @@ impl Serializer {
     /// Deserializes an object [`Value`] from the given data.
     pub fn deserialize<T: TypeTag>(&mut self, data: &[u8]) -> anyhow::Result<Value> {
         let mut reader = self.zlib_parts.configure(&mut self.parts.options, data)?;
+        log::info!("Deserializing object with config {:?}", self.parts.options);
 
         object::deserialize::<T>(&mut self.parts, &mut reader)
     }

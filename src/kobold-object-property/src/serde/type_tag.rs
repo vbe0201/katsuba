@@ -31,8 +31,10 @@ impl TypeTag for PropertyClass {
 #[inline]
 fn find_class_def(types: &TypeList, hash: u32) -> anyhow::Result<Option<&TypeDef>> {
     if hash == 0 {
+        log::debug!("Received null hash for object");
         Ok(None)
     } else if let Some(t) = types.0.get(&hash) {
+        log::debug!("Received object hash for '{}' ({hash})", t.name);
         Ok(Some(t))
     } else {
         anyhow::bail!("failed to identify type with hash {hash}")

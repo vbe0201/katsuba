@@ -2,11 +2,11 @@ use std::{mem, sync::Arc};
 
 use byteorder::{ByteOrder, LE};
 use kobold_types::TypeList;
-use kobold_utils::{align::align_up, anyhow};
+use kobold_utils::anyhow;
 use once_cell::sync::Lazy;
 use regex::bytes::Regex;
 
-use super::*;
+use super::{utils::bits_to_bytes, *};
 
 const NO_FLAGS: u32 = SerializerFlags::empty().bits();
 const ALL_FLAGS: u32 = SerializerFlags::all().bits();
@@ -66,7 +66,7 @@ fn check_serialization_mode(opts: &mut SerializerOptions, offset: usize, data: &
     // A type hash is followed by the size of the remaining stream in bits
     // in deep mode. So we try to confirm this by trial and error.
     if let Some(maybe_bits) = read_u32(offset, data) {
-        let maybe_bytes = align_up(maybe_bits as _, u8::BITS as _) >> 3;
+        let maybe_bytes = bits_to_bytes(maybe_bits as _);
         opts.shallow = maybe_bytes != data.len();
     }
 }

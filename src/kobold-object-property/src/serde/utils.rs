@@ -1,9 +1,14 @@
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use kobold_bit_buf::{utils::sign_extend, BitReader};
-use kobold_utils::anyhow;
+use kobold_utils::{align::align_up, anyhow};
 
 use super::{SerializerFlags, SerializerOptions};
 use crate::value::*;
+
+#[inline]
+pub const fn bits_to_bytes(bits: usize) -> usize {
+    align_up(bits, u8::BITS as _) >> 3
+}
 
 #[inline]
 pub fn read_bits(reader: &mut BitReader<'_>, nbits: u32) -> anyhow::Result<u64> {

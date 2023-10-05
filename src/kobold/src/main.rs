@@ -1,4 +1,5 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use env_logger::{Builder, WriteStyle};
 use kobold_utils::anyhow;
 
 mod bcd;
@@ -21,6 +22,26 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 struct Cli {
     #[clap(subcommand)]
     command: Command,
+
+    #[clap(long, value_enum, default_value_t = Color::Auto)]
+    color: Color,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum Color {
+    Auto,
+    Always,
+    Never,
+}
+
+impl From<Color> for WriteStyle {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::Auto => WriteStyle::Auto,
+            Color::Always => WriteStyle::Always,
+            Color::Never => WriteStyle::Never,
+        }
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -41,6 +62,11 @@ enum Command {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+
+    // Configure global logging with color setting.
+    Builder::from_default_env()
+        .write_style(cli.color.into())
+        .try_init()?;
 
     match cli.command {
         Command::Bcd(bcd) => bcd::process(bcd),

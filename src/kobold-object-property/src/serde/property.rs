@@ -10,11 +10,17 @@ pub fn deserialize<T: TypeTag>(
     property: &Property,
     reader: &mut BitReader<'_>,
 ) -> anyhow::Result<Value> {
-    if property.dynamic {
-        deserialize_list::<T>(de, property, reader)
+    log::debug!("Deserializing value for property '{}'", property.name);
+
+    let value = if property.dynamic {
+        deserialize_list::<T>(de, property, reader)?
     } else {
-        deserialize_value::<T>(de, property, reader)
-    }
+        deserialize_value::<T>(de, property, reader)?
+    };
+
+    log::trace!("Got '{value:?}'");
+
+    Ok(value)
 }
 
 fn deserialize_value<T: TypeTag>(
