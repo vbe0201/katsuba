@@ -14,6 +14,7 @@ use crate::crc;
 
 /// The header of a KIWAD archive.
 #[binrw]
+#[derive(Clone, Copy, Debug)]
 pub struct Header {
     /// The format version in use.
     pub version: u32,
@@ -27,6 +28,7 @@ pub struct Header {
 
 /// Metadata for a file stored in an archive.
 #[binrw]
+#[derive(Clone, Debug)]
 pub struct File {
     /// The starting offset of the file data.
     pub offset: u32,
@@ -89,6 +91,7 @@ impl File {
 /// archive bytes around even after parsing this structure.
 #[binrw]
 #[brw(magic = b"KIWAD")]
+#[derive(Clone, Debug)]
 pub struct Archive {
     /// The [`Header`] of the archive.
     pub header: Header,

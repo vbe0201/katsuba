@@ -22,6 +22,12 @@ impl Inflater {
         }
     }
 
+    /// Consumes the inflater and returns its scratch buffer.
+    #[inline]
+    pub fn into_inner(self) -> Vec<u8> {
+        self.scratch
+    }
+
     /// Decompresses the given `data` into the internal scratch
     /// buffer and returns a reference to it.
     ///
