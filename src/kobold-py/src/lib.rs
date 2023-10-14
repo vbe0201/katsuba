@@ -5,6 +5,7 @@
 
 #![deny(rust_2018_idioms, rustdoc::broken_intra_doc_links)]
 
+mod op;
 mod utils;
 mod wad;
 
@@ -19,20 +20,31 @@ pub fn kobold_py(py: Python<'_>, module: &PyModule) -> PyResult<()> {
     module.add("KoboldError", py.get_type::<KoboldError>())?;
 
     // Declare all the submodules in the package.
+    let op = PyModule::new(py, "kobold_py.op")?;
     let utils = PyModule::new(py, "kobold_py.utils")?;
     let wad = PyModule::new(py, "kobold_py.wad")?;
 
     // Enable `from kobold_py.x import A` imports.
-    let locals = [("utils", utils.to_object(py)), ("wad", wad.to_object(py))].into_py_dict(py);
+    let locals = [
+        ("op", op.to_object(py)),
+        ("utils", utils.to_object(py)),
+        ("wad", wad.to_object(py)),
+    ]
+    .into_py_dict(py);
     py.run(
         r#"
 import sys
+sys.modules['kobold_py.op'] = op
 sys.modules['kobold_py.utils'] = utils
 sys.modules['kobold_py.wad'] = wad
 "#,
         None,
         Some(locals),
     )?;
+
+    // Register kobold_py.op module.
+    op::kobold_op(op)?;
+    module.add_submodule(op)?;
 
     // Register kobold_py.utils module.
     utils::kobold_utils(utils)?;

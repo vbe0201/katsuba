@@ -456,6 +456,8 @@ dependencies = [
 name = "kobold-py"
 version = "0.1.0"
 dependencies = [
+ "kobold-object-property",
+ "kobold-types",
  "kobold-utils",
  "kobold-wad",
  "pyo3",

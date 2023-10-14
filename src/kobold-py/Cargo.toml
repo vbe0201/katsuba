@@ -10,6 +10,8 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+kobold-object-property = { path = "../kobold-object-property" }
+kobold-types = { path = "../kobold-types" }
 kobold-utils = { path = "../kobold-utils" }
 kobold-wad = { path = "../kobold-wad" }
 

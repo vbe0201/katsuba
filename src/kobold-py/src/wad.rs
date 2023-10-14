@@ -6,6 +6,8 @@ use pyo3::{
     types::PyType,
 };
 
+use crate::op;
+
 fn extract_file_contents<'a>(
     archive: &'a kobold_wad::Archive,
     file: &'a kobold_wad::types::File,
@@ -69,6 +71,15 @@ impl Archive {
         kobold_wad::Archive::mmap(path, verify_crcs)
             .map(Self)
             .map_err(|e| PyOSError::new_err(e.to_string()))
+    }
+
+    pub fn deserialize(
+        &self,
+        file: &str,
+        serializer: &mut op::Serializer,
+    ) -> PyResult<op::LazyObject> {
+        let raw = self.__getitem__(file)?;
+        serializer.deserialize(&raw)
     }
 }
 
