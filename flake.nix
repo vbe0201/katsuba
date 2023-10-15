@@ -45,7 +45,6 @@
           };
           nativeBuildInputs = with pkgs.rustPlatform; [cargoSetupHook maturinBuildHook];
           buildAndTestSubdir = "src/kobold-py";
-          propagatedBuildInputs = with pkgs.python3Packages; [cffi];
         };
       }
     );
