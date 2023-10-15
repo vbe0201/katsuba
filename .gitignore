@@ -77,3 +77,8 @@ Thumbs.db
 
 # ObjectProperty state
 *.xml
+
+# Nix
+.devenv*
+.direnv
+devenv.local.nix
