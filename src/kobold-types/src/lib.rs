@@ -18,7 +18,7 @@
 
 use std::{collections::HashMap, io};
 
-use kobold_utils::anyhow;
+use kobold_utils::thiserror::{self, Error};
 use serde::{Deserialize, Deserializer};
 use smartstring::alias::String;
 
@@ -30,19 +30,42 @@ mod serde_impl;
 mod string_or_int;
 pub use string_or_int::*;
 
+/// Errors that may occur when working with [`TypeList`]s.
+#[derive(Debug, Error)]
+pub enum Error {
+    /// An I/O error occured while interacting with a type list file.
+    #[error("{0}")]
+    Io(#[from] io::Error),
+
+    /// An error occurred during JSON deserialization.
+    #[error("{0}")]
+    Serde(serde_json::Error),
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(value: serde_json::Error) -> Self {
+        use serde_json::error::Category;
+
+        match value.classify() {
+            Category::Io => Self::Io(value.into()),
+            _ => Self::Serde(value),
+        }
+    }
+}
+
 /// Representation of the list of types dumped from the game client.
 #[derive(Clone, Debug)]
 pub struct TypeList(pub HashMap<u32, TypeDef>);
 
 impl TypeList {
     /// Deserializes a type list in JSON format from a given reader.
-    pub fn from_reader<R: io::Read>(reader: R) -> anyhow::Result<Self> {
+    pub fn from_reader<R: io::Read>(reader: R) -> Result<Self, Error> {
         serde_json::from_reader(reader).map_err(Into::into)
     }
 
     /// Deserializes a type list in JSON format from a given string.
     #[allow(clippy::should_implement_trait)]
-    pub fn from_str(data: &str) -> anyhow::Result<Self> {
+    pub fn from_str(data: &str) -> Result<Self, Error> {
         serde_json::from_str(data).map_err(Into::into)
     }
 

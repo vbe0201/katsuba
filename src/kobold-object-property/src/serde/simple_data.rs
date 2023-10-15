@@ -1,12 +1,11 @@
 use kobold_bit_buf::BitReader;
-use kobold_utils::anyhow;
 use phf::phf_map;
 
 use crate::value::*;
 
-use super::{utils, SerializerOptions, SerializerParts};
+use super::{utils, Error, SerializerOptions, SerializerParts};
 
-type ReadCallback = fn(&mut BitReader<'_>, &SerializerOptions) -> anyhow::Result<Value>;
+type ReadCallback = fn(&mut BitReader<'_>, &SerializerOptions) -> Result<Value, Error>;
 
 static DESERIALIZER_LUT: phf::Map<&'static str, (bool, ReadCallback)> = phf_map! {
     // Primitive C++ types
@@ -92,7 +91,7 @@ pub fn deserialize(
     de: &SerializerParts,
     ty: &str,
     reader: &mut BitReader<'_>,
-) -> Option<anyhow::Result<Value>> {
+) -> Option<Result<Value, Error>> {
     DESERIALIZER_LUT.get(ty).map(|(bits, f)| {
         if de.options.shallow && !bits {
             reader.realign_to_byte();

@@ -1,8 +1,8 @@
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
 use kobold_bit_buf::{utils::sign_extend, BitReader};
-use kobold_utils::{align::align_up, anyhow};
+use kobold_utils::align::align_up;
 
-use super::{SerializerFlags, SerializerOptions};
+use super::{Error, SerializerFlags, SerializerOptions};
 use crate::value::*;
 
 #[inline]
@@ -11,7 +11,7 @@ pub const fn bits_to_bytes(bits: usize) -> usize {
 }
 
 #[inline]
-pub fn read_bits(reader: &mut BitReader<'_>, nbits: u32) -> anyhow::Result<u64> {
+pub fn read_bits(reader: &mut BitReader<'_>, nbits: u32) -> Result<u64, Error> {
     if reader.buffered_bits() < nbits {
         reader.refill_bits();
     }
@@ -22,24 +22,27 @@ pub fn read_bits(reader: &mut BitReader<'_>, nbits: u32) -> anyhow::Result<u64> 
 }
 
 #[inline]
-pub fn read_signed_bits(reader: &mut BitReader<'_>, nbits: u32) -> anyhow::Result<i64> {
+pub fn read_signed_bits(reader: &mut BitReader<'_>, nbits: u32) -> Result<i64, Error> {
     let v = read_bits(reader, nbits)?;
     Ok(sign_extend(v, nbits))
 }
 
 #[inline]
-pub fn read_u64(reader: &mut BitReader<'_>) -> anyhow::Result<u64> {
+pub fn read_u64(reader: &mut BitReader<'_>) -> Result<u64, Error> {
     reader.realign_to_byte();
-    reader.read_bytes(8).map(LittleEndian::read_u64)
+    reader
+        .read_bytes(8)
+        .map(LittleEndian::read_u64)
+        .map_err(Into::into)
 }
 
 #[inline]
-pub fn read_bool(reader: &mut BitReader<'_>) -> anyhow::Result<bool> {
+pub fn read_bool(reader: &mut BitReader<'_>) -> Result<bool, Error> {
     read_bits(reader, 1).map(|v| v != 0)
 }
 
 #[inline]
-pub fn read_compact_length(reader: &mut BitReader<'_>) -> anyhow::Result<usize> {
+pub fn read_compact_length(reader: &mut BitReader<'_>) -> Result<usize, Error> {
     let is_large = read_bool(reader)?;
     let v = match is_large {
         true => read_bits(reader, u32::BITS - 1),
@@ -50,7 +53,7 @@ pub fn read_compact_length(reader: &mut BitReader<'_>) -> anyhow::Result<usize> 
 }
 
 #[inline]
-pub fn read_string_length(reader: &mut BitReader<'_>, compact: bool) -> anyhow::Result<usize> {
+pub fn read_string_length(reader: &mut BitReader<'_>, compact: bool) -> Result<usize, Error> {
     let len = match compact {
         true => read_compact_length(reader)?,
         false => read_bits(reader, u16::BITS)? as usize,
@@ -62,7 +65,7 @@ pub fn read_string_length(reader: &mut BitReader<'_>, compact: bool) -> anyhow::
 }
 
 #[inline]
-pub fn read_container_length(reader: &mut BitReader<'_>, compact: bool) -> anyhow::Result<usize> {
+pub fn read_container_length(reader: &mut BitReader<'_>, compact: bool) -> Result<usize, Error> {
     let len = match compact {
         true => read_compact_length(reader)?,
         false => read_bits(reader, u32::BITS)? as usize,
@@ -77,21 +80,21 @@ pub fn read_container_length(reader: &mut BitReader<'_>, compact: bool) -> anyho
 pub fn read_string<'a>(
     reader: &mut BitReader<'a>,
     opts: &SerializerOptions,
-) -> anyhow::Result<&'a [u8]> {
+) -> Result<&'a [u8], Error> {
     let len = read_string_length(
         reader,
         opts.flags
             .contains(SerializerFlags::COMPACT_LENGTH_PREFIXES),
     )?;
 
-    reader.read_bytes(len)
+    reader.read_bytes(len).map_err(Into::into)
 }
 
 #[inline]
 pub fn read_wstring(
     reader: &mut BitReader<'_>,
     opts: &SerializerOptions,
-) -> anyhow::Result<Vec<u16>> {
+) -> Result<Vec<u16>, Error> {
     let len = read_string_length(
         reader,
         opts.flags
@@ -107,7 +110,7 @@ pub fn read_wstring(
 }
 
 #[inline]
-pub fn read_color(reader: &mut BitReader<'_>) -> anyhow::Result<Color> {
+pub fn read_color(reader: &mut BitReader<'_>) -> Result<Color, Error> {
     if reader.buffered_bits() < u32::BITS {
         reader.refill_bits();
     }
@@ -125,7 +128,7 @@ pub fn read_color(reader: &mut BitReader<'_>) -> anyhow::Result<Color> {
 }
 
 #[inline]
-pub fn read_vec3(reader: &mut BitReader<'_>) -> anyhow::Result<Vec3> {
+pub fn read_vec3(reader: &mut BitReader<'_>) -> Result<Vec3, Error> {
     let mut data = reader.read_bytes(12)?;
 
     let x = data.read_f32::<LittleEndian>()?;
@@ -136,7 +139,7 @@ pub fn read_vec3(reader: &mut BitReader<'_>) -> anyhow::Result<Vec3> {
 }
 
 #[inline]
-pub fn read_quat(reader: &mut BitReader<'_>) -> anyhow::Result<Quaternion> {
+pub fn read_quat(reader: &mut BitReader<'_>) -> Result<Quaternion, Error> {
     let mut data = reader.read_bytes(16)?;
 
     let x = data.read_f32::<LittleEndian>()?;
@@ -148,7 +151,7 @@ pub fn read_quat(reader: &mut BitReader<'_>) -> anyhow::Result<Quaternion> {
 }
 
 #[inline]
-pub fn read_euler(reader: &mut BitReader<'_>) -> anyhow::Result<Euler> {
+pub fn read_euler(reader: &mut BitReader<'_>) -> Result<Euler, Error> {
     let mut data = reader.read_bytes(12)?;
 
     // TODO: Is this order correct?
@@ -160,7 +163,7 @@ pub fn read_euler(reader: &mut BitReader<'_>) -> anyhow::Result<Euler> {
 }
 
 #[inline]
-pub fn read_matrix(reader: &mut BitReader<'_>) -> anyhow::Result<Matrix> {
+pub fn read_matrix(reader: &mut BitReader<'_>) -> Result<Matrix, Error> {
     let mut data = reader.read_bytes(36)?;
 
     let i = [

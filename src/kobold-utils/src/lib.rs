@@ -8,6 +8,7 @@ pub use anyhow;
 pub use binrw;
 #[cfg(feature = "libdeflater")]
 pub use libdeflater;
+pub use thiserror;
 
 pub mod align;
 #[cfg(feature = "binrw")]

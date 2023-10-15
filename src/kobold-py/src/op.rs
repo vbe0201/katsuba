@@ -3,7 +3,7 @@ use std::{fs, io, path::PathBuf, sync::Arc};
 use kobold_object_property::{serde, Value};
 use pyo3::{prelude::*, types::PyType};
 
-use crate::KoboldError;
+use crate::{error, KoboldError};
 
 mod conversion;
 
@@ -87,12 +87,12 @@ impl SerializerOptions {
     }
 
     #[getter]
-    pub fn get_recursion_limit(&self) -> u8 {
+    pub fn get_recursion_limit(&self) -> i8 {
         self.0.recursion_limit
     }
 
     #[setter]
-    pub fn set_recursion_limit(&mut self, new: u8) {
+    pub fn set_recursion_limit(&mut self, new: i8) {
         self.0.recursion_limit = new;
     }
 
@@ -116,7 +116,7 @@ impl Serializer {
     pub fn new(options: SerializerOptions, types: &TypeList) -> PyResult<Self> {
         serde::Serializer::new(options.0, Arc::clone(&types.0))
             .map(Self)
-            .map_err(|e| KoboldError::new_err(e.to_string()))
+            .map_err(error::op_to_py_err)
     }
 
     pub fn deserialize(&mut self, data: &[u8]) -> PyResult<LazyObject> {
@@ -131,7 +131,7 @@ impl Serializer {
 
                 unsafe { LazyObject::new(value.clone(), obj) }
             })
-            .map_err(|e| KoboldError::new_err(e.to_string()))
+            .map_err(error::op_to_py_err)
     }
 }
 

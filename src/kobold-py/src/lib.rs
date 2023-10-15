@@ -5,6 +5,7 @@
 
 #![deny(rust_2018_idioms, rustdoc::broken_intra_doc_links)]
 
+mod error;
 mod op;
 mod utils;
 mod wad;

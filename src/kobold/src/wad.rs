@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Args, Subcommand};
-use kobold_utils::anyhow;
+use kobold_utils::anyhow::{self, Context};
 use kobold_wad::Archive;
 
 mod extract;
@@ -38,7 +38,8 @@ pub fn process(wad: Wad) -> anyhow::Result<()> {
             };
 
             // TODO: Choose between heap and mmap based on file size.
-            let archive = Archive::mmap(&input, verify_checksums)?;
+            let archive = Archive::mmap(&input, verify_checksums)
+                .with_context(|| format!("failed to open archive '{}'", input.display()))?;
 
             // At this point, we succeeded in opening `input` as a file.
             // Therefore, we know it has a parent path that is not None.

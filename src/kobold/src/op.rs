@@ -87,8 +87,7 @@ pub fn process(op: ObjectProperty) -> anyhow::Result<()> {
         property_mask: PropertyFlags::from_bits_truncate(op.mask),
         shallow: op.shallow,
         manual_compression: op.zlib_manual,
-        recursion_limit: u8::MAX,
-        skip_unknown_types: false,
+        ..Default::default()
     };
 
     match op.command {

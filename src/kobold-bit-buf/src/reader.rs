@@ -1,6 +1,4 @@
-use std::{marker::PhantomData, ptr, slice};
-
-use kobold_utils::anyhow;
+use std::{io, marker::PhantomData, ptr, slice};
 
 // The maximum number of bits that can be stored in lookahead.
 //
@@ -186,36 +184,51 @@ impl<'a> BitReader<'a> {
     /// Returns the next `count` bits from the internal buffer without removing
     /// them, if available.
     #[inline]
-    pub fn peek(&mut self, count: u32) -> anyhow::Result<u64> {
-        anyhow::ensure!(count <= CONSUMABLE_BITS && count <= self.remaining);
-
-        Ok(self.lookahead & ((1 << count) - 1))
+    pub fn peek(&mut self, count: u32) -> io::Result<u64> {
+        if count <= CONSUMABLE_BITS && count <= self.remaining {
+            Ok(self.lookahead & ((1 << count) - 1))
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "attempted to read out of bounds",
+            ))
+        }
     }
 
     /// Removes `count` bits from the internal buffer, if available.
     #[inline]
-    pub fn consume(&mut self, count: u32) -> anyhow::Result<()> {
-        anyhow::ensure!(count <= self.remaining);
+    pub fn consume(&mut self, count: u32) -> io::Result<()> {
+        if count <= self.remaining {
+            self.lookahead >>= count;
+            self.remaining -= count;
 
-        self.lookahead >>= count;
-        self.remaining -= count;
-
-        Ok(())
+            Ok(())
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "attempted to read out of bounds",
+            ))
+        }
     }
 
     /// Reads `nbytes` raw bytes from the internal buffer.
     ///
     /// These are borrowed from the underlying byte view without
     /// copying them.
-    pub fn read_bytes(&mut self, count: usize) -> anyhow::Result<&'a [u8]> {
-        anyhow::ensure!(count <= self.untouched_bytes());
-
-        // SAFETY: A bounds check was done and an appropriate lifetime is
-        // inferred through the function signature.
-        unsafe {
-            let value = slice::from_raw_parts(self.ptr, count);
-            self.ptr = self.ptr.add(count);
-            Ok(value)
+    pub fn read_bytes(&mut self, count: usize) -> io::Result<&'a [u8]> {
+        if count <= self.untouched_bytes() {
+            // SAFETY: A bounds check was done and an appropriate lifetime is
+            // inferred through the function signature.
+            unsafe {
+                let value = slice::from_raw_parts(self.ptr, count);
+                self.ptr = self.ptr.add(count);
+                Ok(value)
+            }
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "attempted to read out of bounds",
+            ))
         }
     }
 }

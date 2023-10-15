@@ -14,7 +14,7 @@ use kobold_utils::{anyhow, fs};
 use crate::utils::*;
 
 struct Report {
-    value: anyhow::Result<Value>,
+    value: Result<Value, serde::Error>,
     opts: serde::SerializerOptions,
 }
 

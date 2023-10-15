@@ -7,11 +7,10 @@
 #![forbid(unsafe_code)]
 
 use kobold_utils::{
-    anyhow,
     binrw::{
         self, binrw,
         io::{Read, Seek, Write},
-        BinReaderExt, BinWriterExt,
+        BinReaderExt, BinResult, BinWriterExt,
     },
     binrw_ext::{read_string_list, write_string_list},
 };
@@ -67,12 +66,12 @@ pub struct NavigationGraph {
 
 impl NavigationGraph {
     /// Attempts to parse a NAV graph from a given [`Read`]er.
-    pub fn parse<R: Read + Seek>(reader: &mut R) -> anyhow::Result<Self> {
+    pub fn parse<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
         reader.read_le().map_err(Into::into)
     }
 
     /// Writes the NAV graph to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> anyhow::Result<()> {
+    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()> {
         writer.write_le(self).map_err(Into::into)
     }
 }
@@ -98,12 +97,12 @@ pub struct ZoneNavigationGraph {
 
 impl ZoneNavigationGraph {
     /// Attempts to parse a zonenav graph from a given [`Read`]er.
-    pub fn parse<R: Read + Seek>(reader: &mut R) -> anyhow::Result<Self> {
+    pub fn parse<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
         reader.read_le().map_err(Into::into)
     }
 
     /// Writes the zonenav graph to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> anyhow::Result<()> {
+    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()> {
         writer.write_le(self).map_err(Into::into)
     }
 }

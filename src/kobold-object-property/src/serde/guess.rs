@@ -2,7 +2,6 @@ use std::{mem, sync::Arc};
 
 use byteorder::{ByteOrder, LE};
 use kobold_types::TypeList;
-use kobold_utils::anyhow;
 use once_cell::sync::Lazy;
 use regex::bytes::Regex;
 
@@ -75,14 +74,14 @@ fn zlib_decompress(
     inflater: &mut Decompressor,
     out: &mut Vec<u8>,
     data: &[u8],
-) -> anyhow::Result<bool> {
+) -> Result<bool, Error> {
     match de::zlib_decompress(inflater, data, out) {
         Ok(()) => Ok(true),
 
         // Assume this was a false positive stream.
-        Err(de::ZlibError::Decompress(_)) => Ok(false),
+        Err(Error::Decompress(_)) => Ok(false),
 
-        Err(e) => Err(e.into()),
+        Err(e) => Err(e),
     }
 }
 
@@ -128,7 +127,7 @@ impl Guesser {
         }
     }
 
-    pub fn guess(mut self, data: &[u8]) -> anyhow::Result<Serializer> {
+    pub fn guess(mut self, data: &[u8]) -> Result<Serializer, Error> {
         // We perform only a baseline guess -- a pass that identifies and bases
         // off unambiguous properties of serialized data under the assumption
         // the stream is valid.
@@ -148,7 +147,7 @@ impl Guesser {
         })
     }
 
-    fn baseline_guess<'a>(&'a mut self, mut data: &'a [u8]) -> anyhow::Result<()> {
+    fn baseline_guess<'a>(&'a mut self, mut data: &'a [u8]) -> Result<(), Error> {
         if check_bind_config(&mut self.opts, data) {
             return Ok(());
         }

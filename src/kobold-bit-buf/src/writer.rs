@@ -1,6 +1,4 @@
-use std::{mem::size_of, ptr};
-
-use kobold_utils::anyhow;
+use std::{io, mem::size_of, ptr};
 
 // The maximum number of bits that can be buffered before comitting to the
 // output sink.
@@ -111,13 +109,18 @@ impl BitWriter {
 
     /// Adds `nbits` bits from `value` to the internal buffer, if capacity
     /// is available in the buffer.
-    pub fn offer(&mut self, value: u64, nbits: u32) -> anyhow::Result<()> {
-        anyhow::ensure!(nbits <= WRITABLE_BITS && nbits <= (BUFFER_SIZE - self.count));
+    pub fn offer(&mut self, value: u64, nbits: u32) -> io::Result<()> {
+        if nbits <= WRITABLE_BITS && nbits <= (BUFFER_SIZE - self.count) {
+            self.buf |= (value & ((1 << nbits) - 1)) << self.count;
+            self.count += nbits;
 
-        self.buf |= (value & ((1 << nbits) - 1)) << self.count;
-        self.count += nbits;
-
-        Ok(())
+            Ok(())
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "buffer capacity overflow",
+            ))
+        }
     }
 
     /// Flushes remaining bits to the output vector, with partially initialized

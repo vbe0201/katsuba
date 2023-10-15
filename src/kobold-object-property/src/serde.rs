@@ -1,10 +1,13 @@
 //! Serialization support for ObjectProperty values.
 
-use std::sync::Arc;
+use std::{io, sync::Arc};
 
 use bitflags::bitflags;
 use kobold_types::{PropertyFlags, TypeList};
-use kobold_utils::{anyhow, libdeflater::Decompressor};
+use kobold_utils::{
+    libdeflater::{DecompressionError, Decompressor},
+    thiserror::{self, Error},
+};
 
 mod de;
 
@@ -26,6 +29,61 @@ mod utils;
 
 /// Magic header for persistent object state shipped with the client.
 pub const BIND_MAGIC: &[u8] = b"BINd";
+
+/// Errors that may occur during the ObjectProperty (de)serialization process.
+#[derive(Debug, Error)]
+pub enum Error {
+    /// An I/O error occured while trying to read data from the input source.
+    #[error("{0}")]
+    Io(#[from] io::Error),
+
+    /// Failed to decompress a zlib object stream.
+    #[error("{0}")]
+    Decompress(#[from] DecompressionError),
+
+    /// The actual size of an inflated object after decompression does
+    /// not match the size expectation for it.
+    #[error("mismatch for inflated object size: expected {expected}, got {actual}")]
+    DecompressedSizeMismatch { expected: usize, actual: usize },
+
+    /// Attempted to construct a serializer from a bad configuration.
+    #[error("bad serializer configuration: {0:?}")]
+    BadConfig(&'static str),
+
+    /// Configured recursion limit was exceeded during the process.
+    #[error("recursion limit exceeded")]
+    Recursion,
+
+    /// Failed to decode an UTF-8 string where one was expected.
+    #[error("{0}")]
+    Decode(#[from] std::str::Utf8Error),
+
+    /// Failed to encode or decode an encountered enum value.
+    #[error("{0}")]
+    Enum(#[from] kobold_types::EncodingError),
+
+    /// Failed to identify a type from its type tag during deserialization.
+    #[error("failed to identify type with tag '{0}'")]
+    UnknownType(u32),
+
+    /// Object stream specifies a property that is not part of the object.
+    #[error("unknown property for object with hash '{0}'")]
+    UnknownProperty(u32),
+
+    /// Encoded property size did not match the actually consumed data for it.
+    #[error("mismatch for property size: expectedd {expected}, got {actual}")]
+    PropertySizeMismatch { expected: usize, actual: usize },
+
+    /// Encoded properties for an object consume more size than the object is
+    /// specified to be.
+    #[error("overflowed object size while consuming data")]
+    ObjectSizeMismatch,
+
+    /// When a delta-encoded property is missing from a stream which enforces
+    /// its presence.
+    #[error("missing delta value which must be present")]
+    MissingDelta,
+}
 
 bitflags! {
     /// Configuration bits to customize serialization behavior.
@@ -65,7 +123,7 @@ pub struct SerializerOptions {
     /// overflows during deserialization.
     ///
     /// Ignored during serialization.
-    pub recursion_limit: u8,
+    pub recursion_limit: i8,
     /// Skips unknown types during deserialization of properties.
     ///
     /// Ignored during serialization.
@@ -79,7 +137,7 @@ impl Default for SerializerOptions {
             property_mask: PropertyFlags::TRANSMIT | PropertyFlags::PRIVILEGED_TRANSMIT,
             shallow: true,
             manual_compression: false,
-            recursion_limit: u8::MAX / 2,
+            recursion_limit: i8::MAX,
             skip_unknown_types: false,
         }
     }
@@ -119,12 +177,14 @@ pub struct Serializer {
 
 impl SerializerParts {
     #[inline]
-    pub(super) fn with_recursion_limit<F, T>(&mut self, f: F) -> anyhow::Result<T>
+    pub(super) fn with_recursion_limit<F, T>(&mut self, f: F) -> Result<T, Error>
     where
-        F: FnOnce(&mut Self) -> anyhow::Result<T>,
+        F: FnOnce(&mut Self) -> Result<T, Error>,
     {
         self.options.recursion_limit -= 1;
-        anyhow::ensure!(self.options.recursion_limit > 0, "recursion limit exceeded");
+        if self.options.recursion_limit < 0 {
+            return Err(Error::Recursion);
+        }
 
         let res = f(self);
 

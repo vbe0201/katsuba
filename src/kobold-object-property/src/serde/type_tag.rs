@@ -1,8 +1,7 @@
 use kobold_bit_buf::BitReader;
 use kobold_types::{TypeDef, TypeList};
-use kobold_utils::anyhow;
 
-use super::utils;
+use super::{utils, Error};
 
 /// A type tag which defines the encoding of an object
 /// identity scheme.
@@ -12,7 +11,7 @@ pub trait TypeTag: Sized {
     fn identity<'a>(
         reader: &mut BitReader<'_>,
         types: &'a TypeList,
-    ) -> anyhow::Result<Option<&'a TypeDef>>;
+    ) -> Result<Option<&'a TypeDef>, Error>;
 }
 
 /// A [`TypeTag`] that identifies regular PropertyClasses.
@@ -22,14 +21,14 @@ impl TypeTag for PropertyClass {
     fn identity<'a>(
         reader: &mut BitReader<'_>,
         types: &'a TypeList,
-    ) -> anyhow::Result<Option<&'a TypeDef>> {
+    ) -> Result<Option<&'a TypeDef>, Error> {
         let hash = utils::read_bits(reader, u32::BITS)? as u32;
         find_class_def(types, hash)
     }
 }
 
 #[inline]
-fn find_class_def(types: &TypeList, hash: u32) -> anyhow::Result<Option<&TypeDef>> {
+fn find_class_def(types: &TypeList, hash: u32) -> Result<Option<&TypeDef>, Error> {
     if hash == 0 {
         log::debug!("Received null hash for object");
         Ok(None)
@@ -37,6 +36,6 @@ fn find_class_def(types: &TypeList, hash: u32) -> anyhow::Result<Option<&TypeDef
         log::debug!("Received object hash for '{}' ({hash})", t.name);
         Ok(Some(t))
     } else {
-        anyhow::bail!("failed to identify type with hash {hash}")
+        Err(Error::UnknownType(hash))
     }
 }

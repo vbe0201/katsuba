@@ -1,12 +1,8 @@
 use std::{borrow::Cow, collections::btree_map, path::PathBuf};
 
-use pyo3::{
-    exceptions::{PyIOError, PyKeyError, PyOSError},
-    prelude::*,
-    types::PyType,
-};
+use pyo3::{exceptions::PyKeyError, prelude::*, types::PyType};
 
-use crate::op;
+use crate::{error, op, KoboldError};
 
 fn extract_file_contents<'a>(
     archive: &'a kobold_wad::Archive,
@@ -20,7 +16,7 @@ fn extract_file_contents<'a>(
             let mut inflater = kobold_wad::Inflater::new();
             inflater
                 .decompress(contents, file.uncompressed_size as _)
-                .map_err(|e| PyIOError::new_err(e.to_string()))?;
+                .map_err(|e| KoboldError::new_err(format!("{e:?}")))?;
 
             Cow::Owned(inflater.into_inner())
         }
@@ -62,7 +58,7 @@ impl Archive {
     pub fn heap(_cls: &PyType, path: PathBuf, verify_crcs: bool) -> PyResult<Self> {
         kobold_wad::Archive::heap(path, verify_crcs)
             .map(Self)
-            .map_err(|e| PyOSError::new_err(e.to_string()))
+            .map_err(error::wad_to_py_err)
     }
 
     #[classmethod]
@@ -70,7 +66,7 @@ impl Archive {
     pub fn mmap(_cls: &PyType, path: PathBuf, verify_crcs: bool) -> PyResult<Self> {
         kobold_wad::Archive::mmap(path, verify_crcs)
             .map(Self)
-            .map_err(|e| PyOSError::new_err(e.to_string()))
+            .map_err(error::wad_to_py_err)
     }
 
     pub fn deserialize(

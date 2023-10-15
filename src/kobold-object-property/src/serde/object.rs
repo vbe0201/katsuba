@@ -1,18 +1,16 @@
 use std::collections::BTreeMap;
 
-use anyhow::anyhow;
 use kobold_bit_buf::BitReader;
 use kobold_types::{PropertyFlags, TypeDef};
-use kobold_utils::anyhow;
 use smartstring::alias::String;
 
-use super::{property, utils, SerializerFlags, SerializerParts, TypeTag};
+use super::{property, utils, Error, SerializerFlags, SerializerParts, TypeTag};
 use crate::{value::Object, Value};
 
 pub fn deserialize<T: TypeTag>(
     de: &mut SerializerParts,
     reader: &mut BitReader<'_>,
-) -> anyhow::Result<Value> {
+) -> Result<Value, Error> {
     de.with_recursion_limit(|de| {
         reader.realign_to_byte();
 
@@ -55,7 +53,7 @@ fn deserialize_properties<T: TypeTag>(
     object_size: usize,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
-) -> anyhow::Result<Value> {
+) -> Result<Value, Error> {
     let mut inner = BTreeMap::new();
 
     if de.options.shallow {
@@ -73,7 +71,7 @@ fn deserialize_properties_shallow<T: TypeTag>(
     de: &mut SerializerParts,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
-) -> anyhow::Result<()> {
+) -> Result<(), Error> {
     // In shallow mode, we walk masked properties in order.
     let mask = de.options.property_mask;
     for property in type_def
@@ -88,7 +86,7 @@ fn deserialize_properties_shallow<T: TypeTag>(
                 .flags
                 .contains(SerializerFlags::FORBID_DELTA_ENCODE)
         {
-            anyhow::bail!("missing delta value which is supposed to be present");
+            return Err(Error::MissingDelta);
         }
 
         let value = property::deserialize::<T>(de, property, reader)?;
@@ -106,7 +104,7 @@ fn deserialize_properties_deep<T: TypeTag>(
     mut object_size: usize,
     type_def: &TypeDef,
     reader: &mut BitReader<'_>,
-) -> anyhow::Result<()> {
+) -> Result<(), Error> {
     // In deep mode, the properties name themselves.
     while object_size > 0 {
         // Back up the current buffer length and read the property size.
@@ -120,22 +118,24 @@ fn deserialize_properties_deep<T: TypeTag>(
             .properties
             .iter()
             .find(|p| p.hash == property_hash)
-            .ok_or_else(|| anyhow!("received unknown property hash {property_hash}"))?;
+            .ok_or_else(|| Error::UnknownProperty(property_hash))?;
 
         // Deserialize the property's value.
         let value = property::deserialize::<T>(de, property, reader)?;
 
         // Validate the size expectations.
         let actual_size = previous_buf_len - reader.remaining_bits();
-        anyhow::ensure!(
-            property_size == actual_size,
-            "property size mismatch; expected {property_size}, got {actual_size}"
-        );
+        if property_size != actual_size {
+            return Err(Error::PropertySizeMismatch {
+                expected: property_size,
+                actual: actual_size,
+            });
+        }
 
         // Prepare for the next round of deserialization.
         object_size = object_size
             .checked_sub(property_size)
-            .ok_or_else(|| anyhow!("property size exceeds object size"))?;
+            .ok_or_else(|| Error::ObjectSizeMismatch)?;
         reader.realign_to_byte();
 
         // Lastly, insert the property into the object.
@@ -149,7 +149,7 @@ fn deserialize_properties_deep<T: TypeTag>(
 pub(crate) fn read_bit_size(
     de: &SerializerParts,
     reader: &mut BitReader<'_>,
-) -> anyhow::Result<u32> {
+) -> Result<u32, Error> {
     (!de.options.shallow)
         .then(|| Ok(utils::read_bits(reader, u32::BITS)? as u32 - u32::BITS))
         .unwrap_or(Ok(0))

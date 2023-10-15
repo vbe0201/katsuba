@@ -1,9 +1,33 @@
-use std::{collections::BTreeMap, fs::File, io, mem, path::Path};
+use std::{collections::BTreeMap, fs, io, mem, path::Path};
 
-use kobold_utils::{anyhow, fs};
+use kobold_utils::{
+    binrw,
+    libdeflater::DecompressionError,
+    thiserror::{self, Error},
+};
 use memmap2::{Mmap, MmapOptions};
 
 use crate::types as wad_types;
+
+/// Errors that may occur when working with KIWAD archives.
+#[derive(Debug, Error)]
+pub enum ArchiveError {
+    /// An I/O operation when reading or mapping a file failed.
+    #[error("failed to open archive: {0}")]
+    Io(#[from] io::Error),
+
+    /// Decompression of a file in the archive failed.
+    #[error("failed to decompress archive file: {0}")]
+    Zlib(#[from] DecompressionError),
+
+    /// Failed to parse the archive file.
+    #[error("failed to parse archive: {0}")]
+    Parse(#[from] binrw::Error),
+
+    /// CRC validation of an archive file failed.
+    #[error("{0}")]
+    Crc(#[from] wad_types::CrcMismatch),
+}
 
 /// Representation of a KIWAD archive loaded into memory.
 ///
@@ -30,7 +54,7 @@ impl Archive {
     ///
     /// This is the preferred option of working with relatively small
     /// files but it's always best to profile.
-    pub fn heap<P: AsRef<Path>>(path: P, verify_crc: bool) -> anyhow::Result<Self> {
+    pub fn heap<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
         HeapArchive::open(path, verify_crc).map(|a| Self(ArchiveInner::Heap(a)))
     }
 
@@ -45,7 +69,7 @@ impl Archive {
     ///
     /// This is the preferred option of working with relatively large
     /// files but it's always best to profile.
-    pub fn mmap<P: AsRef<Path>>(path: P, verify_crc: bool) -> anyhow::Result<Self> {
+    pub fn mmap<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
         MemoryMappedArchive::open(path, verify_crc).map(|a| Self(ArchiveInner::MemoryMapped(a)))
     }
 
@@ -132,13 +156,13 @@ struct MemoryMappedArchive {
     // Owned by this structure so the mapping never becomes invalid.
     // Closed when this structure is dropped.
     #[allow(unused)]
-    file: File,
+    file: fs::File,
 }
 
 impl MemoryMappedArchive {
-    fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> anyhow::Result<Self> {
+    fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
         // Attempt to open the file at the given path.
-        let file = fs::open_file(path)?;
+        let file = fs::File::open(path)?;
         let mut this = Self {
             // SAFETY: We own the file and keep it around until the mapping
             // is closed; see comments in `MemoryMappedArchive` above.
@@ -173,7 +197,7 @@ struct HeapArchive {
 }
 
 impl HeapArchive {
-    fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> anyhow::Result<Self> {
+    fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
         // Attempt to read the given file into a byte vector.
         let mut this = Self {
             journal: Journal {

@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 
 use kobold_utils::{
-    anyhow,
     binrw::{
         self, binrw,
         io::{Read, Seek, Write},
@@ -129,12 +128,12 @@ pub struct Poi {
 
 impl Poi {
     /// Attempts to parse a BCD file from a given [`Read`]er.
-    pub fn parse<R: Read + Seek>(reader: &mut R) -> anyhow::Result<Self> {
+    pub fn parse<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
         reader.read_le().map_err(Into::into)
     }
 
     /// Writes the BCD data to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> anyhow::Result<()> {
+    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()> {
         writer.write_le(self).map_err(Into::into)
     }
 }

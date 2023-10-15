@@ -1,4 +1,4 @@
-use kobold_utils::{anyhow, libdeflater::Decompressor};
+use kobold_utils::libdeflater::{DecompressionError, Decompressor};
 
 /// A zlib inflater for decompressing archive files.
 ///
@@ -33,11 +33,17 @@ impl Inflater {
     ///
     /// `size_hint` must be the size of inflated output, otherwise
     /// this method will error.
-    pub fn decompress(&mut self, data: &[u8], size_hint: usize) -> anyhow::Result<&[u8]> {
+    pub fn decompress(
+        &mut self,
+        data: &[u8],
+        size_hint: usize,
+    ) -> Result<&[u8], DecompressionError> {
         self.scratch.resize(size_hint, 0);
 
         let out = self.raw.zlib_decompress(data, &mut self.scratch)?;
-        anyhow::ensure!(out == size_hint, "inflated size mismatch");
+        if out != size_hint {
+            return Err(DecompressionError::BadData);
+        }
 
         Ok(&self.scratch)
     }

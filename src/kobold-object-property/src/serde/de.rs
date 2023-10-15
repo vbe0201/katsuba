@@ -1,49 +1,28 @@
 use std::sync::Arc;
 
-use anyhow::bail;
 use byteorder::{ReadBytesExt, LE};
 use kobold_bit_buf::BitReader;
 use kobold_types::TypeList;
-use kobold_utils::{
-    anyhow,
-    libdeflater::{self, Decompressor},
-};
+use kobold_utils::libdeflater::Decompressor;
 
 use super::*;
 use crate::Value;
-
-pub(super) enum ZlibError {
-    Io(std::io::Error),
-    Decompress(libdeflater::DecompressionError),
-    Verify(anyhow::Error),
-}
-
-impl From<ZlibError> for anyhow::Error {
-    fn from(value: ZlibError) -> Self {
-        match value {
-            ZlibError::Io(e) => e.into(),
-            ZlibError::Decompress(e) => e.into(),
-            ZlibError::Verify(e) => e,
-        }
-    }
-}
 
 #[inline]
 pub(super) fn zlib_decompress(
     inflater: &mut Decompressor,
     mut data: &[u8],
     out: &mut Vec<u8>,
-) -> Result<(), ZlibError> {
-    let size = data.read_u32::<LE>().map_err(ZlibError::Io)? as usize;
+) -> Result<(), Error> {
+    let size = data.read_u32::<LE>()? as usize;
     out.resize(size, 0);
 
-    let decompressed = inflater
-        .zlib_decompress(data, out)
-        .map_err(ZlibError::Decompress)?;
+    let decompressed = inflater.zlib_decompress(data, out)?;
     if decompressed != size {
-        return Err(ZlibError::Verify(anyhow::anyhow!(
-            "size mismatch for uncompressed data"
-        )));
+        return Err(Error::DecompressedSizeMismatch {
+            expected: size,
+            actual: decompressed,
+        });
     }
 
     Ok(())
@@ -54,7 +33,7 @@ impl ZlibParts {
         &'a mut self,
         opts: &mut SerializerOptions,
         mut data: &'a [u8],
-    ) -> anyhow::Result<BitReader<'a>> {
+    ) -> Result<BitReader<'a>, Error> {
         // If the data is manually compressed, uncompress into scratch.
         if opts.manual_compression {
             zlib_decompress(&mut self.inflater, data, &mut self.scratch1)?;
@@ -81,9 +60,11 @@ impl Serializer {
     ///
     /// No data for deserialization has been loaded at this point.
     /// [`Deserializer::load_data`] should be called next.
-    pub fn new(options: SerializerOptions, types: Arc<TypeList>) -> anyhow::Result<Self> {
+    pub fn new(options: SerializerOptions, types: Arc<TypeList>) -> Result<Self, Error> {
         if options.shallow && options.skip_unknown_types {
-            bail!("cannot skip unknown types in shallow mode");
+            return Err(Error::BadConfig(
+                "cannot skip unknown types in shallow mode",
+            ));
         }
 
         Ok(Self {
@@ -101,7 +82,7 @@ impl Serializer {
     /// It is generally only advised to use the resulting config as
     /// a first fit, it is not guaranteed to be accurate.
     #[cfg(feature = "enable-option-guessing")]
-    pub fn with_guessed_options(types: Arc<TypeList>, data: &[u8]) -> anyhow::Result<Self> {
+    pub fn with_guessed_options(types: Arc<TypeList>, data: &[u8]) -> Result<Self, Error> {
         Self::with_guessed_options_from_base(Default::default(), types, data)
     }
 
@@ -119,12 +100,12 @@ impl Serializer {
         opts: SerializerOptions,
         types: Arc<TypeList>,
         data: &[u8],
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, Error> {
         super::guess::Guesser::new(opts, types).guess(data)
     }
 
     /// Deserializes an object [`Value`] from the given data.
-    pub fn deserialize<T: TypeTag>(&mut self, data: &[u8]) -> anyhow::Result<Value> {
+    pub fn deserialize<T: TypeTag>(&mut self, data: &[u8]) -> Result<Value, Error> {
         let mut reader = self.zlib_parts.configure(&mut self.parts.options, data)?;
         log::info!("Deserializing object with config {:?}", self.parts.options);
 

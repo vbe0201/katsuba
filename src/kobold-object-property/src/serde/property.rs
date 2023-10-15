@@ -1,15 +1,14 @@
 use kobold_bit_buf::BitReader;
 use kobold_types::Property;
-use kobold_utils::anyhow;
 
-use super::{enum_variant, object, simple_data, utils, SerializerFlags, SerializerParts, TypeTag};
+use super::*;
 use crate::value::{List, Value};
 
 pub fn deserialize<T: TypeTag>(
     de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
-) -> anyhow::Result<Value> {
+) -> Result<Value, Error> {
     log::debug!("Deserializing value for property '{}'", property.name);
 
     let value = if property.dynamic {
@@ -27,7 +26,7 @@ fn deserialize_value<T: TypeTag>(
     de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
-) -> anyhow::Result<Value> {
+) -> Result<Value, Error> {
     if property.is_enum() {
         enum_variant::deserialize(de, property, reader)
     } else {
@@ -44,7 +43,7 @@ fn deserialize_list<T: TypeTag>(
     de: &mut SerializerParts,
     property: &Property,
     reader: &mut BitReader<'_>,
-) -> anyhow::Result<Value> {
+) -> Result<Value, Error> {
     let len = utils::read_container_length(
         reader,
         de.options

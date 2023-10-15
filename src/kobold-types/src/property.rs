@@ -1,12 +1,26 @@
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use bitflags::bitflags;
-use kobold_utils::{anyhow, hash};
+use kobold_utils::{
+    hash,
+    thiserror::{self, Error},
+};
 use serde::{de::Error, Deserialize, Deserializer};
 use smartstring::alias::String;
 
 use super::StringOrInt;
+
+/// Errors that may occur when encoding or decoding enum values.
+#[derive(Debug, PartialEq, Error)]
+pub enum EncodingError {
+    /// Failed to decode an enum variant's string representation.
+    #[error("unknown enum variant: {0}")]
+    Decode(std::string::String),
+
+    /// Failed to encode an enum variant's integral representation.
+    #[error("unknown enum value: {0}")]
+    Encode(i64),
+}
 
 bitflags! {
     /// The configuration bits for [`Property`] values.
@@ -76,7 +90,7 @@ impl Property {
 
     /// Encodes an integral enum variant into a string representation
     /// of the value through the property's defined options.
-    pub fn encode_enum_variant(&self, variant: i64) -> anyhow::Result<String> {
+    pub fn encode_enum_variant(&self, variant: i64) -> Result<String, EncodingError> {
         match self.flags.contains(PropertyFlags::BITS) {
             // Given a bitmask, check all available bits in enum_options
             // and build a string representation similar to KI's.
@@ -105,14 +119,14 @@ impl Property {
                     }
                 }
 
-                Err(anyhow!("unknown enum variant: {variant}"))
+                Err(EncodingError::Encode(variant))
             }
         }
     }
 
     /// Decodes a given enum variant from its string representation to
     /// an integer value through the property's defined options.
-    pub fn decode_enum_variant(&self, variant: &str) -> anyhow::Result<i64> {
+    pub fn decode_enum_variant(&self, variant: &str) -> Result<i64, EncodingError> {
         if self.flags.contains(PropertyFlags::BITS) {
             // For bitflags in string format, we convert them into
             // their integral representation.
@@ -124,7 +138,7 @@ impl Property {
                     .enum_options
                     .get(bit)
                     .and_then(|v| v.to_int())
-                    .ok_or_else(|| anyhow!("unknown bit in sequence: '{bit}'"))?;
+                    .ok_or_else(|| EncodingError::Decode(bit.to_string()))?;
             }
 
             Ok(res)
@@ -134,7 +148,7 @@ impl Property {
             self.enum_options
                 .get(variant)
                 .and_then(|v| v.to_int())
-                .ok_or_else(|| anyhow!("received unknown enum variant: '{variant}'"))
+                .ok_or_else(|| EncodingError::Decode(variant.to_string()))
         }
     }
 }

@@ -1,16 +1,26 @@
 //! Common types and structures in the KIWAD format.
 
 use kobold_utils::{
-    anyhow,
     binrw::{
         self, binrw,
         io::{Read, Seek, Write},
-        BinReaderExt, BinWriterExt,
+        BinReaderExt, BinResult, BinWriterExt,
     },
     binrw_ext::{read_prefixed_string, write_prefixed_string},
+    thiserror::{self, Error},
 };
 
 use crate::crc;
+
+/// Error type produced by [`Archive::verify_crcs`].
+#[derive(Clone, Copy, Debug, PartialEq, Error)]
+#[error("CRC mismatch -- expected {expected}, got {actual}")]
+pub struct CrcMismatch {
+    /// The expected CRC value.
+    pub expected: u32,
+    /// The actual computed CRC value.
+    pub actual: u32,
+}
 
 /// The header of a KIWAD archive.
 #[binrw]
@@ -102,27 +112,29 @@ pub struct Archive {
 
 impl Archive {
     /// Parses the archive from the given [`Read`]er.
-    pub fn parse<R: Read + Seek>(reader: &mut R) -> anyhow::Result<Self> {
+    pub fn parse<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
         reader.read_le().map_err(Into::into)
     }
 
     /// Writes the archive data to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> anyhow::Result<()> {
+    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()> {
         writer.write_le(self).map_err(Into::into)
     }
 
     /// Verifies the CRCs of every file in the archive given the
     /// raw bytes of the archive file.
-    pub fn verify_crcs(&self, raw_archive: &[u8]) -> anyhow::Result<()> {
+    pub fn verify_crcs(&self, raw_archive: &[u8]) -> Result<(), CrcMismatch> {
         self.files.iter().try_for_each(|f| {
             let hash = crc::hash(f.extract(raw_archive));
-            anyhow::ensure!(
-                hash == f.crc,
-                "CRC mismatch - expected {}, got {hash}",
-                f.crc
-            );
 
-            Ok(())
+            if hash == f.crc {
+                Ok(())
+            } else {
+                Err(CrcMismatch {
+                    expected: f.crc,
+                    actual: hash,
+                })
+            }
         })
     }
 }
