@@ -7,6 +7,7 @@ mod cs;
 mod hash;
 mod nav;
 mod op;
+mod poi;
 mod utils;
 mod wad;
 
@@ -56,6 +57,8 @@ enum Command {
     Nav(nav::Nav),
     /// Subcommand for working with ObjectProperty binary state.
     Op(op::ObjectProperty),
+    /// Subcommand for working with Points of Interest.
+    Poi(poi::Poi),
     /// Subcommand for working with KIWAD archives.
     Wad(wad::Wad),
 }
@@ -74,6 +77,7 @@ fn main() -> anyhow::Result<()> {
         Command::Hash(hash) => hash::process(hash),
         Command::Nav(nav) => nav::process(nav),
         Command::Op(op) => op::process(op),
+        Command::Poi(poi) => poi::process(poi),
         Command::Wad(wad) => wad::process(wad),
     }
 }

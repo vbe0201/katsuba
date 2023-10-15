@@ -1,5 +1,7 @@
 //! Utilities and extensions for common data types we work with.
 
+use std::{collections::HashMap, hash::Hash};
+
 use binrw::{io::SeekFrom, BinRead, BinResult, BinWrite, VecArgs};
 
 /// Reads a length-prefixed UTF-8 string from the input stream.
@@ -50,6 +52,45 @@ pub fn write_string_list(values: &Vec<String>, null: bool) -> BinResult<()> {
         let len = value.len() as u32;
         len.write_options(writer, endian, ())?;
         write_prefixed_string(value, writer, endian, (null,))?;
+    }
+
+    Ok(())
+}
+
+#[binrw::parser(reader, endian)]
+pub fn read_map<F, K, V, VI, VA>(count: usize, f: F) -> BinResult<HashMap<K, V>>
+where
+    F: FnOnce(VI) -> VA + Copy,
+    for<'a> K: BinRead<Args<'a> = ()> + Eq + Hash,
+    for<'a> V: BinRead<Args<'a> = VA>,
+    for<'a> VI: BinRead<Args<'a> = ()>,
+{
+    let mut map = HashMap::with_capacity(count);
+    for _ in 0..count {
+        let key = K::read_options(reader, endian, ())?;
+
+        let v_arg = VI::read_options(reader, endian, ()).map(f)?;
+        let value = V::read_options(reader, endian, v_arg)?;
+
+        map.insert(key, value);
+    }
+
+    Ok(map)
+}
+
+#[binrw::writer(writer, endian)]
+pub fn write_map<F, K, V, VA>(map: &HashMap<K, V>, f: F) -> BinResult<()>
+where
+    F: FnOnce(&V) -> VA + Copy,
+    for<'a> K: BinWrite<Args<'a> = ()> + Eq + Hash,
+    for<'a> V: BinWrite<Args<'a> = ()>,
+    for<'a> VA: BinWrite<Args<'a> = ()>,
+{
+    for (key, value) in map {
+        key.write_options(writer, endian, ())?;
+
+        f(value).write_options(writer, endian, ())?;
+        value.write_options(writer, endian, ())?;
     }
 
     Ok(())

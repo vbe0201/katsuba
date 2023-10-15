@@ -12,6 +12,7 @@ features = ["enable-option-guessing", "serde"]
 kobold-bcd = { path = "../kobold-bcd" }
 kobold-client-sig = { path = "../kobold-client-sig" }
 kobold-nav = { path = "../kobold-nav" }
+kobold-poi = { path = "../kobold-poi" }
 kobold-types = { path = "../kobold-types" }
 kobold-utils = { path = "../kobold-utils" }
 kobold-wad = { path = "../kobold-wad" }

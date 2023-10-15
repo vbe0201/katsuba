@@ -391,6 +391,7 @@ dependencies = [
  "kobold-client-sig",
  "kobold-nav",
  "kobold-object-property",
+ "kobold-poi",
  "kobold-types",
  "kobold-utils",
  "kobold-wad",
@@ -450,6 +451,14 @@ dependencies = [
  "regex",
  "serde",
  "smartstring",
+]
+
+[[package]]
+name = "kobold-poi"
+version = "0.1.0"
+dependencies = [
+ "kobold-utils",
+ "serde",
 ]
 
 [[package]]
