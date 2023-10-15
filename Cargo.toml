@@ -1,8 +1,10 @@
 [workspace]
-members = ["kobold", "cli", "py"]
+members = ["src/*"]
+resolver = "2"
 
 [profile.release]
-strip = true
+debug = true
+#strip = true
 codegen-units = 1
 lto = true
 panic = "abort"

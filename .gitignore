@@ -73,4 +73,12 @@ Thumbs.db
 *.zip
 
 # Types json
-types.json
+*.json
+
+# ObjectProperty state
+*.xml
+
+# Nix
+.devenv*
+.direnv
+devenv.local.nix
