@@ -47,7 +47,7 @@ book/
 
 # Reversing stuffs
 /reversing/
-*.wad
+/*.wad
 Root/
 
 # Miscellaneous system files
@@ -73,10 +73,10 @@ Thumbs.db
 *.zip
 
 # Types json
-*.json
+/*.json
 
 # ObjectProperty state
-*.xml
+/*.xml
 
 # Nix
 .devenv*
