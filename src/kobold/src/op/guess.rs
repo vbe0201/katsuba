@@ -9,9 +9,8 @@ use kobold_object_property::{
     Value,
 };
 use kobold_types::TypeList;
-use kobold_utils::{anyhow, fs};
 
-use crate::utils::*;
+use crate::{fs, utils::*};
 
 struct Report {
     value: Result<Value, serde::Error>,

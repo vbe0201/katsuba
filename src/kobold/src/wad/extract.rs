@@ -3,8 +3,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use kobold_utils::{anyhow, fs};
 use kobold_wad::{Archive, Inflater};
+
+use crate::fs;
 
 pub fn extract_all(archive: Archive, out: PathBuf) -> anyhow::Result<()> {
     let mut inflater = Inflater::new();

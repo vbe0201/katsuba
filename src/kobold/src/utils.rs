@@ -3,8 +3,9 @@ use std::{
     path::PathBuf,
 };
 
-use kobold_utils::{anyhow, fs};
 use serde::Serialize;
+
+use crate::fs;
 
 pub fn human_bool(v: bool) -> &'static str {
     if v {

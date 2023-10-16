@@ -41,16 +41,6 @@ pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> anyhow::Re
     fs::write(path, contents).with_context(|| format!("failed to write file: `{}`", path.display()))
 }
 
-/// Creates a new, empty directory at a provided path.
-///
-/// This wraps [`std::fs::create_dir`], but with additional context
-/// provided in the error case.
-pub fn create_dir<P: AsRef<Path>>(path: P) -> anyhow::Result<()> {
-    let path = path.as_ref();
-    fs::create_dir(path)
-        .with_context(|| format!("failed to create directory: `{}`", path.display()))
-}
-
 /// Recursively creates a directory and all of its parent components.
 ///
 /// This wraps [`std::fs::create_dir_all`], but with additional

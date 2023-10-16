@@ -1,8 +1,9 @@
+use std::io;
+
 use kobold_bit_buf::BitWriter;
-use kobold_utils::anyhow;
 
 #[test]
-fn write_primitives() -> anyhow::Result<()> {
+fn write_primitives() -> io::Result<()> {
     let mut writer = BitWriter::new();
 
     writer.offer(0xFF, u8::BITS)?;
@@ -16,7 +17,7 @@ fn write_primitives() -> anyhow::Result<()> {
 }
 
 #[test]
-fn write_length_prefix() -> anyhow::Result<()> {
+fn write_length_prefix() -> io::Result<()> {
     let mut writer = BitWriter::new();
 
     writer.length_prefixed(|w| w.offer(0xDEADBEEF, 31))?;
@@ -32,7 +33,7 @@ fn write_length_prefix() -> anyhow::Result<()> {
 }
 
 #[test]
-fn write_bytes_and_alignment() -> anyhow::Result<()> {
+fn write_bytes_and_alignment() -> io::Result<()> {
     let mut writer = BitWriter::new();
 
     writer.offer(1, 1)?;

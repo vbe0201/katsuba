@@ -1,13 +1,10 @@
 use std::{io, path::PathBuf};
 
+use anyhow::{self, Context};
 use clap::{Args, Subcommand};
 use kobold_poi::Poi as PoiFile;
-use kobold_utils::{
-    anyhow::{self, Context},
-    fs,
-};
 
-use crate::utils;
+use crate::{fs, utils};
 
 #[derive(Debug, Args)]
 pub struct Poi {

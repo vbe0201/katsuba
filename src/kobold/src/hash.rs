@@ -1,6 +1,6 @@
 use clap::{Args, ValueEnum};
 
-use kobold_utils::{anyhow, hash::*};
+use kobold_utils::hash::*;
 
 #[derive(Debug, Args)]
 pub struct Hash {

@@ -1,10 +1,9 @@
 use std::path::PathBuf;
 
 use kobold_object_property::serde::{self, BIND_MAGIC};
-use kobold_utils::{anyhow, fs};
 
 use super::ClassType;
-use crate::utils::json_to_stdout_or_output_file;
+use crate::{fs, utils::json_to_stdout_or_output_file};
 
 pub fn process(
     mut de: serde::Serializer,

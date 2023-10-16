@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
+use anyhow::{self, Context};
 use clap::{Args, Subcommand};
-use kobold_utils::anyhow::{self, Context};
 use kobold_wad::Archive;
 
 mod extract;

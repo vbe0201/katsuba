@@ -62,9 +62,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.66"
+version = "1.0.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
+checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
 name = "array-init"
@@ -384,6 +384,7 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 name = "kobold"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "byteorder",
  "clap",
  "env_logger",
@@ -487,7 +488,6 @@ dependencies = [
 name = "kobold-utils"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "binrw",
  "libdeflater",
  "thiserror",

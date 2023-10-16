@@ -17,6 +17,7 @@ kobold-types = { path = "../kobold-types" }
 kobold-utils = { path = "../kobold-utils" }
 kobold-wad = { path = "../kobold-wad" }
 
+anyhow = "1.0"
 byteorder = "1.4"
 clap = { version = "4.3", features = ["derive"] }
 env_logger = "0.10"

@@ -1,8 +1,9 @@
+use std::io;
+
 use kobold_bit_buf::BitReader;
-use kobold_utils::anyhow;
 
 #[test]
-fn read_primitives() -> anyhow::Result<()> {
+fn read_primitives() -> io::Result<()> {
     let mut buf = BitReader::new(&[0xDE, 0xC0, 0xAD, 0xDE]);
 
     assert_eq!(buf.remaining_bits(), 32);
@@ -21,7 +22,7 @@ fn read_primitives() -> anyhow::Result<()> {
 }
 
 #[test]
-fn read_bits_and_alignment() -> anyhow::Result<()> {
+fn read_bits_and_alignment() -> io::Result<()> {
     let mut buf = BitReader::new(&[1, 2, 3, 4]);
 
     assert_eq!(buf.refill_bits(), 32);

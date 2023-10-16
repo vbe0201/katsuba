@@ -1,13 +1,10 @@
 use std::{io, path::PathBuf};
 
+use anyhow::{self, Context};
 use clap::{Args, Subcommand, ValueEnum};
 use kobold_nav::{NavigationGraph, ZoneNavigationGraph};
-use kobold_utils::{
-    anyhow::{self, Context},
-    fs,
-};
 
-use crate::utils;
+use crate::{fs, utils};
 
 #[derive(Debug, Args)]
 pub struct Nav {
