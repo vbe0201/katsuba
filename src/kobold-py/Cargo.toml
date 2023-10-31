@@ -15,4 +15,4 @@ kobold-types = { path = "../kobold-types" }
 kobold-utils = { path = "../kobold-utils" }
 kobold-wad = { path = "../kobold-wad" }
 
-pyo3 = { version = "0.19", features = ["extension-module"] }
+pyo3 = { version = "0.19", features = ["abi3-py310", "extension-module"] }
