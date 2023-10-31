@@ -1,4 +1,10 @@
-use std::{collections::BTreeMap, fs, io, mem, path::Path};
+use std::{
+    collections::BTreeMap,
+    fs,
+    io::{self, Read},
+    mem,
+    path::Path,
+};
 
 use kobold_utils::{
     binrw,
@@ -44,6 +50,21 @@ enum ArchiveInner {
 }
 
 impl Archive {
+    /// Creates an archive from an open file in heap-allocated memory.
+    ///
+    /// See [`Archive::open_heap`] for further details.
+    pub fn heap(file: fs::File, verify_crc: bool) -> Result<Self, ArchiveError> {
+        HeapArchive::new(file, verify_crc).map(|a| Self(ArchiveInner::Heap(a)))
+    }
+
+    /// Creates an archive on the heap from a pre-allocated buffer holding
+    /// the archive contents.
+    ///
+    /// See [`Archive::open_heap`] for further details.
+    pub fn from_vec(buf: Vec<u8>, verify_crc: bool) -> Result<Self, ArchiveError> {
+        HeapArchive::from_vec(buf, verify_crc, 0o666).map(|a| Self(ArchiveInner::Heap(a)))
+    }
+
     /// Opens a file at the given `path` and operates on it from
     /// heap-allocated memory.
     ///
@@ -54,8 +75,15 @@ impl Archive {
     ///
     /// This is the preferred option of working with relatively small
     /// files but it's always best to profile.
-    pub fn heap<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
+    pub fn open_heap<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
         HeapArchive::open(path, verify_crc).map(|a| Self(ArchiveInner::Heap(a)))
+    }
+
+    /// Creates an archive by mapping the open file into memory.
+    ///
+    /// See [`Archive::open_mmap`] for further details.
+    pub fn mmap(file: fs::File, verify_crc: bool) -> Result<Self, ArchiveError> {
+        MemoryMappedArchive::new(file, verify_crc).map(|a| Self(ArchiveInner::MemoryMapped(a)))
     }
 
     /// Opens a file at the given `path` and operates on it from
@@ -69,8 +97,18 @@ impl Archive {
     ///
     /// This is the preferred option of working with relatively large
     /// files but it's always best to profile.
-    pub fn mmap<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
+    pub fn open_mmap<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
         MemoryMappedArchive::open(path, verify_crc).map(|a| Self(ArchiveInner::MemoryMapped(a)))
+    }
+
+    /// Returns the UNIX permissions of the archive file.
+    ///
+    /// On other platforms, this value may be ignored.
+    pub fn mode(&self) -> u32 {
+        match &self.0 {
+            ArchiveInner::MemoryMapped(a) => a.mode,
+            ArchiveInner::Heap(a) => a.mode,
+        }
     }
 
     #[inline]
@@ -157,12 +195,13 @@ struct MemoryMappedArchive {
     // Closed when this structure is dropped.
     #[allow(unused)]
     file: fs::File,
+
+    // The file permissions on UNIX systems.
+    mode: u32,
 }
 
 impl MemoryMappedArchive {
-    fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
-        // Attempt to open the file at the given path.
-        let file = fs::File::open(path)?;
+    fn new(file: fs::File, verify_crc: bool) -> Result<Self, ArchiveError> {
         let mut this = Self {
             // SAFETY: We own the file and keep it around until the mapping
             // is closed; see comments in `MemoryMappedArchive` above.
@@ -171,6 +210,7 @@ impl MemoryMappedArchive {
             // and most other applications, we likely won't run into any
             // synchronization conflicts we need to account for.
             mapping: unsafe { MmapOptions::new().populate().map(&file)? },
+            mode: file_mode(&file),
             file,
             journal: Journal {
                 inner: BTreeMap::new(),
@@ -178,13 +218,19 @@ impl MemoryMappedArchive {
         };
 
         // Parse the archive and build the file journal.
-        let archive = wad_types::Archive::parse(&mut io::Cursor::new(&this.mapping))?;
+        let archive = wad_types::Archive::parse(io::Cursor::new(&this.mapping))?;
         if verify_crc {
             archive.verify_crcs(&this.mapping)?;
         }
         this.journal.build_from(archive);
 
         Ok(this)
+    }
+
+    fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
+        // Attempt to open the file at the given path.
+        let file = fs::File::open(path)?;
+        Self::new(file, verify_crc)
     }
 }
 
@@ -194,25 +240,56 @@ struct HeapArchive {
 
     // The raw archive data, allocated on the heap.
     data: Box<[u8]>,
+
+    // The file mode of the archive.
+    mode: u32,
 }
 
 impl HeapArchive {
-    fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
-        // Attempt to read the given file into a byte vector.
+    fn new(mut file: fs::File, verify_crc: bool) -> Result<Self, ArchiveError> {
+        let mut buf = {
+            let size = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
+            Vec::with_capacity(size)
+        };
+        file.read_to_end(&mut buf)?;
+
+        Self::from_vec(buf, verify_crc, file_mode(&file))
+    }
+
+    fn from_vec(buf: Vec<u8>, verify_crc: bool, mode: u32) -> Result<Self, ArchiveError> {
         let mut this = Self {
             journal: Journal {
                 inner: BTreeMap::new(),
             },
-            data: fs::read(path)?.into_boxed_slice(),
+            data: buf.into_boxed_slice(),
+            mode,
         };
 
         // Parse the archive and build the file journal.
-        let archive = wad_types::Archive::parse(&mut io::Cursor::new(&this.data))?;
+        let archive = wad_types::Archive::parse(io::Cursor::new(&this.data))?;
         if verify_crc {
             archive.verify_crcs(&this.data)?;
         }
         this.journal.build_from(archive);
 
         Ok(this)
+    }
+
+    fn open<P: AsRef<Path>>(path: P, verify_crc: bool) -> Result<Self, ArchiveError> {
+        let file = fs::File::open(path)?;
+        Self::new(file, verify_crc)
+    }
+}
+
+fn file_mode(f: &fs::File) -> u32 {
+    match () {
+        #[cfg(unix)]
+        () => {
+            use std::os::unix::fs::MetadataExt;
+            f.metadata().map(|m| m.mode()).unwrap_or(0o666)
+        }
+
+        #[cfg(not(unix))]
+        () => 0o666,
     }
 }

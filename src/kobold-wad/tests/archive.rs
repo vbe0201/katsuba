@@ -2,17 +2,17 @@ use kobold_wad::{Archive, ArchiveError, Inflater};
 
 #[test]
 fn open_mmap() -> Result<(), ArchiveError> {
-    Archive::mmap("tests/data/Test.wad", true).map(|_| ())
+    Archive::open_mmap("tests/data/Test.wad", true).map(|_| ())
 }
 
 #[test]
 fn open_heap() -> Result<(), ArchiveError> {
-    Archive::heap("tests/data/Test.wad", true).map(|_| ())
+    Archive::open_heap("tests/data/Test.wad", true).map(|_| ())
 }
 
 #[test]
 fn uncompressed() -> Result<(), ArchiveError> {
-    let archive = Archive::heap("tests/data/Test.wad", true)?;
+    let archive = Archive::open_heap("tests/data/Test.wad", true)?;
 
     // Extract the raw file contents which should be uncompressed.
     let file = archive.file_raw("uncompressed.mp3").unwrap();
@@ -28,7 +28,7 @@ fn uncompressed() -> Result<(), ArchiveError> {
 
 #[test]
 fn subdir() -> Result<(), ArchiveError> {
-    let archive = Archive::heap("tests/data/Test.wad", true)?;
+    let archive = Archive::open_heap("tests/data/Test.wad", true)?;
     let mut inflater = Inflater::new();
 
     let file = archive.file_raw("subdir/subdir_text1.txt").unwrap();
@@ -42,7 +42,7 @@ fn subdir() -> Result<(), ArchiveError> {
 
 #[test]
 fn two_files() -> Result<(), ArchiveError> {
-    let archive = Archive::heap("tests/data/Test.wad", true)?;
+    let archive = Archive::open_heap("tests/data/Test.wad", true)?;
 
     let text1 = archive.file_raw("text1.txt").unwrap();
     assert!(text1.compressed);
@@ -57,7 +57,7 @@ fn two_files() -> Result<(), ArchiveError> {
 
 #[test]
 fn inflate_twice() -> Result<(), ArchiveError> {
-    let archive = Archive::heap("tests/data/Test.wad", true)?;
+    let archive = Archive::open_heap("tests/data/Test.wad", true)?;
     let mut inflater = Inflater::new();
 
     let file = archive.file_raw("text1.txt").unwrap();
