@@ -1,0 +1,19 @@
+[project]
+name = "katsuba"
+version = "0.1.0"
+description = "Python bindings to the Katsuba libraries in Rust"
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: ISC License (ISCL)",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+]
+
+[build-system]
+requires = ["maturin>=1,<2"]
+build-backend = "maturin"

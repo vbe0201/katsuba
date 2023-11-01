@@ -1,0 +1,10 @@
+[package]
+name = "katsuba-bit-buf"
+version = "0.1.0"
+authors = ["Valentin B. <valentin.be@protonmail.com>"]
+description = "Bit-level serialization and deserialization of data"
+license = "ISC"
+edition = "2021"
+
+[dependencies]
+katsuba-utils = { path = "../katsuba-utils" }

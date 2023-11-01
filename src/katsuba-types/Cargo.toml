@@ -1,0 +1,15 @@
+[package]
+name = "katsuba-types"
+version = "0.1.0"
+authors = ["Valentin B. <valentin.be@protonmail.com>"]
+description = "Implementation of the type list JSON format"
+license = "ISC"
+edition = "2021"
+
+[dependencies]
+katsuba-utils = { path = "../katsuba-utils" }
+
+bitflags = "2.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+smartstring = { version = "1.0", features = ["serde"] }

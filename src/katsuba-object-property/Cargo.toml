@@ -1,0 +1,26 @@
+[package]
+name = "katsuba-object-property"
+version = "0.1.0"
+authors = ["Valentin B. <valentin.be@protonmail.com>"]
+description = "Implementation of KingsIsle's ObjectProperty serialization"
+license = "ISC"
+edition = "2021"
+
+[dependencies]
+katsuba-bit-buf = { path = "../katsuba-bit-buf" }
+katsuba-types = { path = "../katsuba-types" }
+katsuba-utils = { path = "../katsuba-utils", features = ["libdeflater"] }
+
+bitflags = "2.4"
+byteorder = "1.4"
+log = "0.4"
+once_cell = { version = "1.18", optional = true }
+phf = { version = "0.11", features = ["macros"] }
+regex = { version = "1.9", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+smartstring = "1.0"
+
+[features]
+default = []
+
+option-guessing = ["once_cell", "regex"]

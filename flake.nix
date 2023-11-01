@@ -22,29 +22,29 @@
       system: let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        kobold_toml = builtins.fromTOML (builtins.readFile ./src/kobold/Cargo.toml);
-        kobold_py_toml = builtins.fromTOML (builtins.readFile ./src/kobold-py/pyproject.toml);
+        katsuba_toml = builtins.fromTOML (builtins.readFile ./src/katsuba/Cargo.toml);
+        katsuba_py_toml = builtins.fromTOML (builtins.readFile ./src/katsuba-py/pyproject.toml);
       in {
         default = pkgs.rustPlatform.buildRustPackage {
-          pname = "kobold";
-          version = kobold_toml.package.version;
+          pname = "katsuba";
+          version = katsuba_toml.package.version;
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
           nativeBuildInputs = with pkgs.rustPlatform; [cargoBuildHook];
-          buildAndTestSubdir = "src/kobold";
+          buildAndTestSubdir = "src/katsuba";
           buildInputs = with pkgs; [python3];
         };
 
-        "kobold-py" = pkgs.python3.pkgs.buildPythonPackage {
-          pname = "kobold-py";
-          version = kobold_py_toml.project.version;
+        "katsuba-py" = pkgs.python3.pkgs.buildPythonPackage {
+          pname = "katsuba-py";
+          version = katsuba_py_toml.project.version;
           src = ./.;
           format = "pyproject";
           cargoDeps = pkgs.rustPlatform.importCargoLock {
             lockFile = ./Cargo.lock;
           };
           nativeBuildInputs = with pkgs.rustPlatform; [cargoSetupHook maturinBuildHook];
-          buildAndTestSubdir = "src/kobold-py";
+          buildAndTestSubdir = "src/katsuba-py";
         };
       }
     );

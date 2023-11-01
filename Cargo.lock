@@ -406,21 +406,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 
 [[package]]
-name = "kobold"
+name = "katsuba"
 version = "0.6.0"
 dependencies = [
  "clap",
  "enum-map",
  "eyre",
  "glob",
- "kobold-bcd",
- "kobold-client-sig",
- "kobold-nav",
- "kobold-object-property",
- "kobold-poi",
- "kobold-types",
- "kobold-utils",
- "kobold-wad",
+ "katsuba-bcd",
+ "katsuba-client-sig",
+ "katsuba-nav",
+ "katsuba-object-property",
+ "katsuba-poi",
+ "katsuba-types",
+ "katsuba-utils",
+ "katsuba-wad",
  "log",
  "mimalloc",
  "serde",
@@ -431,50 +431,50 @@ dependencies = [
 ]
 
 [[package]]
-name = "kobold-bcd"
+name = "katsuba-bcd"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.4.0",
- "kobold-utils",
+ "katsuba-utils",
  "serde",
 ]
 
 [[package]]
-name = "kobold-bit-buf"
+name = "katsuba-bit-buf"
 version = "0.1.0"
 dependencies = [
- "kobold-utils",
+ "katsuba-utils",
 ]
 
 [[package]]
-name = "kobold-client-sig"
+name = "katsuba-client-sig"
 version = "0.1.0"
 dependencies = [
  "base64",
  "byteorder",
- "kobold-utils",
+ "katsuba-utils",
  "rand",
  "rsa",
  "sha1",
 ]
 
 [[package]]
-name = "kobold-nav"
+name = "katsuba-nav"
 version = "0.1.0"
 dependencies = [
- "kobold-utils",
+ "katsuba-utils",
  "serde",
 ]
 
 [[package]]
-name = "kobold-object-property"
+name = "katsuba-object-property"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.4.0",
  "byteorder",
- "kobold-bit-buf",
- "kobold-types",
- "kobold-utils",
+ "katsuba-bit-buf",
+ "katsuba-types",
+ "katsuba-utils",
  "log",
  "once_cell",
  "phf",
@@ -484,37 +484,37 @@ dependencies = [
 ]
 
 [[package]]
-name = "kobold-poi"
+name = "katsuba-poi"
 version = "0.1.0"
 dependencies = [
- "kobold-utils",
+ "katsuba-utils",
  "serde",
 ]
 
 [[package]]
-name = "kobold-py"
+name = "katsuba-py"
 version = "0.1.0"
 dependencies = [
- "kobold-object-property",
- "kobold-types",
- "kobold-utils",
- "kobold-wad",
+ "katsuba-object-property",
+ "katsuba-types",
+ "katsuba-utils",
+ "katsuba-wad",
  "pyo3",
 ]
 
 [[package]]
-name = "kobold-types"
+name = "katsuba-types"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.4.0",
- "kobold-utils",
+ "katsuba-utils",
  "serde",
  "serde_json",
  "smartstring",
 ]
 
 [[package]]
-name = "kobold-utils"
+name = "katsuba-utils"
 version = "0.1.0"
 dependencies = [
  "binrw",
@@ -523,11 +523,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "kobold-wad"
+name = "katsuba-wad"
 version = "0.1.0"
 dependencies = [
  "crc32fast",
- "kobold-utils",
+ "katsuba-utils",
  "memmap2",
 ]
 

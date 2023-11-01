@@ -24,7 +24,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: -m src/kobold-py/Cargo.toml --release --out dist
+          args: -m src/katsuba-py/Cargo.toml --release --out dist
           sccache: 'true'
           manylinux: auto
       - name: Upload wheels
@@ -48,7 +48,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: -m src/kobold-py/Cargo.toml --release --out dist
+          args: -m src/katsuba-py/Cargo.toml --release --out dist
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
@@ -70,7 +70,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: -m src/kobold-py/Cargo.toml --release --out dist
+          args: -m src/katsuba-py/Cargo.toml --release --out dist
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v3
@@ -86,7 +86,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
-          args: -m src/kobold-py/Cargo.toml --out dist
+          args: -m src/katsuba-py/Cargo.toml --out dist
       - name: Upload sdist
         uses: actions/upload-artifact@v3
         with:
