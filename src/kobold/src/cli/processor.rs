@@ -17,12 +17,14 @@ mod sealed {
     pub struct Missing;
 }
 
+/// A [`Read`]er over a compatible input source.
 pub enum Reader<'a> {
     Stdin(io::Cursor<Vec<u8>>),
     File(&'a Path, io::BufReader<fs::File>),
 }
 
 impl Reader<'_> {
+    /// Gets the data in the reader as a [`Buffer`], if possible.
     pub fn get_buffer(&mut self, ex: &Executor) -> eyre::Result<Buffer<'_>> {
         match self {
             Self::Stdin(buf) => Ok(Buffer::current_borrowed(buf.get_ref())),
@@ -81,17 +83,30 @@ impl Seek for Reader<'_> {
     }
 }
 
+/// A bias to hint to the [`Processor`] which executor type should
+/// be preferred for workloads consisting of a single input.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Bias {
+    Current,
+    Threaded,
+}
+
+/// Processes input sources and maps them to output sources.
 pub struct Processor<R, W> {
-    executor: Executor,
+    bias: Bias,
     reader_fn: R,
     writer_fn: W,
 }
 
 impl Processor<Missing, Missing> {
     /// Creates a new processor in uninitialized state.
-    pub fn new() -> eyre::Result<Self> {
-        Executor::get().map(|executor| Self {
-            executor,
+    ///
+    /// The bias nudges the processor towards which executor to use for
+    /// single-file workloads. Workloads of many files will always use
+    /// a threaded executor, if available, regardless of bias.
+    pub fn new(bias: Bias) -> eyre::Result<Self> {
+        Ok(Self {
+            bias,
             reader_fn: Missing,
             writer_fn: Missing,
         })
@@ -105,7 +120,7 @@ impl Processor<Missing, Missing> {
         F: FnMut(Reader<'_>, &Executor) -> eyre::Result<T>,
     {
         Processor {
-            executor: self.executor,
+            bias: self.bias,
             reader_fn: f,
             writer_fn: Missing,
         }
@@ -121,7 +136,7 @@ where
         F: FnMut(&Executor, Option<PathBuf>, T, OutputSource) -> eyre::Result<()>,
     {
         Processor {
-            executor: self.executor,
+            bias: self.bias,
             reader_fn: self.reader_fn,
             writer_fn: f,
         }
@@ -150,32 +165,42 @@ where
     }
 
     pub fn process(mut self, input: InputSource, output: OutputSource) -> eyre::Result<()> {
+        let mut executor = match self.bias {
+            Bias::Current => Executor::current(),
+            Bias::Threaded => Executor::get()?,
+        };
+
         match (input, output) {
             (InputSource::Stdin, out) => {
                 let reader = self.stdin()?;
 
-                let value = (self.reader_fn)(reader, &self.executor)?;
-                (self.writer_fn)(&Executor::current(), None, value, out)
+                let value = (self.reader_fn)(reader, &executor)?;
+                (self.writer_fn)(&executor, None, value, out)
             }
 
             (InputSource::File(path), out) => {
                 let reader = self.file(&path)?;
 
-                let value = (self.reader_fn)(reader, &self.executor)?;
-                (self.writer_fn)(&Executor::current(), Some(path), value, out)
+                let value = (self.reader_fn)(reader, &executor)?;
+                (self.writer_fn)(&executor, Some(path), value, out)
             }
 
             (InputSource::Files(paths), out @ OutputSource::Dir(..)) => {
+                // When processing multiple input files, we ignore the bias.
+                if let Bias::Current = self.bias {
+                    executor = Executor::get()?;
+                }
+
                 // Dispatch work for all input paths onto the executor.
                 for path in paths {
                     let reader = self.file(&path)?;
-                    let value = (self.reader_fn)(reader, &self.executor)?;
+                    let value = (self.reader_fn)(reader, &executor)?;
 
-                    (self.writer_fn)(&self.executor, Some(path), value, out.clone())?;
+                    (self.writer_fn)(&executor, Some(path), value, out.clone())?;
                 }
 
                 // Await the completion of all pending tasks on the executor.
-                for pending in self.executor.join() {
+                for pending in executor.join() {
                     pending.result?;
                 }
 

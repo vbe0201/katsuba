@@ -2,7 +2,7 @@ use clap::{Args, Subcommand, ValueEnum};
 use kobold_nav::{NavigationGraph, ZoneNavigationGraph};
 
 use super::Command;
-use crate::cli::{helpers, InputsOutputs, Processor};
+use crate::cli::{helpers, Bias, InputsOutputs, Processor};
 
 /// Subcommand for working with NAV data.
 #[derive(Debug, Args)]
@@ -35,7 +35,7 @@ impl Command for Nav {
         match self.command {
             NavCommand::De(args) => {
                 let (inputs, outputs) = args.evaluate("de.json")?;
-                let processor = Processor::new()?;
+                let processor = Processor::new(Bias::Current)?;
 
                 match self.file_type {
                     FileType::Nav => processor

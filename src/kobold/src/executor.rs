@@ -91,6 +91,7 @@ pub enum Executor {
 
 impl Executor {
     /// Creates a single-threaded executor on the current thread.
+    #[inline]
     pub fn current() -> Self {
         Self::Current(Current)
     }

@@ -2,7 +2,7 @@ use clap::{Args, Subcommand};
 use kobold_bcd::Bcd as BcdFile;
 
 use super::Command;
-use crate::cli::{helpers, InputsOutputs, Processor};
+use crate::cli::{helpers, Bias, InputsOutputs, Processor};
 
 /// Subcommand for working with BCD data.
 #[derive(Debug, Args)]
@@ -22,7 +22,7 @@ impl Command for Bcd {
         match self.command {
             BcdCommand::De(args) => {
                 let (inputs, outputs) = args.evaluate("de.json")?;
-                Processor::new()?
+                Processor::new(Bias::Current)?
                     .read_with(|r, _| BcdFile::parse(r).map_err(Into::into))
                     .write_with(helpers::write_as_json)
                     .process(inputs, outputs)

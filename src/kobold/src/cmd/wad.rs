@@ -2,7 +2,7 @@ use clap::{Args, Subcommand};
 use kobold_wad::Archive;
 
 use super::Command;
-use crate::cli::{InputsOutputs, Processor, Reader};
+use crate::cli::{Bias, InputsOutputs, Processor, Reader};
 
 mod extract;
 
@@ -40,7 +40,7 @@ impl Command for Wad {
                 verify_checksums,
             } => {
                 let (inputs, outputs) = args.evaluate("")?;
-                Processor::new()?
+                Processor::new(Bias::Threaded)?
                     .read_with(move |r, _| {
                         let res = match r {
                             Reader::Stdin(buf) => {

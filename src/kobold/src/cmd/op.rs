@@ -5,7 +5,7 @@ use kobold_object_property::serde;
 use kobold_types::PropertyFlags;
 
 use super::Command;
-use crate::cli::{helpers, InputsOutputs, Processor};
+use crate::cli::{helpers, Bias, InputsOutputs, Processor};
 
 mod guess;
 mod utils;
@@ -122,7 +122,7 @@ impl Command for ObjectProperty {
                 options.skip_unknown_types = ignore_unknown_types;
                 let mut de = serde::Serializer::new(options, type_list)?;
 
-                Processor::new()?
+                Processor::new(Bias::Current)?
                     .read_with(move |mut r, ex| {
                         let buf = r.get_buffer(ex)?;
                         let mut buf: &[u8] = &buf;

@@ -64,6 +64,7 @@ impl<'a> Buffer<'a> {
     /// The implementation must ensure that borrowed buffers do not
     /// outlive their source, e.g. by making sure all tasks complete
     /// timely on a join call.
+    #[inline]
     pub unsafe fn extend_lifetime(self) -> Buffer<'static> {
         // SAFETY: Similar to docs example for `transmute`, caller
         // takes responsibility in case of a borrowed buffer.
