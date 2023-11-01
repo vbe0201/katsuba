@@ -69,13 +69,13 @@ impl Task {
     }
 }
 
-pub(super) fn write_file(path: &Path, contents: &[u8], mode: u32) -> io::Result<()> {
+pub(super) fn write_file(path: &Path, contents: &[u8], _mode: u32) -> io::Result<()> {
     let mut opts = fs::OpenOptions::new();
 
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
-        opts.mode(mode);
+        opts.mode(_mode);
     }
 
     let mut file = opts.write(true).create(true).truncate(true).open(path)?;

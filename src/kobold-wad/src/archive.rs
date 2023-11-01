@@ -281,12 +281,12 @@ impl HeapArchive {
     }
 }
 
-fn file_mode(f: &fs::File) -> u32 {
+fn file_mode(_f: &fs::File) -> u32 {
     match () {
         #[cfg(unix)]
         () => {
             use std::os::unix::fs::MetadataExt;
-            f.metadata().map(|m| m.mode()).unwrap_or(0o666)
+            _f.metadata().map(|m| m.mode()).unwrap_or(0o666)
         }
 
         #[cfg(not(unix))]

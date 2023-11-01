@@ -10,9 +10,8 @@ mod executor;
 
 mod utils;
 
-#[cfg(not(target_env = "msvc"))]
 #[global_allocator]
-static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() -> eyre::Result<()> {
     let cli = Cli::parse();

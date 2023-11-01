@@ -24,6 +24,7 @@ enum-map = "2.6"
 eyre = "0.6"
 glob = "0.3"
 log = "0.4"
+mimalloc = "*"
 serde = "1"
 serde_json = "1"
 sharded-slab = "0.1"
@@ -33,6 +34,3 @@ threadpool = "1.8"
 version = "4.2"
 default-features = false
 features = ["colors"]
-
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator = "0.5"
