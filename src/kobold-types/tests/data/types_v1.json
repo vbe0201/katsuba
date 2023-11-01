@@ -1,0 +1,31 @@
+{
+    "class Matrix3x3": {
+        "bases": [],
+        "hash": 1479974833,
+        "properties": {}
+    },
+    "std::string": {
+        "bases": [],
+        "hash": 1497788074,
+        "properties": {}
+    },
+    "class EquipmentSetList": {
+        "bases": [
+            "PropertyClass"
+        ],
+        "hash": 135649998,
+        "properties": {
+            "m_equipmentSetList": {
+                "type": "class SharedPointer<class EquipmentSet>",
+                "id": 0,
+                "offset": 72,
+                "flags": 31,
+                "container": "List",
+                "dynamic": true,
+                "singleton": false,
+                "pointer": true,
+                "hash": 1788831224
+            }
+        }
+    }
+}

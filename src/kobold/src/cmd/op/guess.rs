@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{self, Write},
     path::PathBuf,
     sync::Arc,
@@ -9,9 +10,8 @@ use kobold_object_property::{
     Value,
 };
 use kobold_types::TypeList;
-use kobold_utils::{anyhow, fs};
 
-use crate::utils::*;
+use crate::utils;
 
 struct Report {
     value: Result<Value, serde::Error>,
@@ -22,20 +22,20 @@ pub fn guess(
     opts: serde::SerializerOptions,
     types: Arc<TypeList>,
     path: PathBuf,
-    no_value: bool,
-) -> anyhow::Result<()> {
+    quiet: bool,
+) -> eyre::Result<()> {
     let report = try_guess(opts, types, path)?;
 
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
 
-    print_status(&mut stdout, &report)?;
+    write_status(&mut stdout, &report)?;
     writeln!(stdout)?;
 
-    print_config(&mut stdout, &report)?;
+    write_config(&mut stdout, &report)?;
     writeln!(stdout)?;
 
-    print_value(&mut stdout, &report, no_value)?;
+    write_value(&mut stdout, &report, quiet)?;
 
     Ok(())
 }
@@ -44,9 +44,7 @@ fn try_guess(
     opts: serde::SerializerOptions,
     types: Arc<TypeList>,
     path: PathBuf,
-) -> anyhow::Result<Report> {
-    // Read the binary data from the given input file.
-    // TODO: mmap?
+) -> eyre::Result<Report> {
     let data = fs::read(path)?;
     let mut data = data.as_slice();
 
@@ -66,7 +64,7 @@ fn try_guess(
         });
     }
 
-    // If that doesn't work, check if it is realistic to retry with human-readable enums.
+    // If that doesn't work, retry with human readable enums if that's realistic.
     if !opts.shallow && !opts.flags.contains(serde::SerializerFlags::STATEFUL_FLAGS) {
         de.parts.options.flags |= serde::SerializerFlags::HUMAN_READABLE_ENUMS;
 
@@ -78,8 +76,7 @@ fn try_guess(
             });
         }
 
-        // Even if this bit is actually part of the config, we keep it the smallest
-        // confirmed set of options to not confuse users with false positives.
+        // This didn't work, so reset the bit.
         de.parts.options.flags &= !serde::SerializerFlags::HUMAN_READABLE_ENUMS;
     }
 
@@ -89,43 +86,43 @@ fn try_guess(
     })
 }
 
-fn print_status<W: Write>(writer: &mut W, report: &Report) -> io::Result<()> {
+fn write_status<W: Write>(mut writer: W, report: &Report) -> io::Result<()> {
     let text = match report.value.is_ok() {
         true => "Deserialization succeeded!",
         false => "Deserialization failed!",
     };
 
-    writeln!(writer, "{}", text)
+    writeln!(writer, "{text}")
 }
 
-fn print_config<W: Write>(writer: &mut W, report: &Report) -> io::Result<()> {
+fn write_config<W: Write>(mut writer: W, report: &Report) -> io::Result<()> {
     writeln!(writer, "Config:")?;
-    writeln!(writer, "  Shallow? {}", human_bool(report.opts.shallow))?;
+    writeln!(
+        writer,
+        "  Shallow: {}",
+        utils::human_bool(report.opts.shallow)
+    )?;
     writeln!(writer, "  Serializer flags: {:?}", report.opts.flags)?;
     writeln!(
         writer,
-        "  Manually compressed? {}",
-        human_bool(report.opts.manual_compression)
+        "  Manually compressed: {}",
+        utils::human_bool(report.opts.manual_compression)
     )?;
     writeln!(writer, "  Property mask: {:?}", report.opts.property_mask)?;
 
     Ok(())
 }
 
-fn print_value<W: Write>(mut writer: W, report: &Report, no_value: bool) -> io::Result<()> {
+fn write_value<W: Write>(mut writer: W, report: &Report, quiet: bool) -> io::Result<()> {
     writeln!(writer, "Output:")?;
     match &report.value {
-        Ok(v) if !no_value => {
+        Ok(v) if !quiet => {
             serde_json::to_writer_pretty(&mut writer, v)?;
-            writeln!(writer)?;
+            writeln!(writer)
         }
 
-        Ok(_) => writeln!(writer, "<omitted>")?,
+        Ok(_) => writeln!(writer, "<omitted>"),
 
-        Err(e) => {
-            writeln!(writer, "Error: {}", e)?;
-        }
+        Err(e) => writeln!(writer, "Error: {e}"),
     }
-
-    Ok(())
 }

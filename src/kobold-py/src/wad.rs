@@ -49,14 +49,14 @@ impl Archive {
     }
 
     pub fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<ArchiveIter>> {
-        let inner = slf.0.files().clone().into_keys();
-        Py::new(slf.py(), ArchiveIter { inner })
+        let iter = slf.0.files().clone().into_keys();
+        Py::new(slf.py(), ArchiveIter { iter })
     }
 
     #[classmethod]
     #[pyo3(signature = (path, verify_crcs=true, /))]
     pub fn heap(_cls: &PyType, path: PathBuf, verify_crcs: bool) -> PyResult<Self> {
-        kobold_wad::Archive::heap(path, verify_crcs)
+        kobold_wad::Archive::open_heap(path, verify_crcs)
             .map(Self)
             .map_err(error::wad_to_py_err)
     }
@@ -64,7 +64,7 @@ impl Archive {
     #[classmethod]
     #[pyo3(signature = (path, verify_crcs=true, /))]
     pub fn mmap(_cls: &PyType, path: PathBuf, verify_crcs: bool) -> PyResult<Self> {
-        kobold_wad::Archive::mmap(path, verify_crcs)
+        kobold_wad::Archive::open_mmap(path, verify_crcs)
             .map(Self)
             .map_err(error::wad_to_py_err)
     }
@@ -81,7 +81,7 @@ impl Archive {
 
 #[pyclass]
 pub struct ArchiveIter {
-    inner: btree_map::IntoKeys<String, kobold_wad::types::File>,
+    iter: btree_map::IntoKeys<String, kobold_wad::types::File>,
 }
 
 #[pymethods]
@@ -91,7 +91,7 @@ impl ArchiveIter {
     }
 
     pub fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<String> {
-        slf.inner.next()
+        slf.iter.next()
     }
 }
 

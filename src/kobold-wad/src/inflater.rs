@@ -22,10 +22,33 @@ impl Inflater {
         }
     }
 
+    /// Creates a new inflater from a pre-allocated memory buffer.
+    pub fn new_with(buf: Vec<u8>) -> Self {
+        Self {
+            raw: Decompressor::new(),
+            scratch: buf,
+        }
+    }
+
     /// Consumes the inflater and returns its scratch buffer.
     #[inline]
     pub fn into_inner(self) -> Vec<u8> {
         self.scratch
+    }
+
+    /// Decompresses the given `data` into a provided external
+    /// buffer and returns a reference to it back.
+    pub fn decompress_into<'a>(
+        &mut self,
+        out: &'a mut [u8],
+        data: &[u8],
+    ) -> Result<&'a [u8], DecompressionError> {
+        let written = self.raw.zlib_decompress(data, out)?;
+        if written != out.len() {
+            return Err(DecompressionError::BadData);
+        }
+
+        Ok(out)
     }
 
     /// Decompresses the given `data` into the internal scratch
@@ -40,8 +63,8 @@ impl Inflater {
     ) -> Result<&[u8], DecompressionError> {
         self.scratch.resize(size_hint, 0);
 
-        let out = self.raw.zlib_decompress(data, &mut self.scratch)?;
-        if out != size_hint {
+        let written = self.raw.zlib_decompress(data, &mut self.scratch)?;
+        if written != size_hint {
             return Err(DecompressionError::BadData);
         }
 

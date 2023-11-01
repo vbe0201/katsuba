@@ -128,12 +128,12 @@ pub struct Poi {
 
 impl Poi {
     /// Attempts to parse a BCD file from a given [`Read`]er.
-    pub fn parse<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
+    pub fn parse<R: Read + Seek>(mut reader: R) -> BinResult<Self> {
         reader.read_le().map_err(Into::into)
     }
 
     /// Writes the BCD data to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, writer: &mut W) -> BinResult<()> {
+    pub fn write<W: Write + Seek>(&self, mut writer: W) -> BinResult<()> {
         writer.write_le(self).map_err(Into::into)
     }
 }

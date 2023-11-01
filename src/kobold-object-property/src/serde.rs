@@ -193,3 +193,7 @@ impl SerializerParts {
         res
     }
 }
+
+// SAFETY: We are already `Send` and do not enable interior mutability of
+// our inner state. This is because `Decompressor` does not implement `Sync`.
+unsafe impl Sync for Serializer {}

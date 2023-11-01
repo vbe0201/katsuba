@@ -12,11 +12,11 @@ mod wad;
 
 use pyo3::{create_exception, exceptions::PyException, prelude::*, types::IntoPyDict};
 
-create_exception!(kobold_py, KoboldError, PyException);
+create_exception!(kobold, KoboldError, PyException);
 
 /// The entrypoint to the Kobold extension module for Python.
 #[pymodule]
-pub fn kobold_py(py: Python<'_>, module: &PyModule) -> PyResult<()> {
+pub fn kobold(py: Python<'_>, module: &PyModule) -> PyResult<()> {
     // Bind the exception types utilized on the Python side.
     module.add("KoboldError", py.get_type::<KoboldError>())?;
 

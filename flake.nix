@@ -32,7 +32,7 @@
           cargoLock.lockFile = ./Cargo.lock;
           nativeBuildInputs = with pkgs.rustPlatform; [cargoBuildHook];
           buildAndTestSubdir = "src/kobold";
-          buildInputs = with pkgs; [cmake python3];
+          buildInputs = with pkgs; [python3];
         };
 
         "kobold-py" = pkgs.python3.pkgs.buildPythonPackage {
