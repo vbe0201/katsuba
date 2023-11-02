@@ -1,5 +1,6 @@
 use std::{borrow::Cow, collections::btree_map, path::PathBuf};
 
+use katsuba_object_property::serde;
 use pyo3::{exceptions::PyKeyError, prelude::*, types::PyType};
 
 use crate::{error, op, KatsubaError};
@@ -89,7 +90,17 @@ impl Archive {
         serializer: &mut op::Serializer,
     ) -> PyResult<op::LazyObject> {
         let raw = self.__getitem__(file)?;
-        serializer.deserialize(&raw)
+        let mut raw: &[u8] = &raw;
+
+        // Set generic configuration for game files if this is one.
+        if raw.get(0..4) == Some(serde::BIND_MAGIC) {
+            serializer.0.parts.options.flags |= serde::SerializerFlags::STATEFUL_FLAGS;
+            serializer.0.parts.options.shallow = false;
+
+            raw = raw.get(4..).unwrap();
+        }
+
+        serializer.deserialize(raw)
     }
 }
 

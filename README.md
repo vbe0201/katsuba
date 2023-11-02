@@ -74,10 +74,6 @@ $ wiztype
 
 The resulting file can then be passed to the `-t` option.
 
-## Python API
-
-TODO
-
 ## Licensing
 
 The Katsuba crates, the CLI tool, and the Python bindings are collectively

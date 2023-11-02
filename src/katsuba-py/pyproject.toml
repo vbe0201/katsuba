@@ -2,6 +2,7 @@
 name = "katsuba"
 version = "0.1.0"
 description = "Python bindings to the Katsuba libraries in Rust"
+readme = "README.md"
 classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: ISC License (ISCL)",

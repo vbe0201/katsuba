@@ -108,11 +108,15 @@ impl LazyObject {
     }
 
     pub fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<PyObject> {
+        self.get(py, key)
+            .ok_or_else(|| PyKeyError::new_err(key.to_string()))
+    }
+
+    pub fn get(&self, py: Python<'_>, key: &str) -> Option<PyObject> {
         let obj = self.get_ref();
 
         obj.get(key)
             .map(|v| unsafe { value_to_python(self.0.clone(), v, py) })
-            .ok_or_else(|| PyKeyError::new_err(key.to_string()))
     }
 }
 

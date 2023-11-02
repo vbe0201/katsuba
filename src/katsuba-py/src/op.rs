@@ -1,6 +1,9 @@
 use std::{fs, io, path::PathBuf, sync::Arc};
 
-use katsuba_object_property::{serde, Value};
+use katsuba_object_property::{
+    serde::{self, SerializerFlags},
+    Value,
+};
 use pyo3::{prelude::*, types::PyType};
 
 use crate::{error, KatsubaError};
@@ -108,7 +111,7 @@ impl SerializerOptions {
 }
 
 #[pyclass]
-pub struct Serializer(serde::Serializer);
+pub struct Serializer(pub(crate) serde::Serializer);
 
 #[pymethods]
 impl Serializer {
@@ -139,6 +142,21 @@ pub fn katsuba_op(m: &PyModule) -> PyResult<()> {
     m.add_class::<TypeList>()?;
     m.add_class::<SerializerOptions>()?;
     m.add_class::<Serializer>()?;
+
+    m.add("STATEFUL_FLAGS", SerializerFlags::STATEFUL_FLAGS.bits())?;
+    m.add(
+        "COMPACT_LENGTH_PREFIXES",
+        SerializerFlags::COMPACT_LENGTH_PREFIXES.bits(),
+    )?;
+    m.add(
+        "HUMAN_READABLE_ENUMS",
+        SerializerFlags::HUMAN_READABLE_ENUMS.bits(),
+    )?;
+    m.add("WITH_COMPRESSION", SerializerFlags::WITH_COMPRESSION.bits())?;
+    m.add(
+        "FORBID_DELTA_ENCODE",
+        SerializerFlags::FORBID_DELTA_ENCODE.bits(),
+    )?;
 
     m.add_class::<LazyList>()?;
     m.add_class::<LazyObject>()?;

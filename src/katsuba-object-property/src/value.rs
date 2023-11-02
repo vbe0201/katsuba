@@ -57,10 +57,10 @@ pub enum Value {
     List(List),
     /// An object which maps field names to values.
     Object {
-        #[serde(rename = "$__type")]
+        #[cfg_attr(feature = "serde", serde(rename = "$__type"))]
         hash: u32,
 
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         obj: Object,
     },
 
