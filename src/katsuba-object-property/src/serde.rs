@@ -197,6 +197,3 @@ impl SerializerParts {
         res
     }
 }
-
-// SAFETY: This is needed because `Decompressor` does not implement `Sync`.
-unsafe impl Sync for Serializer {}

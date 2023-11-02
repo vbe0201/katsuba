@@ -135,6 +135,7 @@ impl GlobArchiveIter {
 pub fn katsuba_wad(m: &PyModule) -> PyResult<()> {
     m.add_class::<Archive>()?;
     m.add_class::<ArchiveIter>()?;
+    m.add_class::<GlobArchiveIter>()?;
 
     Ok(())
 }
