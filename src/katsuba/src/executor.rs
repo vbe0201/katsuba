@@ -17,14 +17,14 @@ use current::Current;
 mod threaded;
 use threaded::Threaded;
 
-const KOBOLD_WORKER_THREADS: &str = "KOBOLD_WORKER_THREADS";
+const KATSUBA_WORKER_THREADS: &str = "KATSUBA_WORKER_THREADS";
 
 fn available_threads() -> eyre::Result<usize> {
-    match env::var(KOBOLD_WORKER_THREADS) {
+    match env::var(KATSUBA_WORKER_THREADS) {
         Ok(value) => value.parse::<usize>().with_context(|| {
             format!(
                 "invalid value in {}; must be natural number",
-                KOBOLD_WORKER_THREADS
+                KATSUBA_WORKER_THREADS
             )
         }),
 

@@ -19,8 +19,8 @@ pub struct ClientSig {
     /// signatures.
     ///
     /// If no argument is provided, Katsuba will try to find a file path
-    /// under the `KOBOLD_CLIENTSIG_PRIVATE_KEY` environment variable.
-    #[clap(short, long, env = "KOBOLD_CLIENTSIG_PRIVATE_KEY")]
+    /// under the `KATSUBA_CLIENTSIG_PRIVATE_KEY` environment variable.
+    #[clap(short, long, env = "KATSUBA_CLIENTSIG_PRIVATE_KEY")]
     private_key: PathBuf,
 }
 
