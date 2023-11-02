@@ -15,6 +15,8 @@ pub use archive::*;
 
 pub mod crc;
 
+pub mod glob;
+
 mod inflater;
 pub use inflater::*;
 

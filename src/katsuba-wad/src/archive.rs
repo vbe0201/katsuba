@@ -13,7 +13,7 @@ use katsuba_utils::{
 };
 use memmap2::{Mmap, MmapOptions};
 
-use crate::types as wad_types;
+use crate::{glob, types as wad_types};
 
 /// Errors that may occur when working with KIWAD archives.
 #[derive(Debug, Error)]
@@ -147,6 +147,13 @@ impl Archive {
     #[inline]
     pub fn files(&self) -> &BTreeMap<String, wad_types::File> {
         &self.journal().inner
+    }
+
+    /// Builds an iterator over `(path, file)` pairs in the archive where
+    /// the path satifies the given UNIX glob pattern.
+    #[inline]
+    pub fn iter_glob(&self, pattern: &str) -> Result<glob::GlobIter<'_>, glob::GlobError> {
+        glob::GlobIter::new(self, pattern)
     }
 
     /// Gets the raw contents of an archived file by its string name.
@@ -290,6 +297,6 @@ fn file_mode(_f: &fs::File) -> u32 {
         }
 
         #[cfg(not(unix))]
-        () => 0o666,
+        () => 0,
     }
 }

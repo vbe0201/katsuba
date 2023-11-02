@@ -6,7 +6,7 @@ use crate::{error, op, KatsubaError};
 
 fn extract_file_contents<'a>(
     archive: &'a katsuba_wad::Archive,
-    file: &'a katsuba_wad::types::File,
+    file: &katsuba_wad::types::File,
 ) -> PyResult<Cow<'a, [u8]>> {
     let contents = archive.file_contents(file);
     let contents = match file.compressed {
@@ -53,8 +53,22 @@ impl Archive {
         Py::new(slf.py(), ArchiveIter { iter })
     }
 
+    pub fn iter_glob(slf: PyRef<'_, Self>, pattern: &str) -> PyResult<Py<GlobArchiveIter>> {
+        let matcher = katsuba_wad::glob::Matcher::new(pattern)
+            .map_err(|e| KatsubaError::new_err(format!("{e:?}")))?;
+        let iter = slf.0.files().clone().into_keys();
+
+        Py::new(
+            slf.py(),
+            GlobArchiveIter {
+                matcher,
+                iter: ArchiveIter { iter },
+            },
+        )
+    }
+
     #[classmethod]
-    #[pyo3(signature = (path, verify_crcs=true, /))]
+    #[pyo3(signature = (path, verify_crcs=false, /))]
     pub fn heap(_cls: &PyType, path: PathBuf, verify_crcs: bool) -> PyResult<Self> {
         katsuba_wad::Archive::open_heap(path, verify_crcs)
             .map(Self)
@@ -62,7 +76,7 @@ impl Archive {
     }
 
     #[classmethod]
-    #[pyo3(signature = (path, verify_crcs=true, /))]
+    #[pyo3(signature = (path, verify_crcs=false, /))]
     pub fn mmap(_cls: &PyType, path: PathBuf, verify_crcs: bool) -> PyResult<Self> {
         katsuba_wad::Archive::open_mmap(path, verify_crcs)
             .map(Self)
@@ -92,6 +106,29 @@ impl ArchiveIter {
 
     pub fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<String> {
         slf.iter.next()
+    }
+}
+
+#[pyclass]
+pub struct GlobArchiveIter {
+    matcher: katsuba_wad::glob::Matcher,
+    iter: ArchiveIter,
+}
+
+#[pymethods]
+impl GlobArchiveIter {
+    pub fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    pub fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<String> {
+        loop {
+            match slf.iter.iter.next() {
+                Some(path) if slf.matcher.is_match(&path) => break Some(path),
+                Some(..) => continue,
+                None => break None,
+            }
+        }
     }
 }
 
