@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use katsuba_bit_buf::BitReader;
 use katsuba_types::{PropertyFlags, TypeDef};
-use katsuba_utils::align::align_down;
+use katsuba_utils::{align::align_down, hash::string_id};
 use smartstring::alias::String;
 
 use super::{property, utils, Error, SerializerFlags, SerializerParts, TypeTag};
@@ -70,7 +70,10 @@ fn deserialize_properties<T: TypeTag>(
         deserialize_properties_deep::<T>(&mut inner, de, object_size, type_def, reader)?;
     }
 
-    Ok(Value::Object(Object { inner }))
+    Ok(Value::Object {
+        hash: string_id(type_def.name.as_bytes()),
+        obj: Object { inner },
+    })
 }
 
 #[inline]

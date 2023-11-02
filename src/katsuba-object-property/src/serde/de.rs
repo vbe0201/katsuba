@@ -109,6 +109,11 @@ impl Serializer {
         let mut reader = self.zlib_parts.configure(&mut self.parts.options, data)?;
         log::info!("Deserializing object with config {:?}", self.parts.options);
 
-        object::deserialize::<T>(&mut self.parts, &mut reader)
+        let value = object::deserialize::<T>(&mut self.parts, &mut reader)?;
+        if let Value::Empty = value {
+            return Err(Error::NullRoot);
+        }
+
+        Ok(value)
     }
 }

@@ -30,6 +30,15 @@ unsafe impl Send for LazyList {}
 
 #[pymethods]
 impl LazyList {
+    pub fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<LazyListIter>> {
+        let iter = LazyListIter {
+            list: slf.clone(),
+            idx: 0,
+        };
+
+        Py::new(slf.py(), iter)
+    }
+
     pub fn __len__(&self) -> usize {
         let list = self.get_ref();
         list.len()
@@ -44,25 +53,49 @@ impl LazyList {
     }
 }
 
+#[pyclass]
+pub struct LazyListIter {
+    list: LazyList,
+    idx: usize,
+}
+
+#[pymethods]
+impl LazyListIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<PyObject> {
+        let idx = slf.idx;
+        slf.idx += 1;
+
+        slf.list.__getitem__(slf.py(), idx).ok()
+    }
+}
+
 #[derive(Clone)]
 #[pyclass]
-pub struct LazyObject(Arc<Value>, NonNull<Object>);
+pub struct LazyObject(Arc<Value>, u32, NonNull<Object>);
 
 impl LazyObject {
     // SAFETY: `current` must be derived from `base` in some way.
-    pub unsafe fn new(base: Arc<Value>, current: &Object) -> Self {
-        Self(base, NonNull::from(current))
+    pub unsafe fn new(base: Arc<Value>, hash: u32, current: &Object) -> Self {
+        Self(base, hash, NonNull::from(current))
     }
 
     #[inline(always)]
     fn get_ref(&self) -> &Object {
         // SAFETY: Constructor ensures our list is fine and we never get a mut ref.
-        unsafe { self.1.as_ref() }
+        unsafe { self.2.as_ref() }
     }
 }
 
 #[pymethods]
 impl LazyObject {
+    pub fn type_hash(&self) -> u32 {
+        self.1
+    }
+
     pub fn __len__(&self) -> usize {
         let obj = self.get_ref();
         obj.len()

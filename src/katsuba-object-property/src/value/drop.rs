@@ -5,7 +5,7 @@ use super::Value;
 /// This avoids stack overflows with deeply nested types.
 pub fn safely(value: Value) {
     match value {
-        Value::List(_) | Value::Object(_) => {}
+        Value::List(..) | Value::Object { .. } => {}
         _ => return,
     }
 
@@ -18,7 +18,7 @@ pub fn safely(value: Value) {
                     stack.push(child);
                 }
             }
-            Value::Object(obj) => {
+            Value::Object { hash: _, obj } => {
                 for (_, child) in obj {
                     stack.push(child);
                 }

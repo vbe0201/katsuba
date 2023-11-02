@@ -42,7 +42,7 @@ pub unsafe fn value_to_python(base: Arc<Value>, value: &Value, py: Python<'_>) -
         Value::WString(v) => convert_to_utf16(py, &v.0),
 
         Value::List(v) => unsafe { LazyList::new(base, v).into_py(py) },
-        Value::Object(v) => unsafe { LazyObject::new(base, v).into_py(py) },
+        Value::Object { hash, obj } => unsafe { LazyObject::new(base, *hash, obj).into_py(py) },
 
         Value::Color(v) => {
             let Color { r, g, b, a } = *v;

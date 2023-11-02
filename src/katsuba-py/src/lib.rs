@@ -21,9 +21,9 @@ pub fn katsuba(py: Python<'_>, module: &PyModule) -> PyResult<()> {
     module.add("KatsubaError", py.get_type::<KatsubaError>())?;
 
     // Declare all the submodules in the package.
-    let op = PyModule::new(py, "katsuba_py.op")?;
-    let utils = PyModule::new(py, "katsuba_py.utils")?;
-    let wad = PyModule::new(py, "katsuba_py.wad")?;
+    let op = PyModule::new(py, "katsuba.op")?;
+    let utils = PyModule::new(py, "katsuba.utils")?;
+    let wad = PyModule::new(py, "katsuba.wad")?;
 
     // Enable `from katsuba_py.x import A` imports.
     let locals = [
@@ -35,9 +35,9 @@ pub fn katsuba(py: Python<'_>, module: &PyModule) -> PyResult<()> {
     py.run(
         r#"
 import sys
-sys.modules['katsuba_py.op'] = op
-sys.modules['katsuba_py.utils'] = utils
-sys.modules['katsuba_py.wad'] = wad
+sys.modules['katsuba.op'] = op
+sys.modules['katsuba.utils'] = utils
+sys.modules['katsuba.wad'] = wad
 "#,
         None,
         Some(locals),

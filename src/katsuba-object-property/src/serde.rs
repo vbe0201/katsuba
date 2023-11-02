@@ -41,6 +41,10 @@ pub enum Error {
     #[error("{0}")]
     Decompress(#[from] DecompressionError),
 
+    /// The deserialized object as a whole was a null value.
+    #[error("root object must not be null")]
+    NullRoot,
+
     /// The actual size of an inflated object after decompression does
     /// not match the size expectation for it.
     #[error("mismatch for inflated object size: expected {expected}, got {actual}")]
