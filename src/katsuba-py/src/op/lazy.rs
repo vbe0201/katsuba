@@ -92,6 +92,7 @@ impl LazyObject {
 
 #[pymethods]
 impl LazyObject {
+    #[getter]
     pub fn type_hash(&self) -> u32 {
         self.1
     }
