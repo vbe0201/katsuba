@@ -28,7 +28,7 @@ fn extract_file_contents<'a>(
     Ok(contents)
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.wad")]
 struct Archive(katsuba_wad::Archive);
 
 #[pymethods]
@@ -104,7 +104,7 @@ impl Archive {
     }
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.wad")]
 pub struct ArchiveIter {
     iter: btree_map::IntoKeys<String, katsuba_wad::types::File>,
 }
@@ -120,7 +120,7 @@ impl ArchiveIter {
     }
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.wad")]
 pub struct GlobArchiveIter {
     matcher: katsuba_wad::glob::Matcher,
     iter: ArchiveIter,

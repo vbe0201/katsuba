@@ -17,7 +17,7 @@ mod leaf_types;
 pub use leaf_types::*;
 
 #[derive(Clone)]
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct TypeList(Arc<katsuba_types::TypeList>);
 
 #[pymethods]
@@ -39,7 +39,7 @@ impl TypeList {
 }
 
 #[derive(Clone, Copy, Default)]
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct SerializerOptions(serde::SerializerOptions);
 
 #[pymethods]
@@ -110,7 +110,7 @@ impl SerializerOptions {
     }
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct Serializer(pub(crate) serde::Serializer);
 
 #[pymethods]

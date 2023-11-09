@@ -9,7 +9,7 @@ use pyo3::{
 use super::conversion::value_to_python;
 
 #[derive(Clone)]
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct LazyList(Arc<Value>, NonNull<List>);
 
 impl LazyList {
@@ -53,7 +53,7 @@ impl LazyList {
     }
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct LazyListIter {
     list: LazyList,
     idx: usize,
@@ -74,7 +74,7 @@ impl LazyListIter {
 }
 
 #[derive(Clone)]
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct LazyObject(Arc<Value>, u32, NonNull<Object>);
 
 impl LazyObject {

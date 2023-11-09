@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct Vec3 {
     #[pyo3(get, set)]
     pub x: f32,
@@ -10,7 +10,7 @@ pub struct Vec3 {
     pub z: f32,
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct Quaternion {
     #[pyo3(get, set)]
     pub x: f32,
@@ -22,7 +22,7 @@ pub struct Quaternion {
     pub w: f32,
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct Matrix {
     #[pyo3(get, set)]
     pub i: [f32; 3],
@@ -32,7 +32,7 @@ pub struct Matrix {
     pub k: [f32; 3],
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct Euler {
     #[pyo3(get, set)]
     pub pitch: f32,
@@ -42,7 +42,7 @@ pub struct Euler {
     pub roll: f32,
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct PointInt {
     #[pyo3(get, set)]
     pub x: i32,
@@ -50,7 +50,7 @@ pub struct PointInt {
     pub y: i32,
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct PointFloat {
     #[pyo3(get, set)]
     pub x: f32,
@@ -58,7 +58,7 @@ pub struct PointFloat {
     pub y: f32,
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct SizeInt {
     #[pyo3(get, set)]
     pub width: i32,
@@ -66,7 +66,7 @@ pub struct SizeInt {
     pub height: i32,
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct RectInt {
     #[pyo3(get, set)]
     pub left: i32,
@@ -78,7 +78,7 @@ pub struct RectInt {
     pub bottom: i32,
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct RectFloat {
     #[pyo3(get, set)]
     pub left: f32,
@@ -90,7 +90,7 @@ pub struct RectFloat {
     pub bottom: f32,
 }
 
-#[pyclass]
+#[pyclass(module = "katsuba.op")]
 pub struct Color {
     #[pyo3(get, set)]
     pub r: u8,
