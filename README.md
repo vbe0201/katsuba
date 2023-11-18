@@ -31,11 +31,11 @@ $ git clone https://github.com/vbe0201/katsuba
 $ cd katsuba
 
 # Install the CLI tool (can be invoked with katsuba command)
-$ cargo install --path cli
+$ cargo install --path src/katsuba
 
 # OPTIONAL: Install the Python bindings.
 # This assumes a recent installation of Python on the system.
-$ cd py
+$ cd src/katsuba-py
 $ python -m pip install .
 ```
 
