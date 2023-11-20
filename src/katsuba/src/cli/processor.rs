@@ -131,6 +131,7 @@ impl<R, T> Processor<R, Missing>
 where
     R: FnMut(Reader<'_>, &Executor) -> eyre::Result<T>,
 {
+    /// Configures a callback for writing an element to an output source.
     pub fn write_with<F>(self, f: F) -> Processor<R, F>
     where
         F: FnMut(&Executor, Option<PathBuf>, T, OutputSource) -> eyre::Result<()>,
@@ -164,6 +165,10 @@ where
         Ok(Reader::File(path, io::BufReader::new(file)))
     }
 
+    /// Processes the given input source into the given output source.
+    ///
+    /// Depending on the configuration, this may use single-threaded or
+    /// multi-threaded I/O for processing.
     pub fn process(mut self, input: InputSource, output: OutputSource) -> eyre::Result<()> {
         let mut executor = match self.bias {
             Bias::Current => Executor::current(),

@@ -23,7 +23,6 @@ mod strings;
 pub use strings::*;
 
 // TODO: Evaluate optimizations.
-// TODO: Manual serde impls if the serialization is bogus?
 
 /// A runtime value from the ObjectProperty system.
 ///

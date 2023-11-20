@@ -1,4 +1,7 @@
-use std::fmt::{self, Write};
+use std::{
+    fmt::{self, Write},
+    str,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 #[repr(transparent)]
@@ -57,7 +60,7 @@ fn display_utf8<'a, Transformer: Fn(&'a str) -> O, O: Iterator<Item = char> + 'a
 ) -> fmt::Result {
     // Adapted from <https://doc.rust-lang.org/std/str/struct.Utf8Error.html>
     loop {
-        match core::str::from_utf8(input) {
+        match str::from_utf8(input) {
             Ok(valid) => {
                 t(valid).try_for_each(|c| f.write_char(c))?;
                 break;
@@ -65,11 +68,12 @@ fn display_utf8<'a, Transformer: Fn(&'a str) -> O, O: Iterator<Item = char> + 'a
             Err(error) => {
                 let (valid, after_valid) = input.split_at(error.valid_up_to());
 
-                t(core::str::from_utf8(valid).unwrap()).try_for_each(|c| f.write_char(c))?;
+                t(unsafe { str::from_utf8(valid).unwrap_unchecked() })
+                    .try_for_each(|c| f.write_char(c))?;
                 f.write_char(char::REPLACEMENT_CHARACTER)?;
 
                 if let Some(invalid_sequence_length) = error.error_len() {
-                    input = &after_valid[invalid_sequence_length..];
+                    input = unsafe { after_valid.get_unchecked(invalid_sequence_length..) };
                 } else {
                     break;
                 }

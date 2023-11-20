@@ -99,7 +99,7 @@ impl<'a> Buffer<'a> {
     pub unsafe fn extend_lifetime(self) -> Buffer<'static> {
         // SAFETY: Similar to docs example for `transmute`, caller
         // takes responsibility in case of a borrowed buffer.
-        std::mem::transmute::<Self, Buffer<'static>>(self)
+        unsafe { std::mem::transmute::<Self, Buffer<'static>>(self) }
     }
 
     /// Creates a file buffer from a static slice.
