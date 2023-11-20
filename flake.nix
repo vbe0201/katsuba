@@ -12,21 +12,27 @@
 
   outputs = {
     self,
-    nixpkgs,
-    systems,
-    devenv,
-  } @ inputs: let
-    forEachSystem = nixpkgs.lib.genAttrs (import systems);
-  in {
-    packages = forEachSystem (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
+    flake-parts,
+    ...
+  } @ inputs:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      imports = [
+        inputs.devenv.flakeModule
+      ];
 
+      systems = import inputs.systems;
+
+      perSystem = {
+        config,
+        pkgs,
+        system,
+        ...
+      }: let
         katsuba_toml = builtins.fromTOML (builtins.readFile ./src/katsuba/Cargo.toml);
         katsuba_py_toml = builtins.fromTOML (builtins.readFile ./src/katsuba-py/pyproject.toml);
       in {
-        default = pkgs.rustPlatform.buildRustPackage {
-          pname = "katsuba";
+        packages.default = pkgs.rustPlatform.buildRustPackage {
+          pname = katsuba_toml.package.name;
           version = katsuba_toml.package.version;
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
@@ -35,7 +41,7 @@
           buildInputs = with pkgs; [python3];
         };
 
-        "katsuba-py" = pkgs.python3.pkgs.buildPythonPackage {
+        packages."katsuba-py" = {
           pname = "katsuba-py";
           version = katsuba_py_toml.project.version;
           src = ./.;
@@ -46,32 +52,20 @@
           nativeBuildInputs = with pkgs.rustPlatform; [cargoSetupHook maturinBuildHook];
           buildAndTestSubdir = "src/katsuba-py";
         };
-      }
-    );
 
-    devShells = forEachSystem (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        default = devenv.lib.mkShell {
-          inherit inputs pkgs;
-          modules = [
-            {
-              packages = with pkgs; [cmake maturin];
+        devenv.shells.default = {
+          packages = with pkgs; [git maturin];
 
-              languages = {
-                nix.enable = true;
-                python = {
-                  enable = true;
-                  package = pkgs.python311;
-                  poetry.enable = true;
-                };
-                rust.enable = true;
-              };
-            }
-          ];
+          languages = {
+            nix.enable = true;
+            python = {
+              enable = true;
+              package = pkgs.python3;
+              poetry.enable = true;
+            };
+            rust.enable = true;
+          };
         };
-      }
-    );
-  };
+      };
+    };
 }
