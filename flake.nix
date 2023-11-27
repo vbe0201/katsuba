@@ -41,7 +41,7 @@
           buildInputs = with pkgs; [python3];
         };
 
-        packages."katsuba-py" = {
+        packages."katsuba-py" = pkgs.python3.pkgs.buildPythonPackage {
           pname = "katsuba-py";
           version = katsuba_py_toml.project.version;
           src = ./.;
