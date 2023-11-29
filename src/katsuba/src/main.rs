@@ -20,8 +20,10 @@ mod utils;
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() -> eyre::Result<()> {
-    let cli = Cli::parse();
+    color_eyre::install()?;
 
+    let cli = Cli::parse();
     cli.verbosity.setup();
+
     cli.command.handle()
 }

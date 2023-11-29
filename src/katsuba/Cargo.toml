@@ -20,6 +20,7 @@ katsuba-utils = { path = "../katsuba-utils" }
 katsuba-wad = { path = "../katsuba-wad" }
 
 clap = { version = "4.4", features = ["derive", "env"] }
+color-eyre = { version = "0.6", default-features = false }
 enum-map = "2.6"
 eyre = "0.6"
 glob = "0.3"
