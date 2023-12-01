@@ -3,9 +3,8 @@ use std::{
     path::PathBuf,
 };
 
+use katsuba_executor::{Executor, Task};
 use serde::Serialize;
-
-use crate::executor::{Executor, Task};
 
 /// Serializes the given value to the respective output source.
 ///
@@ -24,17 +23,13 @@ pub fn serialize_to_output_source<T: Serialize>(
     if let Some(out) = out {
         // We use a blanket size for buffers since they will grow as needed anyway.
         // But also most files shouldn't be this large so the memory can be reused.
-        let mut buffer = ex.request_buffer(4 * 1024 * 1024);
-        serde_json::to_writer(buffer.as_vec(), value)?;
+        let buffer = ex.request_buffer(1024 * 1024, |buf| serde_json::to_writer(buf, value))?;
 
-        let task = Task::create_file(out, buffer.downgrade(), 0o666);
+        let task = Task::create_file(out, buffer, 0o666);
         for pending in ex.dispatch(task) {
-            pending.result?;
+            pending?;
         }
     } else {
-        // Writing to stdout is generally only done for single elements and it also
-        // doesn't have to go through slow `CloseHandle()` calls. Therefore, there
-        // is no point in running this code on the executor.
         let mut stdout = io::stdout().lock();
 
         if stdout.is_terminal() {

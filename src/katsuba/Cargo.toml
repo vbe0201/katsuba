@@ -13,6 +13,7 @@ features = ["option-guessing", "serde"]
 [dependencies]
 katsuba-bcd = { path = "../katsuba-bcd" }
 katsuba-client-sig = { path = "../katsuba-client-sig" }
+katsuba-executor = { path = "../katsuba-executor" }
 katsuba-nav = { path = "../katsuba-nav" }
 katsuba-poi = { path = "../katsuba-poi" }
 katsuba-types = { path = "../katsuba-types" }

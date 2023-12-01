@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
+use katsuba_executor::Executor;
+
 use super::OutputSource;
-use crate::{executor::Executor, utils};
+use crate::utils;
 
 /// Helper function to be used with [`Executor::write_with`] for mapping
 /// any serializable `T` value to an output source.

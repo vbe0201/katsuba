@@ -1,16 +1,12 @@
 use std::{
-    collections::HashSet,
-    env, fs,
+    env,
     path::{Path, PathBuf},
 };
 
-use eyre::Context;
+use katsuba_executor::{Buffer, Executor, Task};
 use katsuba_wad::{Archive, Inflater};
 
-use crate::{
-    cli::OutputSource,
-    executor::{Buffer, Executor, Task},
-};
+use crate::{cli::OutputSource, utils::DirectoryTree};
 
 struct SafeArchiveDrop<'a> {
     ex: &'a Executor,
@@ -27,51 +23,41 @@ impl Drop for SafeArchiveDrop<'_> {
 }
 
 fn fetch_file_contents<'a>(
-    ex: &Executor,
+    ex: &'a Executor,
     archive: &'a Archive,
     inflater: &mut Inflater,
     file: &katsuba_wad::types::File,
 ) -> eyre::Result<Buffer<'a>> {
     let contents = archive.file_contents(file);
-    let buffer = match file.compressed {
+    match file.compressed {
         true => {
             let len = file.uncompressed_size as usize;
 
-            let mut buf = ex.request_buffer(len);
-            buf.as_vec().resize(len, 0);
+            ex.request_buffer(len, |buf| {
+                buf.resize(len, 0);
+                inflater.decompress_into(buf, contents)?;
 
-            inflater.decompress_into(&mut buf, contents)?;
-            buf.downgrade()
+                Ok(())
+            })
         }
-        false => Buffer::current_borrowed(contents),
-    };
 
-    Ok(buffer)
+        false => Ok(Buffer::borrowed(contents)),
+    }
 }
 
-fn create_directory_tree(archive: &Archive, out: &Path) -> eyre::Result<()> {
+fn create_directory_tree(ex: &Executor, archive: &Archive, out: &Path) -> eyre::Result<()> {
     // Pre-compute the directory structure we need to create.
-    let mut out_paths = HashSet::new();
+    let mut tree = DirectoryTree::new();
     for file in archive.files().keys() {
-        let file: &Path = file.as_ref();
-
-        if let Some(p) = file.parent() {
-            out_paths.insert(p);
-
-            // Check for parent of parent so that we can remove
-            // entries which would just need unnecessary syscalls.
-            if let Some(p) = p.parent() {
-                out_paths.remove(p);
-            }
-        }
+        tree.add(file.as_ref());
     }
 
     // Create all the directories with minimal required syscalls.
-    // This has shown to make a drastic performance difference on Windows.
-    for path in out_paths {
-        let path = out.join(path);
-        fs::create_dir_all(&path)
-            .with_context(|| format!("failed to create directory '{}'", path.display()))?;
+    for path in tree {
+        let task = Task::create_dir(out.join(path));
+        for pending in ex.dispatch(task) {
+            pending?;
+        }
     }
 
     Ok(())
@@ -93,7 +79,7 @@ pub fn extract_archive(
     out.push(input_stem);
 
     // First, create all the directories for the output files.
-    create_directory_tree(&archive, &out)?;
+    create_directory_tree(ex, &archive, &out)?;
 
     // This guard ensures we can safely share references into `archive`
     // with the pool without risking dangling in the case of an error.
@@ -114,7 +100,7 @@ pub fn extract_archive(
 
         let task = Task::create_file(path, buffer, mode);
         for pending in ex.dispatch(task) {
-            pending.result?;
+            pending?;
         }
     }
 

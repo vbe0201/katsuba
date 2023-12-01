@@ -5,13 +5,11 @@ use std::{
 };
 
 use eyre::Context;
+use katsuba_executor::{Buffer, Executor};
 
 use self::sealed::Missing;
 use super::{InputSource, OutputSource};
-use crate::{
-    executor::{Buffer, Executor},
-    utils,
-};
+use crate::utils;
 
 mod sealed {
     pub struct Missing;
@@ -27,7 +25,7 @@ impl Reader<'_> {
     /// Gets the data in the reader as a [`Buffer`], if possible.
     pub fn get_buffer(&mut self, ex: &Executor) -> eyre::Result<Buffer<'_>> {
         match self {
-            Self::Stdin(buf) => Ok(Buffer::current_borrowed(buf.get_ref())),
+            Self::Stdin(buf) => Ok(Buffer::borrowed(buf.get_ref())),
             Self::File(_, f) => {
                 let size = f
                     .get_ref()
@@ -35,10 +33,10 @@ impl Reader<'_> {
                     .map(|m| m.len() as usize)
                     .unwrap_or(0);
 
-                let mut buf = ex.request_buffer(size);
-                f.read_to_end(buf.as_vec())?;
-
-                Ok(buf.downgrade())
+                ex.request_buffer(size, |buf| {
+                    f.read_to_end(buf)?;
+                    Ok(())
+                })
             }
         }
     }
@@ -180,33 +178,41 @@ where
                 let reader = self.stdin()?;
 
                 let value = (self.reader_fn)(reader, &executor)?;
-                (self.writer_fn)(&executor, None, value, out)
+                (self.writer_fn)(&mut executor, None, value, out)
             }
 
             (InputSource::File(path), out) => {
                 let reader = self.file(&path)?;
 
                 let value = (self.reader_fn)(reader, &executor)?;
-                (self.writer_fn)(&executor, Some(path), value, out)
+                (self.writer_fn)(&mut executor, Some(path), value, out)
             }
 
-            (InputSource::Files(paths), out @ OutputSource::Dir(..)) => {
+            (InputSource::Files(paths), OutputSource::Dir(out, suffix)) => {
                 // When processing multiple input files, we ignore the bias.
                 if let Bias::Current = self.bias {
                     executor = Executor::get()?;
                 }
+
+                // Create the specified out directory if it doesn't exist.
+                fs::create_dir_all(&out)?;
 
                 // Dispatch work for all input paths onto the executor.
                 for path in paths {
                     let reader = self.file(&path)?;
                     let value = (self.reader_fn)(reader, &executor)?;
 
-                    (self.writer_fn)(&executor, Some(path), value, out.clone())?;
+                    (self.writer_fn)(
+                        &mut executor,
+                        Some(path),
+                        value,
+                        OutputSource::Dir(out.clone(), suffix),
+                    )?;
                 }
 
                 // Await the completion of all pending tasks on the executor.
                 for pending in executor.join() {
-                    pending.result?;
+                    pending?;
                 }
 
                 Ok(())

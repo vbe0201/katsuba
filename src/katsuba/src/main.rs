@@ -12,8 +12,6 @@ use cli::Cli;
 mod cmd;
 use cmd::Command;
 
-mod executor;
-
 mod utils;
 
 #[global_allocator]

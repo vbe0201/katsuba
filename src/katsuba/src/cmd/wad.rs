@@ -28,25 +28,20 @@ enum WadCommand {
         ///
         /// Therefore, this option is disabled by default.
         #[clap(short, long, default_value_t = false)]
-        verify_checksums: bool,
+        check: bool,
     },
 }
 
 impl Command for Wad {
     fn handle(self) -> eyre::Result<()> {
         match self.command {
-            WadCommand::Unpack {
-                args,
-                verify_checksums,
-            } => {
+            WadCommand::Unpack { args, check } => {
                 let (inputs, outputs) = args.evaluate("")?;
                 Processor::new(Bias::Threaded)?
                     .read_with(move |r, _| {
                         let res = match r {
-                            Reader::Stdin(buf) => {
-                                Archive::from_vec(buf.into_inner(), verify_checksums)
-                            }
-                            Reader::File(_, f) => Archive::mmap(f.into_inner(), verify_checksums),
+                            Reader::Stdin(buf) => Archive::from_vec(buf.into_inner(), check),
+                            Reader::File(_, f) => Archive::mmap(f.into_inner(), check),
                         };
 
                         res.map_err(Into::into)
