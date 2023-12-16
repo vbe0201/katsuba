@@ -12,6 +12,18 @@ use katsuba_utils::{
 
 use crate::crc;
 
+pub(crate) fn is_unpatched_file(data: &[u8]) -> bool {
+    // SAFETY: Transmuting bytes to larger integer types is legal.
+    let (prefix, aligned, suffix) = unsafe { data.align_to::<u128>() };
+
+    // Speed up the checks by comparing most data in chunks of 16
+    // bytes. For smaller-than-16-bytes leading and trailing chunks
+    // we do byte comparisons.
+    prefix.iter().all(|&x| x == 0)
+        && aligned.iter().all(|&x| x == 0)
+        && suffix.iter().all(|&x| x == 0)
+}
+
 /// Error type produced by [`Archive::verify_crcs`].
 #[derive(Clone, Copy, Debug, PartialEq, Error)]
 #[error("CRC mismatch -- expected {expected}, got {actual}")]
@@ -53,6 +65,14 @@ pub struct File {
     /// The CRC32 checksum of the uncompressed file contents.
     pub crc: u32,
 
+    /// Whether this file has unpatched data in the archive that
+    /// needs to be ignored.
+    ///
+    /// Unpatched files are basically just placeholder for actual
+    /// data later to be filled in.
+    #[brw(ignore)]
+    pub is_unpatched: bool,
+
     #[br(temp)]
     #[bw(calc(name.len() as u32 + 1))]
     name_len: u32,
@@ -80,15 +100,12 @@ impl File {
 
     /// Extracts this file from the given raw archive bytes.
     ///
-    /// # Panics
-    ///
-    /// This may panic when `raw_archive` is indexed incorrectly with
-    /// offset and length of the described file bytes.
-    pub fn extract<'wad>(&self, raw_archive: &'wad [u8]) -> &'wad [u8] {
+    /// When the archive is malformed, this returns [`None`].
+    pub fn extract<'wad>(&self, raw_archive: &'wad [u8]) -> Option<&'wad [u8]> {
         let offset = self.offset as usize;
         let size = self.size();
 
-        &raw_archive[offset..offset + size]
+        raw_archive.get(offset..offset + size)
     }
 }
 
@@ -123,13 +140,26 @@ impl Archive {
 
     /// Verifies the CRCs of every file in the archive given the
     /// raw bytes of the archive file.
-    pub fn verify_crcs(&self, raw_archive: &[u8]) -> Result<(), CrcMismatch> {
-        self.files.iter().try_for_each(|f| {
-            let hash = crc::hash(f.extract(raw_archive));
+    ///
+    /// # Panics
+    ///
+    /// Panics when the KIWAD archive encodes file journal entries
+    /// with no matching data.
+    pub fn verify_crcs(&mut self, raw_archive: &[u8]) -> Result<(), CrcMismatch> {
+        self.files.iter_mut().try_for_each(|f| {
+            let data = f.extract(raw_archive).unwrap();
+            let hash = crc::hash(data);
 
             if hash == f.crc {
                 Ok(())
             } else {
+                // Only dismiss files as unpatched if they are all zeroes
+                // on CRC mismatch.
+                if is_unpatched_file(data) {
+                    f.is_unpatched = true;
+                    return Ok(());
+                }
+
                 Err(CrcMismatch {
                     expected: f.crc,
                     actual: hash,

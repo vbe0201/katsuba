@@ -19,29 +19,19 @@ enum WadCommand {
     Unpack {
         #[clap(flatten)]
         args: InputsOutputs,
-
-        /// Verifies the CRC32 checksums for every file in the archive.
-        ///
-        /// Since most files are zlib-compressed and are automatically
-        /// verified by Adler32, this only has relevance for a very
-        /// limited number of files.
-        ///
-        /// Therefore, this option is disabled by default.
-        #[clap(short, long, default_value_t = false)]
-        check: bool,
     },
 }
 
 impl Command for Wad {
     fn handle(self) -> eyre::Result<()> {
         match self.command {
-            WadCommand::Unpack { args, check } => {
+            WadCommand::Unpack { args } => {
                 let (inputs, outputs) = args.evaluate("")?;
                 Processor::new(Bias::Threaded)?
                     .read_with(move |r, _| {
                         let res = match r {
-                            Reader::Stdin(buf) => Archive::from_vec(buf.into_inner(), check),
-                            Reader::File(_, f) => Archive::mmap(f.into_inner(), check),
+                            Reader::Stdin(buf) => Archive::from_vec(buf.into_inner()),
+                            Reader::File(_, f) => Archive::mmap(f.into_inner()),
                         };
 
                         res.map_err(Into::into)

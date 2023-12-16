@@ -27,8 +27,15 @@ fn fetch_file_contents<'a>(
     archive: &'a Archive,
     inflater: &mut Inflater,
     file: &katsuba_wad::types::File,
-) -> eyre::Result<Buffer<'a>> {
-    let contents = archive.file_contents(file);
+) -> eyre::Result<Option<Buffer<'a>>> {
+    if file.is_unpatched {
+        return Ok(None);
+    }
+
+    let contents = archive
+        .file_contents(file)
+        .ok_or_else(|| eyre::eyre!("missing file contents in archive"))?;
+
     match file.compressed {
         true => {
             let len = file.uncompressed_size as usize;
@@ -39,9 +46,10 @@ fn fetch_file_contents<'a>(
 
                 Ok(())
             })
+            .map(Some)
         }
 
-        false => Ok(Buffer::borrowed(contents)),
+        false => Ok(Some(Buffer::borrowed(contents))),
     }
 }
 
@@ -95,7 +103,13 @@ pub fn extract_archive(
 
         // SAFETY: We can never end up with dangling references into
         // `archive` because `sad` joins all pending tasks on drop.
-        let buffer = fetch_file_contents(ex, &sad.archive, &mut inflater, file)?;
+        let buffer = match fetch_file_contents(ex, &sad.archive, &mut inflater, file)? {
+            Some(buf) => buf,
+            None => {
+                log::warn!("Skipping unpatched file '{}'", path.display());
+                continue;
+            }
+        };
         let buffer = unsafe { buffer.extend_lifetime() };
 
         let task = Task::create_file(path, buffer, mode);

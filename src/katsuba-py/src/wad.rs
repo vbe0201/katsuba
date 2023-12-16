@@ -9,7 +9,10 @@ fn extract_file_contents<'a>(
     archive: &'a katsuba_wad::Archive,
     file: &katsuba_wad::types::File,
 ) -> PyResult<Cow<'a, [u8]>> {
-    let contents = archive.file_contents(file);
+    let contents = archive
+        .file_contents(file)
+        .ok_or_else(|| KatsubaError::new_err("file contents missing from archive"))?;
+
     let contents = match file.compressed {
         true => {
             // We trade some efficiency for a nicer and error-resilient Python API
@@ -69,17 +72,15 @@ impl Archive {
     }
 
     #[classmethod]
-    #[pyo3(signature = (path, verify_crcs=false, /))]
-    pub fn heap(_cls: &PyType, path: PathBuf, verify_crcs: bool) -> PyResult<Self> {
-        katsuba_wad::Archive::open_heap(path, verify_crcs)
+    pub fn heap(_cls: &PyType, path: PathBuf) -> PyResult<Self> {
+        katsuba_wad::Archive::open_heap(path)
             .map(Self)
             .map_err(error::wad_to_py_err)
     }
 
     #[classmethod]
-    #[pyo3(signature = (path, verify_crcs=false, /))]
-    pub fn mmap(_cls: &PyType, path: PathBuf, verify_crcs: bool) -> PyResult<Self> {
-        katsuba_wad::Archive::open_mmap(path, verify_crcs)
+    pub fn mmap(_cls: &PyType, path: PathBuf) -> PyResult<Self> {
+        katsuba_wad::Archive::open_mmap(path)
             .map(Self)
             .map_err(error::wad_to_py_err)
     }
