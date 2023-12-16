@@ -18,6 +18,12 @@
 //! mostly happens on the main thread and can still generate reasonable
 //! loads onto the executor.
 
+#![deny(
+    rust_2018_idioms,
+    rustdoc::broken_intra_doc_links,
+    unsafe_op_in_unsafe_fn
+)]
+
 mod executor;
 pub use executor::*;
 
