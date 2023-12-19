@@ -3,6 +3,9 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     systems.url = "github:nix-systems/default";
     devenv.url = "github:cachix/devenv";
+    nix2container.url = "github:nlewo/nix2container";
+    nix2container.inputs.nixpkgs.follows = "nixpkgs";
+    mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
   };
 
   nixConfig = {
@@ -26,12 +29,13 @@
         config,
         pkgs,
         system,
+        self',
         ...
       }: let
         katsuba_toml = builtins.fromTOML (builtins.readFile ./src/katsuba/Cargo.toml);
         katsuba_py_toml = builtins.fromTOML (builtins.readFile ./src/katsuba-py/pyproject.toml);
       in {
-        packages.default = pkgs.rustPlatform.buildRustPackage {
+        packages.katsuba = pkgs.rustPlatform.buildRustPackage {
           pname = katsuba_toml.package.name;
           version = katsuba_toml.package.version;
           src = ./.;
@@ -53,6 +57,8 @@
           buildAndTestSubdir = "src/katsuba-py";
         };
 
+        packages.default = self'.packages.katsuba;
+
         devenv.shells.default = {
           packages = with pkgs; [git maturin];
 
@@ -61,7 +67,6 @@
             python = {
               enable = true;
               package = pkgs.python3;
-              poetry.enable = true;
             };
             rust.enable = true;
           };
