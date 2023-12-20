@@ -45,6 +45,11 @@ impl From<binrw::Error> for BuilderError {
     }
 }
 
+#[inline(always)]
+fn checked_u32(x: usize) -> Result<u32, BuilderError> {
+    u32::try_from(x).or(Err(BuilderError::TooLarge))
+}
+
 struct BuilderState {
     // The raw archive structure we're building. This is what we will
     // serialize in the end, sans the actual file contents.
@@ -88,14 +93,14 @@ impl BuilderState {
         self.journal_size += record_size;
         self.next_file_offset = self
             .next_file_offset
-            .checked_add(data.len() as u32)
+            .checked_add(checked_u32(data.len())?)
             .ok_or(BuilderError::TooLarge)?;
 
         Ok(())
     }
 
     fn patch_file_offsets(&mut self) -> Result<(), BuilderError> {
-        let journal_size = u32::try_from(self.journal_size).or(Err(BuilderError::TooLarge))?;
+        let journal_size = checked_u32(self.journal_size)?;
         for file in &mut self.archive.files {
             file.offset = file
                 .offset
@@ -144,6 +149,10 @@ impl ArchiveBuilder {
     /// file in the same directory fail to be created.
     ///
     /// `flags` will be ignored on `version < 2`.
+    ///
+    /// # Panics
+    ///
+    /// Panics when `out` is not a path to a file.
     pub fn new<P: AsRef<Path>>(version: u32, flags: u8, out: P) -> Result<Self, BuilderError> {
         let out = out.as_ref();
         assert!(out.is_file());
@@ -170,7 +179,7 @@ impl ArchiveBuilder {
     ) -> Result<(), BuilderError> {
         let record = wad_types::File {
             offset: self.state.next_file_offset,
-            uncompressed_size: u32::try_from(contents.len()).or(Err(BuilderError::TooLarge))?,
+            uncompressed_size: checked_u32(contents.len())?,
             compressed_size: u32::MAX,
             compressed: false,
             crc: crc::hash(contents),
@@ -208,13 +217,11 @@ impl ArchiveBuilder {
             return self.add_file(name, contents);
         }
 
-        let uncompressed_size = u32::try_from(contents.len()).or(Err(BuilderError::TooLarge))?;
         let compressed = self.deflater.compress(contents)?;
-
         let record = wad_types::File {
             offset: self.state.next_file_offset,
-            uncompressed_size,
-            compressed_size: compressed.len() as u32,
+            uncompressed_size: checked_u32(contents.len())?,
+            compressed_size: checked_u32(compressed.len())?,
             compressed: true,
             crc: crc::hash(compressed),
             is_unpatched: false,
