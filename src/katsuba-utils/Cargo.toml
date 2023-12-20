@@ -7,6 +7,6 @@ license = "ISC"
 edition = "2021"
 
 [dependencies]
-binrw = { version = "0.11", optional = true }
-libdeflater = { version = "0.14", optional = true, features = ["freestanding"] }
+binrw = { version = "0.13", optional = true }
+libdeflater = { version = "1.19", optional = true, features = ["freestanding"] }
 thiserror = "1.0"

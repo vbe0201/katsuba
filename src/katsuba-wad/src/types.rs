@@ -48,6 +48,13 @@ pub struct Header {
     pub flags: Option<u8>,
 }
 
+impl Header {
+    #[cfg(feature = "builder")]
+    fn binary_size(&self) -> usize {
+        8 + if self.version >= 2 { 1 } else { 0 }
+    }
+}
+
 /// Metadata for a file stored in an archive.
 #[binrw]
 #[derive(Clone, Debug)]
@@ -88,6 +95,11 @@ pub struct File {
 }
 
 impl File {
+    #[cfg(feature = "builder")]
+    pub(crate) fn binary_size(&self) -> usize {
+        22 + self.name.len()
+    }
+
     /// Gets the length of data described by this file in bytes.
     #[inline]
     pub const fn size(&self) -> usize {
@@ -128,6 +140,11 @@ pub struct Archive {
 }
 
 impl Archive {
+    #[cfg(feature = "builder")]
+    pub(crate) fn binary_size(&self) -> usize {
+        5 + self.header.binary_size() + self.files.iter().map(|f| f.binary_size()).sum::<usize>()
+    }
+
     /// Parses the archive from the given [`Read`]er.
     pub fn parse<R: Read + Seek>(mut reader: R) -> BinResult<Self> {
         reader.read_le().map_err(Into::into)

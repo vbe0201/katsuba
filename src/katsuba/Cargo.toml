@@ -18,7 +18,7 @@ katsuba-nav = { path = "../katsuba-nav" }
 katsuba-poi = { path = "../katsuba-poi" }
 katsuba-types = { path = "../katsuba-types" }
 katsuba-utils = { path = "../katsuba-utils" }
-katsuba-wad = { path = "../katsuba-wad" }
+katsuba-wad = { path = "../katsuba-wad", features = ["builder"] }
 
 clap = { version = "4.4", features = ["derive", "env"] }
 color-eyre = { version = "0.6", default-features = false }

@@ -13,7 +13,15 @@
 mod archive;
 pub use archive::*;
 
+#[cfg(feature = "builder")]
+mod builder;
+#[cfg(feature = "builder")]
+pub use builder::*;
+
 pub mod crc;
+
+#[cfg(feature = "builder")]
+pub mod deflater;
 
 pub mod glob;
 

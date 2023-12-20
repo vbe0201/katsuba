@@ -28,11 +28,20 @@ pub enum ArchiveError {
 
     /// Failed to parse the archive file.
     #[error("failed to parse archive: {0}")]
-    Parse(#[from] binrw::Error),
+    Parse(binrw::Error),
 
     /// CRC validation of an archive file failed.
     #[error("{0}")]
     Crc(#[from] wad_types::CrcMismatch),
+}
+
+impl From<binrw::Error> for ArchiveError {
+    fn from(value: binrw::Error) -> Self {
+        match value {
+            binrw::Error::Io(e) => Self::Io(e),
+            e => Self::Parse(e),
+        }
+    }
 }
 
 /// Representation of a KIWAD archive loaded into memory.
@@ -171,14 +180,21 @@ impl Archive {
 
 pub(crate) struct Journal {
     // A mapping of file names to their journal entry.
-    inner: BTreeMap<String, wad_types::File>,
+    pub inner: BTreeMap<String, wad_types::File>,
 
     // The file permissions on UNIX systems.
     mode: u32,
 }
 
 impl Journal {
-    fn insert(&mut self, mut file: wad_types::File) {
+    pub fn new(mode: u32) -> Self {
+        Self {
+            inner: BTreeMap::new(),
+            mode,
+        }
+    }
+
+    pub fn insert(&mut self, mut file: wad_types::File) {
         let name = mem::take(&mut file.name);
         self.inner.insert(name, file);
     }
@@ -220,10 +236,7 @@ impl MemoryMappedArchive {
             // and most other applications, we likely won't run into any
             // synchronization conflicts we need to account for.
             mapping: unsafe { MmapOptions::new().populate().map(&file)? },
-            journal: Journal {
-                inner: BTreeMap::new(),
-                mode: file_mode(&file),
-            },
+            journal: Journal::new(file_mode(&file)),
             file,
         };
 
@@ -263,10 +276,7 @@ impl HeapArchive {
 
     fn from_vec(buf: Vec<u8>, mode: u32) -> Result<Self, ArchiveError> {
         let mut this = Self {
-            journal: Journal {
-                inner: BTreeMap::new(),
-                mode,
-            },
+            journal: Journal::new(mode),
             data: buf.into_boxed_slice(),
         };
 
