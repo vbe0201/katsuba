@@ -265,10 +265,7 @@ struct HeapArchive {
 
 impl HeapArchive {
     fn new(mut file: fs::File) -> Result<Self, ArchiveError> {
-        let mut buf = {
-            let size = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
-            Vec::with_capacity(size)
-        };
+        let mut buf = Vec::new();
         file.read_to_end(&mut buf)?;
 
         Self::from_vec(buf, file_mode(&file))
