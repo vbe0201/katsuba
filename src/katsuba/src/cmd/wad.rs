@@ -60,7 +60,9 @@ impl Command for Wad {
                     }
                 };
 
-                let mut builder = ArchiveBuilder::new(2, 0, output)?;
+                let mut builder = ArchiveBuilder::new(2, 0, &output).with_context(|| {
+                    format!("failed to build output archive at '{}'", output.display())
+                })?;
 
                 for entry in walkdir::WalkDir::new(input) {
                     let entry = entry.context("failed to query input directory")?;

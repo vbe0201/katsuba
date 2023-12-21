@@ -34,6 +34,10 @@ pub enum BuilderError {
     /// The archive could not be serialized to the output file.
     #[error("failed to serialize archive: {0}")]
     Serialize(binrw::Error),
+
+    /// Received an invalid path for the output archive file.
+    #[error("path to output archive file must have a parent component")]
+    Path,
 }
 
 impl From<binrw::Error> for BuilderError {
@@ -149,16 +153,12 @@ impl ArchiveBuilder {
     /// file in the same directory fail to be created.
     ///
     /// `flags` will be ignored on `version < 2`.
-    ///
-    /// # Panics
-    ///
-    /// Panics when `out` is not a path to a file.
     pub fn new<P: AsRef<Path>>(version: u32, flags: u8, out: P) -> Result<Self, BuilderError> {
         let out = out.as_ref();
-        assert!(out.is_file());
+        let parent = out.parent().ok_or(BuilderError::Path)?;
 
         let outfile = File::create(out).map(BufWriter::new)?;
-        let blob_cache = tempfile_in(out.parent().unwrap()).map(BufWriter::new)?;
+        let blob_cache = tempfile_in(parent).map(BufWriter::new)?;
 
         Ok(Self {
             state: BuilderState::new(version, flags),
