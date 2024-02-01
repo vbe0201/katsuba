@@ -38,25 +38,23 @@ bitflags! {
         const DELTA_ENCODE = 1 << 8;
         const BLOB = 1 << 9;
 
+        // below are editor hint flags
         const NOEDIT = 1 << 16;
         const FILENAME = 1 << 17;
         const COLOR = 1 << 18;
+        const CONSTRAINED_VALUE = 1 << 19;
         const BITS = 1 << 20;
         const ENUM = 1 << 21;
         const LOCALIZED = 1 << 22;
         const STRING_KEY = 1 << 23;
         const OBJECT_ID = 1 << 24;
         const REFERENCE_ID = 1 << 25;
+        const RADIANS = 1 << 26;
         const OBJECT_NAME = 1 << 27;
         const HAS_BASECLASS = 1 << 28;
-
-
-        // TODO: figure out what these are (pirate101 uses them)
-        const UNKNOWN5 = 1 << 26;
-        const UNKNOWN4 = 1 << 19;
-        const UNKNOWN1 = 1 << 29;
-        const UNKNOWN2 = 1 << 30;
-        const UNKNOWN3 = 1 << 31;
+        // class is behavior, not property type
+        const IS_BEHAVIOR = 1 << 29;
+        const ASSET = 1 << 30;
 
         #[doc(hidden)]
         const ENUM_LIKE = Self::ENUM.bits() | Self::BITS.bits();
