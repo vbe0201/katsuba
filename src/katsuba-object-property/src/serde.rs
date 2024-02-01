@@ -134,7 +134,7 @@ pub struct SerializerOptions {
     pub skip_unknown_types: bool,
     /// Uses djb2 for all hashes.
     ///
-    /// Used by ꟼirate101.
+    /// Used by Pirate101.
     pub djb2_only: bool,
 }
 

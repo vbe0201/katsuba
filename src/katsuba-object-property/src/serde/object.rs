@@ -76,7 +76,7 @@ fn deserialize_properties<T: TypeTag>(
     };
 
     Ok(Value::Object {
-        hash: hash,
+        hash,
         obj: Object { inner },
     })
 }

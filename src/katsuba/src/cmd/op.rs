@@ -64,7 +64,7 @@ pub struct ObjectProperty {
     #[clap(short, long, default_value_t = false)]
     zlib_manual: bool,
 
-    /// Whether we should use only the djb2 hash (ꟼirate101)
+    /// Whether we should use only the djb2 hash (Pirate101)
     #[clap(short, long, default_value_t = false)]
     djb2_only: bool,
 }
