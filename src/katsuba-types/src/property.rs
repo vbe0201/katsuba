@@ -50,6 +50,14 @@ bitflags! {
         const OBJECT_NAME = 1 << 27;
         const HAS_BASECLASS = 1 << 28;
 
+
+        // TODO: figure out what these are (pirate101 uses them)
+        const UNKNOWN5 = 1 << 26;
+        const UNKNOWN4 = 1 << 19;
+        const UNKNOWN1 = 1 << 29;
+        const UNKNOWN2 = 1 << 30;
+        const UNKNOWN3 = 1 << 31;
+
         #[doc(hidden)]
         const ENUM_LIKE = Self::ENUM.bits() | Self::BITS.bits();
     }
