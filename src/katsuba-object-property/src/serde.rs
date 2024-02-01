@@ -132,6 +132,10 @@ pub struct SerializerOptions {
     ///
     /// Ignored during serialization.
     pub skip_unknown_types: bool,
+    /// Uses djb2 for all hashes.
+    ///
+    /// Used by Pirate101.
+    pub djb2_only: bool,
 }
 
 impl Default for SerializerOptions {
@@ -143,6 +147,7 @@ impl Default for SerializerOptions {
             manual_compression: false,
             recursion_limit: i8::MAX,
             skip_unknown_types: false,
+            djb2_only: false,
         }
     }
 }

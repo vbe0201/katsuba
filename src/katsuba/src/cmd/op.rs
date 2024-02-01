@@ -63,6 +63,10 @@ pub struct ObjectProperty {
     /// guess command.
     #[clap(short, long, default_value_t = false)]
     zlib_manual: bool,
+
+    /// Whether we should use only the djb2 hash (Pirate101)
+    #[clap(short, long, default_value_t = false)]
+    djb2_only: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -109,6 +113,7 @@ impl Command for ObjectProperty {
             property_mask: PropertyFlags::from_bits_truncate(self.mask),
             shallow: self.shallow,
             manual_compression: self.zlib_manual,
+            djb2_only: self.djb2_only,
             ..Default::default()
         };
 

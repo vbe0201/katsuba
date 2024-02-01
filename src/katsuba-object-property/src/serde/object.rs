@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use katsuba_bit_buf::BitReader;
 use katsuba_types::{PropertyFlags, TypeDef};
-use katsuba_utils::{align::align_down, hash::string_id};
+use katsuba_utils::{align::align_down, hash::string_id, hash::djb2};
 use smartstring::alias::String;
 
 use super::{property, utils, Error, SerializerFlags, SerializerParts, TypeTag};
@@ -70,8 +70,13 @@ fn deserialize_properties<T: TypeTag>(
         deserialize_properties_deep::<T>(&mut inner, de, object_size, type_def, reader)?;
     }
 
+    let hash = match de.options.djb2_only {
+        true => djb2(type_def.name.as_bytes()),
+        false => string_id(type_def.name.as_bytes()),
+    };
+
     Ok(Value::Object {
-        hash: string_id(type_def.name.as_bytes()),
+        hash,
         obj: Object { inner },
     })
 }
