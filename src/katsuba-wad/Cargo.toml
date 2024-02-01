@@ -15,3 +15,9 @@ katsuba-utils = { path = "../katsuba-utils", features = [
 crc32fast = "1.3"
 globset = "0.4"
 memmap2 = "0.7"
+tempfile = { version = "3.8", optional = true }
+
+[features]
+default = ["builder"]
+
+builder = ["tempfile"]

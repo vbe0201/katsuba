@@ -7,7 +7,7 @@ use katsuba_utils::libdeflater::{DecompressionError, Decompressor};
 /// [`Inflater`] object.
 ///
 /// This however comes at the caveat that only one decompressed
-/// file can be borrowed from the archive at a given moment.
+/// file can be borrowed from the archive at a time.
 pub struct Inflater {
     raw: Decompressor,
     scratch: Vec<u8>,

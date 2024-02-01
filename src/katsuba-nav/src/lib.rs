@@ -43,7 +43,7 @@ pub struct NavigationGraph {
     #[br(temp)]
     #[bw(calc = self.nodes.iter().map(|n| n.id).max().unwrap_or(0))]
     #[serde(skip)]
-    last_id: u16,
+    _last_id: u16,
 
     #[br(temp)]
     #[bw(calc = self.nodes.len() as u32)]
