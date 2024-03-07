@@ -83,7 +83,9 @@ impl InputsOutputs {
         // Determine how many matches the glob produced. If it's just a
         // single file, we consider it separately because it requires
         // less clunky output handling.
-        if paths.len() == 1 {
+        if paths.is_empty() {
+            Err(eyre::eyre!("failed to find files matching '{}'", self.input))
+        } else if paths.len() == 1 {
             Ok(InputSource::File(paths.remove(0)))
         } else {
             Ok(InputSource::Files(paths))
