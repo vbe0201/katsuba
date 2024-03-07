@@ -84,7 +84,10 @@ impl InputsOutputs {
         // single file, we consider it separately because it requires
         // less clunky output handling.
         if paths.is_empty() {
-            Err(eyre::eyre!("failed to find files matching '{}'", self.input))
+            Err(eyre::eyre!(
+                "failed to find files matching '{}'",
+                self.input
+            ))
         } else if paths.len() == 1 {
             Ok(InputSource::File(paths.remove(0)))
         } else {

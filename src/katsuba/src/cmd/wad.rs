@@ -1,4 +1,7 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use clap::{Args, Subcommand};
 use eyre::Context;
@@ -30,7 +33,7 @@ enum WadCommand {
 
         /// Specifies flags which should be set on the newly created
         /// KIWAD archive.
-        /// 
+        ///
         /// Unless you know what you're doing, the use of this option
         /// is generally not recommended. The only exception to that
         /// rule is when repacking Root.wad, in which case a value of
@@ -56,7 +59,11 @@ enum WadCommand {
 impl Command for Wad {
     fn handle(self) -> eyre::Result<()> {
         match self.command {
-            WadCommand::Pack { input, flags, output } => {
+            WadCommand::Pack {
+                input,
+                flags,
+                output,
+            } => {
                 if !input.is_dir() {
                     eyre::bail!("input for packing must be a directory");
                 }
@@ -64,9 +71,14 @@ impl Command for Wad {
                 let output = if let Some(output) = output {
                     output
                 } else {
-                    match input.parent() {
-                        Some(p) => p.with_extension("wad"),
-                        None => eyre::bail!("failed to determine parent directory of input"),
+                    match input.file_name() {
+                        Some(p) => {
+                            let p: &Path = p.as_ref();
+                            p.with_extension("wad")
+                        }
+                        None => eyre::bail!(
+                            "failed to determine output file. consider specifying one with '-o'"
+                        ),
                     }
                 };
 
@@ -74,7 +86,7 @@ impl Command for Wad {
                     format!("failed to build output archive at '{}'", output.display())
                 })?;
 
-                for entry in walkdir::WalkDir::new(input) {
+                for entry in walkdir::WalkDir::new(&input) {
                     let entry = entry.context("failed to query input directory")?;
                     if !entry
                         .metadata()
@@ -88,7 +100,7 @@ impl Command for Wad {
                     let contents = fs::read(path)
                         .with_context(|| format!("failed to read file at '{}'", path.display()))?;
 
-                    builder.add_file_compressed(entry.path(), &contents)?;
+                    builder.add_file_compressed(path.strip_prefix(&input).unwrap(), &contents)?;
                 }
 
                 builder.finish()?;

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use katsuba_bit_buf::BitReader;
 use katsuba_types::{PropertyFlags, TypeDef};
-use katsuba_utils::{align::align_down, hash::string_id, hash::djb2};
+use katsuba_utils::{align::align_down, hash::djb2, hash::string_id};
 use smartstring::alias::String;
 
 use super::{property, utils, Error, SerializerFlags, SerializerParts, TypeTag};

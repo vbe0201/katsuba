@@ -118,6 +118,12 @@ impl Archive {
         self.journal().mode
     }
 
+    /// Gets an immutable reference to the header of this archive.
+    #[inline]
+    pub fn header(&self) -> &wad_types::Header {
+        &self.journal().header
+    }
+
     #[inline]
     pub(crate) fn journal(&self) -> &Journal {
         match &self.0 {
@@ -181,7 +187,8 @@ impl Archive {
 pub(crate) struct Journal {
     // A mapping of file names to their journal entry.
     pub inner: BTreeMap<String, wad_types::File>,
-
+    /// The header of a KIWAD archive.
+    pub header: wad_types::Header,
     // The file permissions on UNIX systems.
     mode: u32,
 }
@@ -190,6 +197,11 @@ impl Journal {
     pub fn new(mode: u32) -> Self {
         Self {
             inner: BTreeMap::new(),
+            header: wad_types::Header {
+                version: 0,
+                file_count: 0,
+                flags: None,
+            },
             mode,
         }
     }
@@ -200,7 +212,10 @@ impl Journal {
     }
 
     fn build_from(&mut self, archive: wad_types::Archive) {
-        archive.files.into_iter().for_each(|f| self.insert(f));
+        let wad_types::Archive { header, files } = archive;
+
+        self.header = header;
+        files.into_iter().for_each(|f| self.insert(f));
     }
 
     fn find(&self, file: &str) -> Option<&wad_types::File> {
