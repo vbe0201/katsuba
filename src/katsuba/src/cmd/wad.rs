@@ -28,6 +28,16 @@ enum WadCommand {
         /// Note that this does not follow symbolic links.
         input: PathBuf,
 
+        /// Specifies flags which should be set on the newly created
+        /// KIWAD archive.
+        /// 
+        /// Unless you know what you're doing, the use of this option
+        /// is generally not recommended. The only exception to that
+        /// rule is when repacking Root.wad, in which case a value of
+        /// 1 must be set.
+        #[clap(short, default_value_t = 0)]
+        flags: u8,
+
         /// The optional output file to write the archive to.
         ///
         /// If missing, a file named after the input directory will
@@ -46,7 +56,7 @@ enum WadCommand {
 impl Command for Wad {
     fn handle(self) -> eyre::Result<()> {
         match self.command {
-            WadCommand::Pack { input, output } => {
+            WadCommand::Pack { input, flags, output } => {
                 if !input.is_dir() {
                     eyre::bail!("input for packing must be a directory");
                 }
@@ -60,7 +70,7 @@ impl Command for Wad {
                     }
                 };
 
-                let mut builder = ArchiveBuilder::new(2, 0, &output).with_context(|| {
+                let mut builder = ArchiveBuilder::new(2, flags, &output).with_context(|| {
                     format!("failed to build output archive at '{}'", output.display())
                 })?;
 
