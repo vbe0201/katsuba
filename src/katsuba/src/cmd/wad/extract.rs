@@ -68,6 +68,12 @@ fn create_directory_tree(ex: &Executor, archive: &Archive, out: &Path) -> eyre::
         }
     }
 
+    // Join all pending operations here so we don't accidentally
+    // try to write into directories that don't exist yet.
+    for pending in ex.join() {
+        pending?;
+    }
+
     Ok(())
 }
 
