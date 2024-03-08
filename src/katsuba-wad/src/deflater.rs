@@ -17,7 +17,7 @@ impl Deflater {
     /// Creates an empty deflater at default compression level.
     pub fn new() -> Self {
         Self {
-            compressor: Compressor::new(CompressionLvl::default()),
+            compressor: Compressor::new(CompressionLvl::best()),
             scratch: Vec::new(),
         }
     }
