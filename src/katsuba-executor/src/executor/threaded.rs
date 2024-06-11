@@ -34,13 +34,14 @@ const fn bucket_capacity(nthreads: usize) -> usize {
     nthreads + QUEUE_THRESHOLD
 }
 
-#[derive(Clone, Copy, Debug, Enum)]
+#[derive(Clone, Copy, Debug, PartialEq, Enum)]
 enum BucketSize {
     FourK,
     EightK,
     OneM,
     EightM,
     SixteenM,
+    Unbounded,
 }
 
 struct Bucket {
@@ -81,6 +82,10 @@ impl Threaded {
             BucketSize::OneM => Bucket::new(bucket_cap, 1024 * 1024),
             BucketSize::EightM => Bucket::new(bucket_cap, 8 * 1024 * 1024),
             BucketSize::SixteenM => Bucket::new(bucket_cap, 16 * 1024 * 1024),
+            // The unbounded bucket supports arbitrary growth. It doesn't
+            // preallocate memory in advance because it's used in rare
+            // situations where 16M don't suffice.
+            BucketSize::Unbounded => Bucket::new(bucket_cap, 0),
         };
 
         // Ensure that we have at least one buffer of each size so
@@ -110,7 +115,7 @@ impl Threaded {
 
         let bucket = &self.memory_buckets[bucket_size];
         assert!(
-            size <= bucket.size,
+            bucket_size == BucketSize::Unbounded || size <= bucket.size,
             "cannot find a bucket for '{size}' bytes"
         );
 
