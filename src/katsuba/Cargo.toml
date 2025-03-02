@@ -29,8 +29,6 @@ log = "0.4"
 mimalloc = "*"
 serde = "1"
 serde_json = "1"
-sharded-slab = "0.1"
-threadpool = "1.8"
 walkdir = "2"
 
 [dependencies.simple_logger]

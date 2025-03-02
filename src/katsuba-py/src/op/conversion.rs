@@ -23,7 +23,7 @@ fn convert_to_utf16(py: Python<'_>, x: &[u16]) -> PyObject {
         // Otherwise, handing back the raw bytes seems most reasonable.
         match PyObject::from_owned_ptr_or_opt(py, unicode) {
             Some(v) => v,
-            None => PyBytes::from_ptr(py, ptr, len).to_object(py),
+            None => PyBytes::from_ptr(py, ptr, len).into(),
         }
     }
 }

@@ -5,7 +5,7 @@ use pyo3::{
 };
 
 #[inline]
-unsafe fn downcast_to_bytes(value: &PyAny) -> PyResult<&[u8]> {
+unsafe fn downcast_to_bytes<'a>(value: &'a Bound<'_, PyAny>) -> PyResult<&'a [u8]> {
     if let Ok(value) = value.downcast::<PyString>() {
         value.to_str().map(str::as_bytes)
     } else if let Ok(value) = value.downcast::<PyBytes>() {
@@ -19,17 +19,17 @@ unsafe fn downcast_to_bytes(value: &PyAny) -> PyResult<&[u8]> {
 
 /// Hashes the given `input` using the KingsIsle String ID algorithm.
 #[pyfunction]
-fn string_id(input: &PyAny) -> PyResult<u32> {
+fn string_id(input: &Bound<'_, PyAny>) -> PyResult<u32> {
     unsafe { downcast_to_bytes(input).map(katsuba_utils::hash::string_id) }
 }
 
 /// Hashes the given `input` using the DJB2 algorithm.
 #[pyfunction]
-fn djb2(input: &PyAny) -> PyResult<u32> {
+fn djb2(input: &Bound<'_, PyAny>) -> PyResult<u32> {
     unsafe { downcast_to_bytes(input).map(katsuba_utils::hash::djb2) }
 }
 
-pub fn katsuba_utils(m: &PyModule) -> PyResult<()> {
+pub fn katsuba_utils(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(string_id, m)?)?;
     m.add_function(wrap_pyfunction!(djb2, m)?)?;
 

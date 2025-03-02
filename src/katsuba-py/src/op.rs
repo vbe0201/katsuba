@@ -1,10 +1,14 @@
-use std::{fs, io, path::PathBuf, sync::Arc};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use katsuba_object_property::{
     serde::{self, SerializerFlags},
     Value,
 };
-use pyo3::{prelude::*, types::PyType};
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyType};
 
 use crate::{error, KatsubaError};
 
@@ -20,6 +24,23 @@ pub use leaf_types::*;
 #[pyclass(module = "katsuba.op")]
 pub struct TypeList(Arc<katsuba_types::TypeList>);
 
+impl TypeList {
+    #[inline]
+    fn open_impl<P: AsRef<Path>>(path: P) -> PyResult<katsuba_types::TypeList> {
+        let file = fs::File::open(path)?;
+        katsuba_types::TypeList::from_reader(io::BufReader::new(file))
+            .map_err(|e| KatsubaError::new_err(e.to_string()))
+    }
+
+    pub fn find(&self, hash: u32) -> PyResult<katsuba_types::TypeDef> {
+        self.0
+             .0
+            .get(&hash)
+            .cloned()
+            .ok_or_else(|| PyValueError::new_err(format!("'{hash}' not in type list")))
+    }
+}
+
 #[pymethods]
 impl TypeList {
     #[new]
@@ -30,11 +51,17 @@ impl TypeList {
     }
 
     #[classmethod]
-    pub fn open(_cls: &PyType, path: PathBuf) -> PyResult<Self> {
-        let file = fs::File::open(path)?;
-        katsuba_types::TypeList::from_reader(io::BufReader::new(file))
-            .map(|v| Self(Arc::new(v)))
-            .map_err(|e| KatsubaError::new_err(e.to_string()))
+    pub fn open(_cls: &Bound<'_, PyType>, path: PathBuf) -> PyResult<Self> {
+        Self::open_impl(path).map(|v| Self(Arc::new(v)))
+    }
+
+    #[classmethod]
+    pub fn open_many(_cls: &Bound<'_, PyType>, paths: Vec<PathBuf>) -> PyResult<Self> {
+        let mut types = katsuba_types::TypeList::default();
+        for path in paths {
+            types.merge(Self::open_impl(path)?);
+        }
+        Ok(Self(Arc::new(types)))
     }
 }
 
@@ -148,7 +175,7 @@ impl Serializer {
     }
 }
 
-pub fn katsuba_op(m: &PyModule) -> PyResult<()> {
+pub fn katsuba_op(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TypeList>()?;
     m.add_class::<SerializerOptions>()?;
     m.add_class::<Serializer>()?;

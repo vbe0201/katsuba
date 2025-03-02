@@ -114,7 +114,7 @@ impl Command for Wad {
                     .read_with(move |r, _| {
                         let res = match r {
                             Reader::Stdin(buf) => Archive::from_vec(buf.into_inner()),
-                            Reader::File(_, f) => Archive::mmap(f.into_inner()),
+                            Reader::File(f) => Archive::mmap(f.into_inner()),
                         };
 
                         res.map_err(Into::into)

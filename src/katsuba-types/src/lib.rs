@@ -54,7 +54,7 @@ impl From<serde_json::Error> for Error {
 }
 
 /// Representation of the list of types dumped from the game client.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TypeList(pub HashMap<u32, TypeDef>);
 
 impl TypeList {

@@ -4,9 +4,10 @@ use katsuba_object_property::value::{List, Object, Value};
 use pyo3::{
     exceptions::{PyIndexError, PyKeyError},
     prelude::*,
+    types::PyTuple,
 };
 
-use super::conversion::value_to_python;
+use super::{conversion::value_to_python, TypeList};
 
 #[derive(Clone)]
 #[pyclass(module = "katsuba.op")]
@@ -27,6 +28,7 @@ impl LazyList {
 
 // SAFETY: Raw pointers are never exposed for mutation.
 unsafe impl Send for LazyList {}
+unsafe impl Sync for LazyList {}
 
 #[pymethods]
 impl LazyList {
@@ -118,7 +120,43 @@ impl LazyObject {
         obj.get(key)
             .map(|v| unsafe { value_to_python(self.0.clone(), v, py) })
     }
+
+    pub fn items(&self, py: Python<'_>, types: &TypeList) -> PyResult<Py<LazyObjectIter>> {
+        let iter = LazyObjectIter {
+            object: self.clone(),
+            entry: types.find(self.1)?,
+            idx: 0,
+        };
+
+        Py::new(py, iter)
+    }
+}
+
+#[pyclass(module = "katsuba.op")]
+pub struct LazyObjectIter {
+    object: LazyObject,
+    entry: katsuba_types::TypeDef,
+    idx: usize,
+}
+
+#[pymethods]
+impl LazyObjectIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Bound<'_, PyTuple>> {
+        let idx = slf.idx;
+        slf.idx += 1;
+
+        let property = slf.entry.properties.get(idx)?;
+        let name = property.name.into_pyobject(slf.py()).unwrap();
+        let value = slf.object.__getitem__(slf.py(), &property.name).ok()?;
+
+        (name, value).into_pyobject(slf.py()).ok()
+    }
 }
 
 // SAFETY: Raw pointers are never exposed for mutation.
 unsafe impl Send for LazyObject {}
+unsafe impl Sync for LazyObject {}

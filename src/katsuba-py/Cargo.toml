@@ -1,6 +1,6 @@
 [package]
 name = "katsuba-py"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
 description = "Python language bindings to Katsuba libraries"
 license = "ISC"
@@ -15,4 +15,4 @@ katsuba-types = { path = "../katsuba-types" }
 katsuba-utils = { path = "../katsuba-utils" }
 katsuba-wad = { path = "../katsuba-wad" }
 
-pyo3 = { version = "0.19", features = ["abi3-py310", "extension-module"] }
+pyo3 = { version = "0.23", features = ["abi3-py310", "extension-module"] }

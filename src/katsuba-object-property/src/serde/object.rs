@@ -135,7 +135,7 @@ fn deserialize_properties_deep<T: TypeTag>(
             .properties
             .iter()
             .find(|p| p.hash == property_hash)
-            .ok_or_else(|| Error::UnknownProperty(property_hash))?;
+            .ok_or(Error::UnknownProperty(property_hash))?;
 
         // Deserialize the property's value.
         let value = property::deserialize::<T>(de, property, reader)?;
@@ -152,7 +152,7 @@ fn deserialize_properties_deep<T: TypeTag>(
         // Prepare for the next round of deserialization.
         object_size = object_size
             .checked_sub(property_size)
-            .ok_or_else(|| Error::ObjectSizeMismatch)?;
+            .ok_or(Error::ObjectSizeMismatch)?;
 
         // Lastly, insert the property into the object.
         obj.insert(property.name.clone(), value);

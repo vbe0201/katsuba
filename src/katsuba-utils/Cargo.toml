@@ -8,5 +8,5 @@ edition = "2021"
 
 [dependencies]
 binrw = { version = "0.13", optional = true }
-libdeflater = { version = "1.19", optional = true, features = ["freestanding"] }
+libdeflater = { version = "1.23", optional = true, features = ["freestanding"] }
 thiserror = "1.0"

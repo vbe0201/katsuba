@@ -44,10 +44,7 @@ impl Pool {
     /// New vectors not part of the pool yet start empty and
     /// will not trigger memory allocation.
     pub fn get(self: Arc<Self>) -> PoolRef {
-        let inner = match self.queue.pop() {
-            Some(vec) => vec,
-            None => Vec::new(),
-        };
+        let inner = self.queue.pop().unwrap_or_default();
 
         PoolRef {
             pool: self,

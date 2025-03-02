@@ -160,6 +160,9 @@ pub(super) struct ZlibParts {
     scratch2: Vec<u8>,
 }
 
+// SAFETY: No interior mutability. This should be in libdeflater?
+unsafe impl Sync for ZlibParts {}
+
 impl ZlibParts {
     pub fn new() -> Self {
         Self {

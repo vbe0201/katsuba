@@ -72,14 +72,14 @@ impl Archive {
     }
 
     #[classmethod]
-    pub fn heap(_cls: &PyType, path: PathBuf) -> PyResult<Self> {
+    pub fn heap(_cls: &Bound<'_, PyType>, path: PathBuf) -> PyResult<Self> {
         katsuba_wad::Archive::open_heap(path)
             .map(Self)
             .map_err(error::wad_to_py_err)
     }
 
     #[classmethod]
-    pub fn mmap(_cls: &PyType, path: PathBuf) -> PyResult<Self> {
+    pub fn mmap(_cls: &Bound<'_, PyType>, path: PathBuf) -> PyResult<Self> {
         katsuba_wad::Archive::open_mmap(path)
             .map(Self)
             .map_err(error::wad_to_py_err)
@@ -144,7 +144,7 @@ impl GlobArchiveIter {
     }
 }
 
-pub fn katsuba_wad(m: &PyModule) -> PyResult<()> {
+pub fn katsuba_wad(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Archive>()?;
     m.add_class::<ArchiveIter>()?;
     m.add_class::<GlobArchiveIter>()?;

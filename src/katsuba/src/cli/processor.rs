@@ -16,17 +16,17 @@ mod sealed {
 }
 
 /// A [`Read`]er over a compatible input source.
-pub enum Reader<'a> {
+pub enum Reader {
     Stdin(io::Cursor<Vec<u8>>),
-    File(&'a Path, io::BufReader<fs::File>),
+    File(io::BufReader<fs::File>),
 }
 
-impl Reader<'_> {
+impl Reader {
     /// Gets the data in the reader as a [`Buffer`], if possible.
     pub fn get_buffer(&mut self, ex: &Executor) -> eyre::Result<Buffer<'_>> {
         match self {
             Self::Stdin(buf) => Ok(Buffer::borrowed(buf.get_ref())),
-            Self::File(_, f) => {
+            Self::File(f) => {
                 let size = f
                     .get_ref()
                     .metadata()
@@ -42,41 +42,41 @@ impl Reader<'_> {
     }
 }
 
-impl Read for Reader<'_> {
+impl Read for Reader {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self {
             Self::Stdin(i) => i.read(buf),
-            Self::File(_, i) => i.read(buf),
+            Self::File(i) => i.read(buf),
         }
     }
 
     fn read_to_end(&mut self, buf: &mut Vec<u8>) -> io::Result<usize> {
         match self {
             Self::Stdin(i) => i.read_to_end(buf),
-            Self::File(_, i) => i.read_to_end(buf),
+            Self::File(i) => i.read_to_end(buf),
         }
     }
 
     fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
         match self {
             Self::Stdin(i) => i.read_exact(buf),
-            Self::File(_, i) => i.read_exact(buf),
+            Self::File(i) => i.read_exact(buf),
         }
     }
 }
 
-impl Seek for Reader<'_> {
+impl Seek for Reader {
     fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
         match self {
             Self::Stdin(i) => i.seek(pos),
-            Self::File(_, i) => i.seek(pos),
+            Self::File(i) => i.seek(pos),
         }
     }
 
     fn stream_position(&mut self) -> io::Result<u64> {
         match self {
             Self::Stdin(i) => i.stream_position(),
-            Self::File(_, i) => i.stream_position(),
+            Self::File(i) => i.stream_position(),
         }
     }
 }
@@ -115,7 +115,7 @@ impl Processor<Missing, Missing> {
     #[inline]
     pub fn read_with<F, T>(self, f: F) -> Processor<F, Missing>
     where
-        F: FnMut(Reader<'_>, &Executor) -> eyre::Result<T>,
+        F: FnMut(Reader, &Executor) -> eyre::Result<T>,
     {
         Processor {
             bias: self.bias,
@@ -127,7 +127,7 @@ impl Processor<Missing, Missing> {
 
 impl<R, T> Processor<R, Missing>
 where
-    R: FnMut(Reader<'_>, &Executor) -> eyre::Result<T>,
+    R: FnMut(Reader, &Executor) -> eyre::Result<T>,
 {
     /// Configures a callback for writing an element to an output source.
     pub fn write_with<F>(self, f: F) -> Processor<R, F>
@@ -144,10 +144,10 @@ where
 
 impl<R, W, T> Processor<R, W>
 where
-    R: FnMut(Reader<'_>, &Executor) -> eyre::Result<T>,
+    R: FnMut(Reader, &Executor) -> eyre::Result<T>,
     W: FnMut(&Executor, Option<PathBuf>, T, OutputSource) -> eyre::Result<()>,
 {
-    fn stdin(&self) -> eyre::Result<Reader<'static>> {
+    fn stdin(&self) -> eyre::Result<Reader> {
         let mut stdin = utils::stdin_reader();
 
         let mut buf = io::Cursor::new(Vec::new());
@@ -156,11 +156,11 @@ where
         Ok(Reader::Stdin(buf))
     }
 
-    fn file<'a>(&self, path: &'a Path) -> eyre::Result<Reader<'a>> {
+    fn file(&self, path: &Path) -> eyre::Result<Reader> {
         let file = fs::File::open(path)
             .with_context(|| format!("failed to open file '{}'", path.display()))?;
 
-        Ok(Reader::File(path, io::BufReader::new(file)))
+        Ok(Reader::File(io::BufReader::new(file)))
     }
 
     /// Processes the given input source into the given output source.
