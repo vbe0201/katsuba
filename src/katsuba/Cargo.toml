@@ -1,6 +1,6 @@
 [package]
 name = "katsuba"
-version = "0.8.6"
+version = "0.8.5"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
 description = "CLI tool for working with KingsIsle formats"
 license = "ISC"
