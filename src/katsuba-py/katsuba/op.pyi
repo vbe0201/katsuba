@@ -41,6 +41,15 @@ class TypeList:
         :return: The merged list instance.
         """
 
+    def name_for(self, type_hash: int) -> str:
+        """
+        Translates a type hash to a type name.
+
+        :param type_hash: The hash to look up.
+        :return: The corresponding type name.
+        :raises KeyError: The hash is not found in the type list.
+        """
+
 class SerializerOptions:
     """
     Customization options for serializer behavior.

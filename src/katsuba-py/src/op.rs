@@ -8,7 +8,11 @@ use katsuba_object_property::{
     serde::{self, SerializerFlags},
     Value,
 };
-use pyo3::{exceptions::PyValueError, prelude::*, types::PyType};
+use pyo3::{
+    exceptions::{PyKeyError, PyValueError},
+    prelude::*,
+    types::PyType,
+};
 
 use crate::{error, KatsubaError};
 
@@ -62,6 +66,16 @@ impl TypeList {
             types.merge(Self::open_impl(path)?);
         }
         Ok(Self(Arc::new(types)))
+    }
+
+    pub fn name_for(&self, type_hash: u32) -> PyResult<&str> {
+        let entry = self
+            .0
+             .0
+            .get(&type_hash)
+            .ok_or_else(|| PyKeyError::new_err(format!("'{type_hash}'")))?;
+
+        Ok(&entry.name)
     }
 }
 
