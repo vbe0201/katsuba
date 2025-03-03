@@ -1,7 +1,7 @@
 [project]
 name = "katsuba"
-version = "0.1.1"
-description = "Python bindings to the Katsuba libraries in Rust"
+version = "0.1.2"
+description = "Python bindings to the katsuba Rust libraries"
 readme = "README.md"
 classifiers = [
     "Intended Audience :: Developers",
@@ -18,3 +18,8 @@ classifiers = [
 [build-system]
 requires = ["maturin>=1,<2"]
 build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+bindings = "pyo3"
+sdist-include = ["README.md"]

@@ -49,11 +49,12 @@
           pname = "katsuba-py";
           version = katsuba_py_toml.project.version;
           src = ./.;
-          format = "pyproject";
+          pyproject = true;
           cargoDeps = pkgs.rustPlatform.importCargoLock {
             lockFile = ./Cargo.lock;
           };
           nativeBuildInputs = with pkgs.rustPlatform; [cargoSetupHook maturinBuildHook];
+          pythonImportsCheck = ["katsuba"];
           buildAndTestSubdir = "src/katsuba-py";
         };
 

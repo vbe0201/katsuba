@@ -147,7 +147,7 @@ impl SerializerOptions {
     }
 }
 
-#[pyclass(module = "katsuba.op")]
+#[pyclass(module = "katsuba.op", subclass)]
 pub struct Serializer(pub(crate) serde::Serializer);
 
 #[pymethods]
