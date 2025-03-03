@@ -4,10 +4,8 @@ use std::{io, sync::Arc};
 
 use bitflags::bitflags;
 use katsuba_types::{PropertyFlags, TypeList};
-use katsuba_utils::{
-    libdeflater::{DecompressionError, Decompressor},
-    thiserror::{self, Error},
-};
+use libdeflater::{DecompressionError, Decompressor};
+use thiserror::Error;
 
 mod de;
 

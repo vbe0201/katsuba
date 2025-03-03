@@ -7,6 +7,7 @@ license = "ISC"
 edition = "2021"
 
 [dependencies]
-katsuba-utils = { path = "../katsuba-utils", features = ["binrw"] }
+katsuba-utils = { path = "../katsuba-utils", features = ["binrw-ext"] }
 
-serde = "1"
+binrw = { workspace = true }
+serde = { workspace = true }

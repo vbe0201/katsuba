@@ -1,4 +1,4 @@
-use katsuba_utils::libdeflater::{CompressionError, CompressionLvl, Compressor};
+use libdeflater::{CompressionError, CompressionLvl, Compressor};
 
 /// A zlib inflater for compressing archive files.
 ///

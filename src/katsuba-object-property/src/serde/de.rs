@@ -3,7 +3,7 @@ use std::sync::Arc;
 use byteorder::{ReadBytesExt, LE};
 use katsuba_bit_buf::BitReader;
 use katsuba_types::TypeList;
-use katsuba_utils::libdeflater::Decompressor;
+use libdeflater::Decompressor;
 
 use super::*;
 use crate::Value;

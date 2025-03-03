@@ -14,7 +14,7 @@ use std::io;
 
 use base64::{prelude::BASE64_STANDARD, Engine};
 use byteorder::{ReadBytesExt, LE};
-use katsuba_utils::thiserror::{self, Error};
+use thiserror::{self, Error};
 use rsa::{
     pkcs1::DecodeRsaPrivateKey,
     pkcs1v15::SigningKey,

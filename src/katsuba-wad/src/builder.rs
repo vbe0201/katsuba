@@ -5,12 +5,9 @@ use std::{
     path::Path,
 };
 
-use katsuba_utils::{
-    binrw,
-    libdeflater::CompressionError,
-    thiserror::{self, Error},
-};
+use libdeflater::CompressionError;
 use tempfile::tempfile_in;
+use thiserror::Error;
 
 use crate::{crc, deflater::Deflater, types as wad_types};
 

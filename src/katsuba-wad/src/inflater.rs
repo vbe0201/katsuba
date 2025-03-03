@@ -1,4 +1,4 @@
-use katsuba_utils::libdeflater::{DecompressionError, Decompressor};
+use libdeflater::{DecompressionError, Decompressor};
 
 /// A zlib inflater for decompressing archive files.
 ///

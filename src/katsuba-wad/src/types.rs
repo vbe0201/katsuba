@@ -1,14 +1,12 @@
 //! Common types and structures in the KIWAD format.
 
-use katsuba_utils::{
-    binrw::{
-        self, binrw,
-        io::{Read, Seek, Write},
-        BinReaderExt, BinResult, BinWriterExt,
-    },
-    binrw_ext::{read_prefixed_string, write_prefixed_string},
-    thiserror::{self, Error},
+use binrw::{
+    binrw,
+    io::{Read, Seek, Write},
+    BinReaderExt, BinResult, BinWriterExt,
 };
+use katsuba_utils::binrw_ext::{read_prefixed_string, write_prefixed_string};
+use thiserror::Error;
 
 use crate::crc;
 

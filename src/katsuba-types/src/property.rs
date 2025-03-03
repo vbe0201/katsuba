@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
 use bitflags::bitflags;
-use katsuba_utils::{
-    hash,
-    thiserror::{self, Error},
-};
+use katsuba_utils::hash;
 use serde::{de::Error, Deserialize, Deserializer};
 use smartstring::alias::String;
+use thiserror::Error;
 
 use super::StringOrInt;
 

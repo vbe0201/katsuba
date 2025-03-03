@@ -18,9 +18,9 @@
 
 use std::{collections::HashMap, io};
 
-use katsuba_utils::thiserror::{self, Error};
 use serde::{Deserialize, Deserializer};
 use smartstring::alias::String;
+use thiserror::Error;
 
 mod property;
 pub use property::*;

@@ -7,14 +7,12 @@
 
 use std::collections::HashMap;
 
-use katsuba_utils::{
-    binrw::{
-        self, binrw,
-        io::{Read, Seek, Write},
-        BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, VecArgs,
-    },
-    binrw_ext::*,
+use binrw::{
+    binrw,
+    io::{Read, Seek, Write},
+    BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, VecArgs,
 };
+use katsuba_utils::binrw_ext::*;
 use serde::{Deserialize, Serialize};
 
 /// An event point inside a [`Poi`] object.

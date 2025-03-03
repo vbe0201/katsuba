@@ -6,12 +6,9 @@ use std::{
     path::Path,
 };
 
-use katsuba_utils::{
-    binrw,
-    libdeflater::DecompressionError,
-    thiserror::{self, Error},
-};
+use libdeflater::DecompressionError;
 use memmap2::{Mmap, MmapOptions};
+use thiserror::Error;
 
 use crate::{glob, types as wad_types};
 

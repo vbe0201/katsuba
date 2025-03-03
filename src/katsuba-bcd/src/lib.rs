@@ -6,15 +6,13 @@
 #![deny(rust_2018_idioms, rustdoc::broken_intra_doc_links)]
 #![forbid(unsafe_code)]
 
-use bitflags::bitflags;
-use katsuba_utils::{
-    binrw::{
-        self, binrw,
-        io::{Read, Seek, Write},
-        BinReaderExt, BinResult, BinWriterExt,
-    },
-    binrw_ext::{read_prefixed_string, write_prefixed_string},
+use binrw::{
+    binrw,
+    io::{Read, Seek, Write},
+    BinReaderExt, BinResult, BinWriterExt,
 };
+use bitflags::bitflags;
+use katsuba_utils::binrw_ext::{read_prefixed_string, write_prefixed_string};
 use serde::{Deserialize, Serialize};
 
 bitflags! {

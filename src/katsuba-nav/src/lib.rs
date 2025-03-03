@@ -6,14 +6,12 @@
 #![deny(rust_2018_idioms, rustdoc::broken_intra_doc_links)]
 #![forbid(unsafe_code)]
 
-use katsuba_utils::{
-    binrw::{
-        self, binrw,
-        io::{Read, Seek, Write},
-        BinReaderExt, BinResult, BinWriterExt,
-    },
-    binrw_ext::{read_string_list, write_string_list},
+use binrw::{
+    binrw,
+    io::{Read, Seek, Write},
+    BinReaderExt, BinResult, BinWriterExt,
 };
+use katsuba_utils::binrw_ext::{read_string_list, write_string_list};
 use serde::{Deserialize, Serialize};
 
 /// A navigation node in the zone.
