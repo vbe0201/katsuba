@@ -146,14 +146,20 @@ impl LazyObjectIter {
     }
 
     fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Bound<'_, PyTuple>> {
-        let idx = slf.idx;
-        slf.idx += 1;
+        loop {
+            let idx = slf.idx;
+            slf.idx += 1;
 
-        let property = slf.entry.properties.get(idx)?;
-        let name = property.name.into_pyobject(slf.py()).unwrap();
-        let value = slf.object.__getitem__(slf.py(), &property.name).ok()?;
+            // If this returns None, there are no valid properties anymore.
+            let property = slf.entry.properties.get(idx)?;
 
-        (name, value).into_pyobject(slf.py()).ok()
+            // There is a property, but it might not be in the object due to
+            // selective deserialization with flag masks.
+            if let Ok(v) = slf.object.__getitem__(slf.py(), &property.name) {
+                let name = property.name.into_pyobject(slf.py()).unwrap();
+                return (name, v).into_pyobject(slf.py()).ok();
+            }
+        }
     }
 }
 
