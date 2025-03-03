@@ -1,3 +1,11 @@
+"""
+katsuba.op
+~~~~~~~~~~
+
+Implements support for ObjectProperty binary deserialization.
+This is a wrapper over the `katsuba-object-property` Rust crate.
+"""
+
 from os import PathLike
 from pathlib import Path
 from typing import Any, Iterator, Literal, Self, Sequence

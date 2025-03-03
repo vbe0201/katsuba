@@ -621,7 +621,7 @@ dependencies = [
 
 [[package]]
 name = "katsuba-py"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "katsuba-object-property",
  "katsuba-types",
