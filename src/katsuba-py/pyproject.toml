@@ -1,6 +1,6 @@
 [project]
 name = "katsuba"
-version = "0.2.0"
+version = "0.2.1"
 description = "Python bindings to the katsuba Rust libraries"
 readme = "README.md"
 classifiers = [

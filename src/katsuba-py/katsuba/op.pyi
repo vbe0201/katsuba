@@ -207,7 +207,7 @@ class Serializer:
 
         :param data: The raw data to deserialize.
         :return: The resulting object value.
-        :raises IOError: I/O error occurred while trying to read data.
+        :raises OSError: I/O error occurred while trying to read data.
         :raises KatsubaError: Unknown type or invalid data format.
         """
 

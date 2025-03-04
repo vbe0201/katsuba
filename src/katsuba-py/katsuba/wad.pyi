@@ -29,7 +29,7 @@ class Archive:
 
         :param path: The filesystem path to open the archive file at.
         :return: The archive instance.
-        :raises IOError: Failed to read the archive file.
+        :raises OSError: Failed to read the archive file.
         :raises KatsubaError: Failed to parse the archive file.
         """
 
@@ -40,7 +40,7 @@ class Archive:
 
         :param path: The filesystem path to open the archive file at.
         :return: The archive instance.
-        :raises IOError: Failed to read the archive file.
+        :raises OSError: Failed to read the archive file.
         :raises KatsubaError: Failed to parse the archive file.
         """
 
@@ -91,6 +91,6 @@ class Archive:
         :param file: The file path relative to the archive.
         :param s: The serializer instance to use.
         :return: The deserialized object value.
-        :raises IOError: I/O error occurred while trying to read data.
+        :raises OSError: I/O error occurred while trying to read data.
         :raises KatsubaError: Unknown type or invalid data format.
         """
