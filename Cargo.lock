@@ -518,7 +518,7 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 
 [[package]]
 name = "katsuba"
-version = "0.8.5"
+version = "0.8.6"
 dependencies = [
  "clap",
  "color-eyre",
@@ -621,7 +621,7 @@ dependencies = [
 
 [[package]]
 name = "katsuba-py"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "katsuba-object-property",
  "katsuba-types",
