@@ -136,13 +136,16 @@ impl Property {
             // their integral representation.
             let mut res = 0;
 
-            for bit in variant.split('|') {
-                let bit = bit.trim();
-                res |= self
-                    .enum_options
-                    .get(bit)
-                    .and_then(|v| v.to_int())
-                    .ok_or_else(|| EncodingError::Decode(bit.to_string()))?;
+            // Try to decode individual bits on non-empty inputs.
+            if !variant.is_empty() {
+                for bit in variant.split('|') {
+                    let bit = bit.trim();
+                    res |= self
+                        .enum_options
+                        .get(bit)
+                        .and_then(|v| v.to_int())
+                        .ok_or_else(|| EncodingError::Decode(bit.to_string()))?;
+                }
             }
 
             Ok(res)
