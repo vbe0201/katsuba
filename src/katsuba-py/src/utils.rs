@@ -6,11 +6,11 @@ use pyo3::{
 
 #[inline]
 unsafe fn downcast_to_bytes<'a>(value: &'a Bound<'_, PyAny>) -> PyResult<&'a [u8]> {
-    if let Ok(value) = value.downcast::<PyString>() {
+    if let Ok(value) = value.cast::<PyString>() {
         value.to_str().map(str::as_bytes)
-    } else if let Ok(value) = value.downcast::<PyBytes>() {
+    } else if let Ok(value) = value.cast::<PyBytes>() {
         Ok(value.as_bytes())
-    } else if let Ok(value) = value.downcast::<PyByteArray>() {
+    } else if let Ok(value) = value.cast::<PyByteArray>() {
         Ok(unsafe { value.as_bytes() })
     } else {
         Err(PyTypeError::new_err("Cannot hash the given type"))
