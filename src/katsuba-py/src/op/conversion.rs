@@ -5,7 +5,7 @@ use pyo3::{IntoPyObjectExt, prelude::*, types::PyBytes};
 
 use super::{lazy::*, leaf_types};
 
-fn convert_to_utf16(py: Python<'_>, x: &[u16]) -> PyObject {
+fn convert_to_utf16(py: Python<'_>, x: &[u16]) -> Py<PyAny> {
     let ptr = x.as_ptr().cast::<u8>();
     let len = x.len() * 2;
 
@@ -21,7 +21,7 @@ fn convert_to_utf16(py: Python<'_>, x: &[u16]) -> PyObject {
 
         // If we successfully decode the string, we can return it as-is.
         // Otherwise, handing back the raw bytes seems most reasonable.
-        match PyObject::from_owned_ptr_or_opt(py, unicode) {
+        match Py::from_owned_ptr_or_opt(py, unicode) {
             Some(v) => v,
             None => PyBytes::from_ptr(py, ptr, len).into(),
         }
@@ -29,7 +29,7 @@ fn convert_to_utf16(py: Python<'_>, x: &[u16]) -> PyObject {
 }
 
 // SAFETY: `value` must be derived from `base` in some way.
-pub unsafe fn value_to_python(base: Arc<Value>, value: &Value, py: Python<'_>) -> PyObject {
+pub unsafe fn value_to_python(base: Arc<Value>, value: &Value, py: Python<'_>) -> Py<PyAny> {
     match value {
         Value::Empty => py.None(),
 
