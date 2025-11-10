@@ -46,7 +46,7 @@ impl LazyList {
         list.len()
     }
 
-    pub fn __getitem__(&self, py: Python<'_>, idx: usize) -> PyResult<PyObject> {
+    pub fn __getitem__(&self, py: Python<'_>, idx: usize) -> PyResult<Py<PyAny>> {
         let list = self.get_ref();
 
         list.get(idx)
@@ -67,7 +67,7 @@ impl LazyListIter {
         slf
     }
 
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<PyObject> {
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Py<PyAny>> {
         let idx = slf.idx;
         slf.idx += 1;
 
@@ -109,12 +109,12 @@ impl LazyObject {
         obj.contains_key(key)
     }
 
-    pub fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<PyObject> {
+    pub fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<Py<PyAny>> {
         self.get(py, key)
             .ok_or_else(|| PyKeyError::new_err(key.to_string()))
     }
 
-    pub fn get(&self, py: Python<'_>, key: &str) -> Option<PyObject> {
+    pub fn get(&self, py: Python<'_>, key: &str) -> Option<Py<PyAny>> {
         let obj = self.get_ref();
 
         obj.get(key)
