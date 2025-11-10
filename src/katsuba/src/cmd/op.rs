@@ -1,8 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
 use clap::{Args, Subcommand};
-use katsuba_object_property::serde;
-use katsuba_types::PropertyFlags;
+use katsuba_object_property::serde::{self, SerializerOptions};
+use katsuba_types::{PropertyFlags, TypeList};
 
 use super::Command;
 use crate::cli::{helpers, Bias, InputsOutputs, Processor};
@@ -108,7 +108,7 @@ enum ObjectPropertyCommand {
 impl Command for ObjectProperty {
     fn handle(self) -> eyre::Result<()> {
         let type_list = Arc::new(utils::merge_type_lists(self.type_lists)?);
-        let mut options = serde::SerializerOptions {
+        let options = serde::SerializerOptions {
             flags: serde::SerializerFlags::from_bits_truncate(self.flags),
             property_mask: PropertyFlags::from_bits_truncate(self.mask),
             shallow: self.shallow,
@@ -122,30 +122,7 @@ impl Command for ObjectProperty {
                 args,
                 ignore_unknown_types,
             } => {
-                let (inputs, outputs) = args.evaluate("de.xml")?;
-
-                options.skip_unknown_types = ignore_unknown_types;
-                let mut de = serde::Serializer::new(options, type_list)?;
-
-                Processor::new(Bias::Current)?
-                    .read_with(move |mut r, ex| {
-                        let buf = r.get_buffer(ex)?;
-                        let mut buf: &[u8] = &buf;
-
-                        // If the data starts with the `BINd` magic, it is a game file.
-                        // These always use a fixed base config so we set it here.
-                        if buf.get(0..4) == Some(serde::BIND_MAGIC) {
-                            de.parts.options.shallow = false;
-                            de.parts.options.flags = serde::SerializerFlags::STATEFUL_FLAGS;
-
-                            buf = buf.get(4..).unwrap();
-                        }
-
-                        de.deserialize::<serde::PropertyClass>(buf)
-                            .map_err(Into::into)
-                    })
-                    .write_with(helpers::write_as_json)
-                    .process(inputs, outputs)
+                return deserialize(args, type_list, options, ignore_unknown_types)
             }
 
             ObjectPropertyCommand::Guess { path, quiet } => {
@@ -153,4 +130,36 @@ impl Command for ObjectProperty {
             }
         }
     }
+}
+
+fn deserialize(
+    args: InputsOutputs,
+    type_list: Arc<TypeList>,
+    mut options: SerializerOptions,
+    ignore_unknown_types: bool,
+) -> eyre::Result<()> {
+    let (inputs, outputs) = args.evaluate("de.xml")?;
+
+    options.skip_unknown_types = ignore_unknown_types;
+    let mut de = serde::Serializer::new(options, type_list)?;
+
+    Processor::new(Bias::Current)?
+        .read_with(move |mut r, ex| {
+            let buf = r.get_buffer(ex)?;
+            let mut buf: &[u8] = &buf;
+
+            // If the data starts with the `BINd` magic, it is a game file.
+            // These always use a fixed base config so we set it here.
+            if buf.get(0..4) == Some(serde::BIND_MAGIC) {
+                de.parts.options.shallow = false;
+                de.parts.options.flags = serde::SerializerFlags::STATEFUL_FLAGS;
+
+                buf = buf.get(4..).unwrap();
+            }
+
+            de.deserialize::<serde::PropertyClass>(buf)
+                .map_err(Into::into)
+        })
+        .write_with(helpers::write_as_json)
+        .process(inputs, outputs)
 }

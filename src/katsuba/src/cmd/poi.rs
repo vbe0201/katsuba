@@ -21,12 +21,16 @@ impl Command for Poi {
     fn handle(self) -> eyre::Result<()> {
         match self.command {
             PoiCommand::De(args) => {
-                let (inputs, outputs) = args.evaluate("de.json")?;
-                Processor::new(Bias::Current)?
-                    .read_with(|r, _| PoiFile::parse(r).map_err(Into::into))
-                    .write_with(helpers::write_as_json)
-                    .process(inputs, outputs)
+                return deserialize(args)
             }
         }
     }
+}
+
+fn deserialize(args: InputsOutputs) -> eyre::Result<()> {
+    let (inputs, outputs) = args.evaluate("de.json")?;
+    Processor::new(Bias::Current)?
+        .read_with(|r, _| PoiFile::parse(r).map_err(Into::into))
+        .write_with(helpers::write_as_json)
+        .process(inputs, outputs)
 }

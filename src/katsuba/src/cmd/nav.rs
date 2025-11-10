@@ -34,21 +34,27 @@ impl Command for Nav {
     fn handle(self) -> eyre::Result<()> {
         match self.command {
             NavCommand::De(args) => {
-                let (inputs, outputs) = args.evaluate("de.json")?;
-                let processor = Processor::new(Bias::Current)?;
-
                 match self.file_type {
-                    FileType::Nav => processor
-                        .read_with(|r, _| NavigationGraph::parse(r).map_err(Into::into))
-                        .write_with(helpers::write_as_json)
-                        .process(inputs, outputs),
-
-                    FileType::ZoneNav => processor
-                        .read_with(|r, _| ZoneNavigationGraph::parse(r).map_err(Into::into))
-                        .write_with(helpers::write_as_json)
-                        .process(inputs, outputs),
+                    FileType::Nav => deserialize_nav(args),
+                    FileType::ZoneNav => deserialize_zonenav(args),
                 }
             }
         }
     }
+}
+
+fn deserialize_nav(args: InputsOutputs) -> eyre::Result<()> {
+    let (inputs, outputs) = args.evaluate("de.json")?;
+    Processor::new(Bias::Current)?
+        .read_with(|r, _| NavigationGraph::parse(r).map_err(Into::into))
+        .write_with(helpers::write_as_json)
+        .process(inputs, outputs)
+}
+
+fn deserialize_zonenav(args: InputsOutputs) -> eyre::Result<()> {
+    let (inputs, outputs) = args.evaluate("de.json")?;
+    Processor::new(Bias::Current)?
+        .read_with(|r, _| ZoneNavigationGraph::parse(r).map_err(Into::into))
+        .write_with(helpers::write_as_json)
+        .process(inputs, outputs)
 }

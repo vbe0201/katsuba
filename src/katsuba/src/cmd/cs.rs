@@ -47,32 +47,45 @@ enum ClientSigCommand {
 
 impl Command for ClientSig {
     fn handle(self) -> eyre::Result<()> {
-        let private_key = fs::read_to_string(&self.private_key).with_context(|| {
-            format!(
-                "failed to read private key from '{}'",
-                self.private_key.display()
-            )
-        })?;
-        let private_key =
-            PrivateKey::new(&private_key).context("failed to parse given private key")?;
-
         match self.command {
             ClientSigCommand::Arg => {
-                let arg = private_key.make_access_key();
-                println!("{arg}");
+                arg(&self.private_key)
             }
 
             ClientSigCommand::Decrypt { path, output } => {
-                let signature = fs::read(&path)
-                    .with_context(|| format!("failed to read file '{}'", path.display()))?;
-                let decrypted_signature = private_key
-                    .decrypt_sig(&signature)
-                    .context("received invalid Client Signature file")?;
-
-                fs::write(output, decrypted_signature)?;
+                decrypt(&self.private_key, path, output)
             }
         }
-
-        Ok(())
     }
+}
+
+fn get_private_key(private_key_file: &PathBuf) -> eyre::Result<PrivateKey> {
+    let private_key = fs::read_to_string(&private_key_file).with_context(|| {
+        format!(
+            "failed to read private key from '{}'",
+            private_key_file.display()
+        )
+    })?;
+    PrivateKey::new(&private_key).context("failed to parse given private key")
+}
+
+fn arg(private_key_file: &PathBuf) -> eyre::Result<()> {
+    let private_key = get_private_key(&private_key_file)?;
+    let arg = private_key.make_access_key();
+    println!("{arg}");
+    Ok(())
+}
+
+fn decrypt(private_key_file: &PathBuf, path: PathBuf, output: PathBuf) -> eyre::Result<()> {
+    let private_key = get_private_key(&private_key_file)?;
+
+    let signature = fs::read(&path)
+        .with_context(|| format!("failed to read file '{}'", path.display()))?;
+
+    let decrypted_signature = private_key
+        .decrypt_sig(&signature)
+        .context("received invalid Client Signature file")?;
+
+    fs::write(output, decrypted_signature)?;
+    Ok(())
 }

@@ -26,13 +26,17 @@ enum Algo {
 
 impl Command for Hash {
     fn handle(self) -> eyre::Result<()> {
-        let input = self.input.as_bytes();
-        let hash = match self.algo {
-            Algo::StringId => string_id(input),
-            Algo::Djb2 => djb2(input),
-        };
-
-        println!("{hash}");
-        Ok(())
+        hash(&self.input, self.algo)
     }
+}
+
+fn hash(input: &String, algo: Algo) -> eyre::Result<()> {
+    let input = input.as_bytes();
+    let hash = match algo {
+        Algo::StringId => string_id(input),
+        Algo::Djb2 => djb2(input),
+    };
+
+    println!("{hash}");
+    Ok(())
 }
