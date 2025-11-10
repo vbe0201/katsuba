@@ -12,6 +12,8 @@ pub use io::*;
 mod processor;
 pub use processor::*;
 
+pub const HYPHEN: &str = "-";
+
 /// The CLI interface for the Katsuba application.
 #[derive(Debug, Parser)]
 #[clap(author, version, about, long_about = None)]

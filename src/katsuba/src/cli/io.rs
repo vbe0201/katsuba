@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::Args;
 use glob::glob;
 
-const HYPHEN: &str = "-";
+use crate::cli::HYPHEN;
 
 /// An input source to [`InputsOutputs`] machinery.
 #[derive(Clone, Debug)]
@@ -48,7 +48,7 @@ pub struct InputsOutputs {
     /// Note however that when a glob pattern matches more than one
     /// file, an explicit output directory for all the result files
     /// needs to be specified with the output option.
-    input: String,
+    pub input: String,
 
     /// An optional output source for the processed outputs.
     ///
@@ -58,7 +58,7 @@ pub struct InputsOutputs {
     /// input was a single file too), or a path to a directory
     /// where output files will be created for each input file.
     #[clap(short, default_value = HYPHEN)]
-    output: PathBuf,
+    pub output: PathBuf,
 }
 
 impl InputsOutputs {
