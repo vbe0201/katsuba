@@ -534,6 +534,7 @@ dependencies = [
  "katsuba-types",
  "katsuba-utils",
  "katsuba-wad",
+ "libc",
  "log",
  "mimalloc",
  "serde",

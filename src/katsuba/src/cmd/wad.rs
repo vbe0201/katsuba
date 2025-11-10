@@ -1,14 +1,17 @@
 use std::{
+    ffi::{CStr},
     fs,
     path::{Path, PathBuf},
 };
+
+use libc::{c_char};
 
 use clap::{Args, Subcommand};
 use eyre::Context;
 use katsuba_wad::{Archive, ArchiveBuilder};
 
 use super::Command;
-use crate::cli::{Bias, InputsOutputs, Processor, Reader};
+use crate::cli::{Bias, InputsOutputs, Processor, Reader, HYPHEN};
 
 mod extract;
 
@@ -138,4 +141,64 @@ fn wad_unpack(
         })
         .write_with(extract::extract_archive)
         .process(inputs, outputs)
+}
+
+#[no_mangle]
+pub extern "C" fn wad_pack_c(
+    input: *const c_char,
+    flags: u8,
+    output: *const c_char,
+) -> bool {
+    let input_path = if input.is_null() {
+        return false
+    } else {
+        match unsafe { CStr::from_ptr(input) }.to_str() {
+            Ok(rust_str) => PathBuf::from(rust_str),
+            Err(_) => return false,
+        }
+    };
+
+    let output_path = if output.is_null() {
+        None
+    } else {
+        match unsafe { CStr::from_ptr(output) }.to_str() {
+            Ok(rust_str) => Some(PathBuf::from(rust_str)),
+            Err(_) => None,
+        }
+    };
+
+    wad_pack(input_path, flags, output_path).is_ok()
+}
+
+#[no_mangle]
+pub extern "C" fn wad_unpack_c(
+    input: *const c_char,
+    output: *const c_char,
+) -> bool {
+    let rust_input = if input.is_null() {
+        return false
+    } else {
+        match unsafe { CStr::from_ptr(input) }.to_str() {
+            Ok(rust_str) => rust_str.to_owned(),
+            Err(_) => return false,
+        }
+    };
+
+    let default_path = PathBuf::from(HYPHEN);
+
+    let rust_output = if output.is_null() {
+        default_path
+    } else {
+        match unsafe { CStr::from_ptr(output) }.to_str() {
+            Ok(rust_str) => PathBuf::from(rust_str),
+            Err(_) => default_path,
+        }
+    };
+
+    let io = InputsOutputs {
+        input: rust_input,
+        output: rust_output,
+    };
+
+    wad_unpack(io).is_ok()
 }
