@@ -1,4 +1,11 @@
-use std::{fs, path::PathBuf};
+use std::{
+    env::{self, VarError},
+    ffi::CStr,
+    fs,
+    path::PathBuf,
+};
+
+use libc::{c_char};
 
 use clap::{Args, Subcommand};
 use eyre::Context;
@@ -91,4 +98,63 @@ fn decrypt(private_key_file: &PathBuf, path: PathBuf, output: PathBuf) -> eyre::
 
     fs::write(output, decrypted_signature)?;
     Ok(())
+}
+
+fn get_private_key_path_from_c(private_key_file: *const c_char) -> eyre::Result<PathBuf, VarError> {
+    let private_key = if !private_key_file.is_null() {
+        match unsafe { CStr::from_ptr(private_key_file) }.to_str() {
+            Ok(rust_str) => rust_str,
+            Err(_) => "",
+        }
+    } else {
+        ""
+    };
+
+    // No private key file was given, try the environment variable instead
+    if private_key == "" {
+        match env::var(KATSUBA_CLIENTSIG_PRIVATE_KEY) {
+            Ok(value) => Ok(PathBuf::from(value)),
+            Err(error) => Err(error), // No value found for environment variable
+        }
+    } else {
+        Ok(PathBuf::from(private_key))
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn cs_arg(private_key_file: *const c_char) -> bool {
+    let private_key = match get_private_key_path_from_c(private_key_file) {
+        Ok(key) => key,
+        Err(_) => return false,
+    };
+
+    arg(&private_key).is_ok()
+}
+
+#[no_mangle]
+pub extern "C" fn cs_decrypt(private_key_file: *const c_char, path: *const c_char, output: *const c_char) -> bool {
+    let private_key = match get_private_key_path_from_c(private_key_file) {
+        Ok(key) => key,
+        Err(_) => return false,
+    };
+
+    let rust_path = if path.is_null() {
+        return false
+    } else {
+        match unsafe { CStr::from_ptr(path) }.to_str() {
+            Ok(rust_str) => PathBuf::from(rust_str),
+            Err(_) => return false,
+        }
+    };
+
+    let rust_output = if output.is_null() {
+        PathBuf::from(DEFAULT_OUTPUT_FILE)
+    } else {
+        match unsafe { CStr::from_ptr(output) }.to_str() {
+            Ok(rust_str) => PathBuf::from(rust_str),
+            Err(_) => PathBuf::from(DEFAULT_OUTPUT_FILE),
+        }
+    };
+
+    decrypt(&private_key, rust_path, rust_output).is_ok()
 }
