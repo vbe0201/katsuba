@@ -15,6 +15,8 @@ use crate::cli::{Bias, InputsOutputs, Processor, Reader, HYPHEN};
 
 mod extract;
 
+pub const DEFAULT_FLAGS: u8 = 0;
+
 /// Subcommand for working with KIWAD archives.
 #[derive(Debug, Args)]
 pub struct Wad {
@@ -41,7 +43,7 @@ enum WadCommand {
         /// is generally not recommended. The only exception to that
         /// rule is when repacking Root.wad, in which case a value of
         /// 1 must be set.
-        #[clap(short, default_value_t = 0)]
+        #[clap(short, default_value_t = DEFAULT_FLAGS)]
         flags: u8,
 
         /// The optional output file to write the archive to.

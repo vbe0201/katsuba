@@ -10,6 +10,9 @@ use crate::cli::{helpers, Bias, InputsOutputs, Processor};
 mod guess;
 mod utils;
 
+pub const DEFAULT_FLAGS: u32 = 0;
+pub const DEFAULT_MASK: u32 = 0x18;
+
 /// Subcommand for working with ObjectProperty serialization.
 #[derive(Debug, Args)]
 pub struct ObjectProperty {
@@ -33,7 +36,7 @@ pub struct ObjectProperty {
     /// instance and influence how data is interpreted.
     ///
     /// When in doubt what to pick, try 0 or using the guess command.
-    #[clap(short, long, default_value_t = 0)]
+    #[clap(short, long, default_value_t = DEFAULT_FLAGS)]
     flags: u32,
 
     /// Property filter mask to use.
@@ -42,7 +45,7 @@ pub struct ObjectProperty {
     /// of an object from the serialization.
     ///
     /// When in doubt what to pick, try the default value or 0.
-    #[clap(short, long, default_value_t = 0x18)]
+    #[clap(short, long, default_value_t = DEFAULT_MASK)]
     mask: u32,
 
     /// Whether the object is serialized shallow.
