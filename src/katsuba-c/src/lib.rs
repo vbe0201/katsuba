@@ -7,18 +7,25 @@ use std::{
 
 use libc::{c_char};
 
-use katsuba::cli::{HYPHEN};
-use katsuba::cli::io::{InputsOutputs};
-use katsuba::cmd::bcd::{deserialize as rust_bcd_deserialize};
-use katsuba::cmd::cs::{KATSUBA_CLIENTSIG_PRIVATE_KEY, DEFAULT_OUTPUT_FILE, arg, decrypt};
-use katsuba::cmd::hash::{Algo, hash};
-use katsuba::cmd::nav::{deserialize_nav, deserialize_zonenav};
-use katsuba::cmd::op::{deserialize as rust_op_deserialize};
-use katsuba::cmd::op::guess;
-use katsuba::cmd::op::utils::{merge_type_lists};
-use katsuba::cmd::poi::{deserialize as rust_poi_deserialize};
-use katsuba::cmd::wad::{wad_pack, wad_unpack};
+use katsuba::cli::{
+    HYPHEN,
+    io::{InputsOutputs},
+};
+
+use katsuba::cmd::{
+    bcd::{deserialize as rust_bcd_deserialize},
+    cs::{KATSUBA_CLIENTSIG_PRIVATE_KEY, DEFAULT_OUTPUT_FILE, arg as rust_cs_arg, decrypt as rust_cs_decrypt},
+    hash::{Algo, hash},
+    nav::{deserialize_nav as rust_nav_deserialize, deserialize_zonenav as rust_zonenav_deserialize},
+    op::{deserialize as rust_op_deserialize},
+    op::guess,
+    op::utils::{merge_type_lists},
+    poi::{deserialize as rust_poi_deserialize},
+    wad::{wad_pack as rust_wad_pack, wad_unpack as rust_wad_unpack},
+};
+
 use katsuba_object_property::serde;
+
 use katsuba_types::{PropertyFlags, TypeList};
 
 #[no_mangle]
@@ -79,7 +86,7 @@ pub extern "C" fn cs_arg(private_key_file: *const c_char) -> bool {
         Err(_) => return false,
     };
 
-    arg(&private_key).is_ok()
+    rust_cs_arg(&private_key).is_ok()
 }
 
 #[no_mangle]
@@ -107,7 +114,7 @@ pub extern "C" fn cs_decrypt(private_key_file: *const c_char, path: *const c_cha
         }
     };
 
-    decrypt(&private_key, rust_path, rust_output).is_ok()
+    rust_cs_decrypt(&private_key, rust_path, rust_output).is_ok()
 }
 
 /// The hash algorithm to apply. Duplicate of Algo enum.
@@ -177,7 +184,7 @@ pub extern "C" fn nav_deserialize(
         output: rust_output,
     };
 
-    deserialize_nav(io).is_ok()
+    rust_nav_deserialize(io).is_ok()
 }
 
 #[no_mangle]
@@ -210,7 +217,7 @@ pub extern "C" fn zonenav_deserialize(
         output: rust_output,
     };
 
-    deserialize_zonenav(io).is_ok()
+    rust_zonenav_deserialize(io).is_ok()
 }
 
 fn get_type_lists_from_c(type_lists: *const *const c_char) -> eyre::Result<Arc<TypeList>> {
@@ -363,7 +370,7 @@ pub extern "C" fn poi_deserialize(
 }
 
 #[no_mangle]
-pub extern "C" fn wad_pack_c(
+pub extern "C" fn wad_pack(
     input: *const c_char,
     flags: u8,
     output: *const c_char,
@@ -386,11 +393,11 @@ pub extern "C" fn wad_pack_c(
         }
     };
 
-    wad_pack(input_path, flags, output_path).is_ok()
+    rust_wad_pack(input_path, flags, output_path).is_ok()
 }
 
 #[no_mangle]
-pub extern "C" fn wad_unpack_c(
+pub extern "C" fn wad_unpack(
     input: *const c_char,
     output: *const c_char,
 ) -> bool {
@@ -419,5 +426,5 @@ pub extern "C" fn wad_unpack_c(
         output: rust_output,
     };
 
-    wad_unpack(io).is_ok()
+    rust_wad_unpack(io).is_ok()
 }
