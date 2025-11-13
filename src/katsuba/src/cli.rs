@@ -6,7 +6,7 @@ mod args;
 
 pub mod helpers;
 
-mod io;
+pub mod io;
 pub use io::*;
 
 mod processor;

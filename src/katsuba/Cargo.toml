@@ -25,7 +25,6 @@ color-eyre = { version = "0.6", default-features = false }
 enum-map = "2.7"
 eyre = "0.6"
 glob = "0.3"
-libc = "0.2"
 log = { workspace = true }
 mimalloc = "*"
 serde = { workspace = true }
