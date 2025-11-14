@@ -6,11 +6,13 @@ mod args;
 
 pub mod helpers;
 
-mod io;
+pub mod io;
 pub use io::*;
 
 mod processor;
 pub use processor::*;
+
+pub const HYPHEN: &str = "-";
 
 /// The CLI interface for the Katsuba application.
 #[derive(Debug, Parser)]

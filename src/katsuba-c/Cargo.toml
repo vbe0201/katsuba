@@ -1,0 +1,22 @@
+[package]
+name = "katsubac"
+version = "0.8.6"
+authors = ["Marcus S. <marcus.s@booleanbirch@users.noreply.github.com>"]
+description = "C API for calling CLI functions"
+license = "ISC"
+edition = "2021"
+
+[lib]
+name = "katsubac"
+crate-type = ["cdylib"]
+
+[dependencies.katsuba-object-property]
+path = "../katsuba-object-property"
+features = ["option-guessing", "serde"]
+
+[dependencies]
+katsuba = { path = "../katsuba" }
+katsuba-types = { path = "../katsuba-types" }
+
+eyre = "0.6"
+libc = "0.2"
