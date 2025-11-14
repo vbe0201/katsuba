@@ -28,6 +28,8 @@ use katsuba_object_property::serde;
 
 use katsuba_types::{PropertyFlags, TypeList};
 
+/// C linkage function for calling the CLI command "katsuba bcd de",
+/// which calls the rust function [`katsuba::cmd::bcd::deserialize`]
 #[no_mangle]
 pub extern "C" fn bcd_deserialize(input: *const c_char, output: *const c_char) -> bool {
     let default_path = PathBuf::from(HYPHEN);
@@ -79,6 +81,8 @@ fn get_private_key_path_from_c(private_key_file: *const c_char) -> eyre::Result<
     }
 }
 
+/// C linkage function for calling the CLI command "katsuba cs arg",
+/// which calls the rust function [`katsuba::cmd::cs::arg`]
 #[no_mangle]
 pub extern "C" fn cs_arg(private_key_file: *const c_char) -> bool {
     let private_key = match get_private_key_path_from_c(private_key_file) {
@@ -89,6 +93,8 @@ pub extern "C" fn cs_arg(private_key_file: *const c_char) -> bool {
     rust_cs_arg(&private_key).is_ok()
 }
 
+/// C linkage function for calling the CLI command "katsuba cs decrypt",
+/// which calls the rust function [`katsuba::cmd::cs::decrypt`]
 #[no_mangle]
 pub extern "C" fn cs_decrypt(private_key_file: *const c_char, path: *const c_char, output: *const c_char) -> bool {
     let private_key = match get_private_key_path_from_c(private_key_file) {
@@ -118,7 +124,6 @@ pub extern "C" fn cs_decrypt(private_key_file: *const c_char, path: *const c_cha
 }
 
 /// The hash algorithm to apply. Duplicate of Algo enum.
-///
 /// This enum is accessible from C.
 #[repr(C)]
 #[allow(dead_code)]
@@ -138,6 +143,8 @@ impl From<&CAlgo> for Algo {
     }
 }
 
+/// C linkage function for calling the CLI command "katsuba hash",
+/// which calls the rust function [`katsuba::cmd::hash::hash`]
 #[no_mangle]
 pub extern "C" fn hash_c(input: *const c_char, algo: CAlgo) -> bool {
     let rust_input = if input.is_null() {
@@ -154,6 +161,8 @@ pub extern "C" fn hash_c(input: *const c_char, algo: CAlgo) -> bool {
     hash(&rust_input, rust_algo).is_ok()
 }
 
+/// C linkage function for calling the CLI command "katsuba nav de",
+/// which calls the rust function [`katsuba::cmd::nav::deserialize_nav`]
 #[no_mangle]
 pub extern "C" fn nav_deserialize(
     input: *const c_char,
@@ -187,6 +196,8 @@ pub extern "C" fn nav_deserialize(
     rust_nav_deserialize(io).is_ok()
 }
 
+/// C linkage function for calling the CLI command "katsuba nav de",
+/// which calls the rust function [`katsuba::cmd::nav::deserialize_zonenav`]
 #[no_mangle]
 pub extern "C" fn zonenav_deserialize(
     input: *const c_char,
@@ -243,6 +254,8 @@ fn get_type_lists_from_c(type_lists: *const *const c_char) -> eyre::Result<Arc<T
     }
 }
 
+/// C linkage function for calling the CLI command "katsuba op de",
+/// which calls the rust function [`katsuba::cmd::op::deserialize`]
 #[no_mangle]
 pub extern "C" fn op_deserialize(
     input: *const c_char,
@@ -300,6 +313,8 @@ pub extern "C" fn op_deserialize(
     rust_op_deserialize(io, type_list, options, ignore_unknown_types).is_ok()
 }
 
+/// C linkage function for calling the CLI command "katsuba op guess",
+/// which calls the rust function [`katsuba::cmd::op::guess::guess`]
 #[no_mangle]
 pub extern "C" fn op_guess(
     path: *const c_char,
@@ -336,6 +351,8 @@ pub extern "C" fn op_guess(
     guess::guess(options, type_list, rust_path, quiet).is_ok()
 }
 
+/// C linkage function for calling the CLI command "katsuba poi de",
+/// which calls the rust function [`katsuba::cmd::poi::deserialize`]
 #[no_mangle]
 pub extern "C" fn poi_deserialize(
     input: *const c_char,
@@ -369,6 +386,8 @@ pub extern "C" fn poi_deserialize(
     rust_poi_deserialize(io).is_ok()
 }
 
+/// C linkage function for calling the CLI command "katsuba wad pack",
+/// which calls the rust function [`katsuba::cmd::wad::wad_pack`]
 #[no_mangle]
 pub extern "C" fn wad_pack(
     input: *const c_char,
@@ -396,6 +415,8 @@ pub extern "C" fn wad_pack(
     rust_wad_pack(input_path, flags, output_path).is_ok()
 }
 
+/// C linkage function for calling the CLI command "katsuba wad unpack",
+/// which calls the rust function [`katsuba::cmd::wad::wad_unpack`]
 #[no_mangle]
 pub extern "C" fn wad_unpack(
     input: *const c_char,
