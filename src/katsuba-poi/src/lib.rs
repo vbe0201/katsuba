@@ -5,23 +5,15 @@
 #![deny(rust_2018_idioms, rustdoc::broken_intra_doc_links)]
 #![forbid(unsafe_code)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, io};
 
-use binrw::{
-    binrw,
-    io::{Read, Seek, Write},
-    BinRead, BinReaderExt, BinResult, BinWrite, BinWriterExt, VecArgs,
-};
-use katsuba_utils::binrw_ext::*;
+use katsuba_utils::binary;
 use serde::{Deserialize, Serialize};
 
 /// An event point inside a [`Poi`] object.
-#[binrw]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Point {
     /// Whether the quest helper references this point.
-    #[br(map = |x: u8| x != 0)]
-    #[bw(map = |&x| x as u8)]
     pub no_quest_helper: bool,
     /// The ID of the zone this point is part of.
     pub zone_id: u16,
@@ -30,138 +22,178 @@ pub struct Point {
     /// The location of this point.
     pub location: [f32; 3],
     /// Whether this point is an interactable NPC.
-    #[br(map = |x: u8| x != 0)]
-    #[bw(map = |&x| x as u8)]
     pub interactable: bool,
     /// Whether this point is a collectable item.
-    #[br(map = |x: u8| x != 0)]
-    #[bw(map = |&x| x as u8)]
     pub collectable: bool,
 }
 
+impl Point {
+    fn parse<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        Ok(Self {
+            no_quest_helper: binary::boolean(reader)?,
+            zone_id: binary::uint16(reader)?,
+            template_id: binary::uint64(reader)?,
+            location: [
+                binary::float32(reader)?,
+                binary::float32(reader)?,
+                binary::float32(reader)?,
+            ],
+            interactable: binary::boolean(reader)?,
+            collectable: binary::boolean(reader)?,
+        })
+    }
+
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        binary::write_boolean(writer, self.no_quest_helper)?;
+        binary::write_uint16(writer, self.zone_id)?;
+        binary::write_uint64(writer, self.template_id)?;
+        for v in self.location {
+            binary::write_float32(writer, v)?;
+        }
+        binary::write_boolean(writer, self.interactable)?;
+        binary::write_boolean(writer, self.collectable)?;
+
+        Ok(())
+    }
+}
+
 /// Representation of a teleporter entry in [`Poi`] files.
-#[binrw]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Teleporter {
-    #[br(temp)]
-    #[bw(calc = self.destination.len() as u32)]
-    len: u32,
-
     /// The destination zone for the teleport.
-    #[br(args(len as _, false), parse_with = read_prefixed_string)]
-    #[bw(args(false), write_with = write_prefixed_string)]
     pub destination: String,
-
     /// The exact teleport position in the zone.
     pub position: [f32; 3],
 }
 
+impl Teleporter {
+    fn parse<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        Ok(Self {
+            destination: binary::uint32(reader).and_then(|len| binary::str(reader, len, false))?,
+            position: [
+                binary::float32(reader)?,
+                binary::float32(reader)?,
+                binary::float32(reader)?,
+            ],
+        })
+    }
+
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        binary::write_str(writer, &self.destination, false)?;
+        for v in self.position {
+            binary::write_float32(writer, v)?;
+        }
+
+        Ok(())
+    }
+}
+
 /// Representation of a POI file.
-#[binrw]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Poi {
-    #[br(temp)]
-    #[bw(calc = self.zone_names.len() as u32)]
-    zone_count: u32,
-
     /// A list of all zone names described by this file.
-    #[br(args(zone_count as _, false), parse_with = read_string_list)]
-    #[bw(args(false), write_with = write_string_list)]
     pub zone_names: Vec<String>,
-
-    #[br(temp)]
-    #[bw(calc = self.goals.len() as u32)]
-    goal_count: u32,
-
     /// A mapping of goal IDs to the respective [`Point`]s.
-    #[br(args(goal_count as _, |()| ()), parse_with = read_map)]
-    #[bw(args(|_| ()), write_with = write_map)]
     pub goals: HashMap<u64, Point>,
-
-    #[br(temp)]
-    #[bw(calc = self.interactive_goals.len() as u32)]
-    interactive_goal_count: u32,
-
     /// A mapping of zone IDs to lists of interactable template IDs.
-    #[br(
-        args(interactive_goal_count as _, |x: u32| VecArgs { count: x as _, inner: () }),
-        parse_with = read_map,
-    )]
-    #[bw(args(|v| v.len() as u32), write_with = write_map)]
     pub interactive_goals: HashMap<u32, Vec<u64>>,
-
-    #[br(temp)]
-    #[bw(calc = self.teleporters.len() as u32)]
-    teleporters_count: u32,
-
     /// Teleporter entries between zones in this file.
-    #[br(
-        args(teleporters_count as _, |x: u32| VecArgs { count: x as _, inner: () }),
-        parse_with = read_map,
-    )]
-    #[bw(args(|v| v.len() as u32), write_with = write_map)]
     pub teleporters: HashMap<u32, Vec<Teleporter>>,
-
-    #[br(temp)]
-    #[bw(calc = self.goal_adjectives.len() as u32)]
-    goal_adjective_count: u32,
-
     /// A mapping of goal IDs to goal adjectives.
-    #[br(
-        args(goal_adjective_count as _, |x: u32| VecArgs { count: x as _, inner: () }),
-        parse_with = read_map,
-    )]
-    #[bw(args(|v| v.len() as u32), write_with = write_map)]
     pub goal_adjectives: HashMap<u64, Vec<u32>>,
-
-    #[br(temp)]
-    #[bw(calc = self.zone_mobs.values().map(|v| v.len()).sum::<usize>() as u32)]
-    zone_mob_count: u32,
-
     /// A list of zone mobs for each zone ID in the file.
-    #[br(args(zone_mob_count as _), parse_with = read_zone_mobs)]
-    #[bw(write_with = write_zone_mobs)]
     pub zone_mobs: HashMap<u32, Vec<String>>,
 }
 
 impl Poi {
     /// Attempts to parse a BCD file from a given [`Read`]er.
-    pub fn parse<R: Read + Seek>(mut reader: R) -> BinResult<Self> {
-        reader.read_le()
+    pub fn parse<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        Ok(Self {
+            zone_names: binary::uint32(&mut reader).and_then(|len| {
+                binary::seq(&mut reader, len, |r| {
+                    let len = binary::uint32(r)?;
+                    binary::str(r, len, false)
+                })
+            })?,
+            goals: binary::uint32(&mut reader).and_then(|len| {
+                binary::map(&mut reader, len, |r| binary::uint64(r), Point::parse)
+            })?,
+            interactive_goals: binary::uint32(&mut reader).and_then(|len| {
+                binary::map(&mut reader, len, binary::uint32, |r| {
+                    let len = binary::uint32(r)?;
+                    binary::seq(r, len, binary::uint64)
+                })
+            })?,
+            teleporters: binary::uint32(&mut reader).and_then(|len| {
+                binary::map(&mut reader, len, binary::uint32, |r| {
+                    let len = binary::uint32(r)?;
+                    binary::seq(r, len, Teleporter::parse)
+                })
+            })?,
+            goal_adjectives: binary::uint32(&mut reader).and_then(|len| {
+                binary::map(&mut reader, len, binary::uint64, |r| {
+                    let len = binary::uint32(r)?;
+                    binary::seq(r, len, binary::uint32)
+                })
+            })?,
+            zone_mobs: binary::uint32(&mut reader).and_then(|len| {
+                binary::map(&mut reader, len, binary::uint32, |r| {
+                    let len = binary::uint32(r)?;
+                    binary::seq(r, len, |r| {
+                        let len = binary::uint32(r)?;
+                        binary::str(r, len, false)
+                    })
+                })
+            })?,
+        })
     }
 
     /// Writes the BCD data to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, mut writer: W) -> BinResult<()> {
-        writer.write_le(self)
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        /*
+        pub goal_adjectives: HashMap<u64, Vec<u32>>,
+        /// A list of zone mobs for each zone ID in the file.
+        pub zone_mobs: HashMap<u32, Vec<String>>,
+             */
+        binary::write_seq(&mut writer, true, &self.zone_names, |v, w| {
+            binary::write_str(w, v, false)
+        })?;
+        binary::write_map(
+            &mut writer,
+            true,
+            &self.goals,
+            |&v, w| binary::write_uint64(w, v),
+            Point::write,
+        )?;
+        binary::write_map(
+            &mut writer,
+            true,
+            &self.interactive_goals,
+            |&v, w| binary::write_uint32(w, v),
+            |v, w| binary::write_seq(w, true, v, |&v, w| binary::write_uint64(w, v)),
+        )?;
+        binary::write_map(
+            &mut writer,
+            true,
+            &self.teleporters,
+            |&v, w| binary::write_uint32(w, v),
+            |v, w| binary::write_seq(w, true, v, Teleporter::write),
+        )?;
+        binary::write_map(
+            &mut writer,
+            true,
+            &self.goal_adjectives,
+            |&v, w| binary::write_uint64(w, v),
+            |v, w| binary::write_seq(w, true, v, |&v, w| binary::write_uint32(w, v)),
+        )?;
+        binary::write_map(
+            &mut writer,
+            true,
+            &self.zone_mobs,
+            |&v, w| binary::write_uint32(w, v),
+            |v, w| binary::write_seq(w, true, v, |v, w| binary::write_str(w, v, false)),
+        )?;
+
+        Ok(())
     }
-}
-
-#[binrw::parser(reader, endian)]
-fn read_zone_mobs(count: usize) -> BinResult<HashMap<u32, Vec<String>>> {
-    let mut map: HashMap<u32, Vec<String>> = HashMap::with_capacity(count);
-
-    for _ in 0..count {
-        let zone_id = u32::read_options(reader, endian, ())?;
-
-        let len = u32::read_options(reader, endian, ())? as usize;
-        let mob_asset = read_prefixed_string(reader, endian, (len, false))?;
-
-        map.entry(zone_id).or_default().push(mob_asset);
-    }
-
-    Ok(map)
-}
-
-#[binrw::writer(writer, endian)]
-fn write_zone_mobs(mobs: &HashMap<u32, Vec<String>>) -> BinResult<()> {
-    for (zone_id, mob_assets) in mobs {
-        for mob_asset in mob_assets {
-            zone_id.write_options(writer, endian, ())?;
-
-            (mob_asset.len() as u32).write_options(writer, endian, ())?;
-            write_prefixed_string(mob_asset, writer, endian, (false,))?;
-        }
-    }
-
-    Ok(())
 }

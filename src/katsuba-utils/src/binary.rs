@@ -1,6 +1,8 @@
 //! Utilities for reading and writing structured binary data.
 
 use std::{
+    collections::HashMap,
+    hash::Hash,
     io::{self, Read, Write},
     mem,
 };
@@ -109,6 +111,30 @@ int_write_impl! {
     write_int64(i64),
 }
 
+/// Parses an [`f32`] off the data stream.
+#[inline]
+pub fn float32<R: Read>(data: &mut R) -> io::Result<f32> {
+    uint32(data).map(f32::from_bits)
+}
+
+/// Writes an [`f32`] to the data stream.
+#[inline]
+pub fn write_float32<W: Write>(out: &mut W, v: f32) -> io::Result<()> {
+    write_uint32(out, v.to_bits())
+}
+
+/// Parses an [`f64`] off the data stream.
+#[inline]
+pub fn float64<R: Read>(data: &mut R) -> io::Result<f64> {
+    uint64(data).map(f64::from_bits)
+}
+
+/// Writes an [`f64`] to the data stream.
+#[inline]
+pub fn write_float64<W: Write>(out: &mut W, v: f64) -> io::Result<()> {
+    write_uint64(out, v.to_bits())
+}
+
 /// Parses a string given its length and removes a potential null
 /// terminator from the end of the value.
 ///
@@ -165,17 +191,67 @@ where
     Ok(out)
 }
 
+/// Writes a sequence of elements to the data stream with an optional
+/// length prefix.
 #[inline]
 pub fn write_seq<F, T, W>(out: &mut W, prefixed: bool, seq: &[T], mut f: F) -> io::Result<()>
 where
-    F: FnMut(&mut W, &T) -> io::Result<()>,
+    F: FnMut(&T, &mut W) -> io::Result<()>,
     W: Write,
 {
     if prefixed {
         write_uint32(out, seq.len() as u32)?;
     }
     for v in seq {
-        f(out, v)?;
+        f(v, out)?;
+    }
+
+    Ok(())
+}
+
+/// Reads a map from the output stream.
+#[inline]
+pub fn map<R, K, V, F1, F2>(
+    data: &mut R,
+    count: u32,
+    mut f1: F1,
+    mut f2: F2,
+) -> io::Result<HashMap<K, V>>
+where
+    R: Read,
+    K: Eq + Hash,
+    F1: FnMut(&mut R) -> io::Result<K>,
+    F2: FnMut(&mut R) -> io::Result<V>,
+{
+    let mut map = HashMap::with_capacity(count as usize);
+    for _ in 0..count {
+        map.insert(f1(data)?, f2(data)?);
+    }
+    Ok(map)
+}
+
+/// Writes a map to the output stream, with an optional length prefix.
+#[inline]
+pub fn write_map<W, K, V, F1, F2>(
+    out: &mut W,
+    prefixed: bool,
+    map: &HashMap<K, V>,
+    mut f1: F1,
+    mut f2: F2,
+) -> io::Result<()>
+where
+    W: Write,
+    K: Eq + Hash,
+    F1: FnMut(&K, &mut W) -> io::Result<()>,
+    F2: FnMut(&V, &mut W) -> io::Result<()>,
+{
+    if prefixed {
+        write_uint32(out, map.len() as u32)?;
+    }
+
+    for (k, v) in map.iter() {
+        f1(k, out)?;
+        f2(v, out)?;
     }
 
     Ok(())

@@ -124,20 +124,20 @@ impl Archive {
     }
 
     /// Parses the archive from the given [`Read`]er.
-    pub fn parse<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-        binary::magic(reader, *b"KIWAD")?;
+    pub fn parse<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        binary::magic(&mut reader, *b"KIWAD")?;
 
         let mut header = Header {
-            version: binary::uint32(reader)?,
-            file_count: binary::uint32(reader)?,
+            version: binary::uint32(&mut reader)?,
+            file_count: binary::uint32(&mut reader)?,
             flags: None,
         };
 
         if header.version >= 2 {
-            header.flags = Some(binary::uint8(reader)?);
+            header.flags = Some(binary::uint8(&mut reader)?);
         }
 
-        let files = binary::seq(reader, header.file_count, |r| {
+        let files = binary::seq(&mut reader, header.file_count, |r| {
             Ok(File {
                 offset: binary::uint32(r)?,
                 uncompressed_size: binary::uint32(r)?,
@@ -153,16 +153,16 @@ impl Archive {
     }
 
     /// Writes the archive data to the given [`Write`]r.
-    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-        binary::write_magic(writer, b"KIWAD")?;
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        binary::write_magic(&mut writer, b"KIWAD")?;
 
-        binary::write_uint32(writer, self.header.version)?;
-        binary::write_uint32(writer, self.header.file_count)?;
+        binary::write_uint32(&mut writer, self.header.version)?;
+        binary::write_uint32(&mut writer, self.header.file_count)?;
         if let Some(flags) = self.header.flags {
-            binary::write_uint8(writer, flags)?;
+            binary::write_uint8(&mut writer, flags)?;
         }
 
-        binary::write_seq(writer, false, &self.files, |w, f| {
+        binary::write_seq(&mut writer, false, &self.files, |f, w| {
             binary::write_uint32(w, f.offset)?;
             binary::write_uint32(w, f.uncompressed_size)?;
             binary::write_uint32(w, f.compressed_size)?;
