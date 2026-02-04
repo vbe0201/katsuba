@@ -6,16 +6,12 @@
 #![deny(rust_2018_idioms, rustdoc::broken_intra_doc_links)]
 #![forbid(unsafe_code)]
 
-use binrw::{
-    binrw,
-    io::{Read, Seek, Write},
-    BinReaderExt, BinResult, BinWriterExt,
-};
-use katsuba_utils::binrw_ext::{read_string_list, write_string_list};
+use std::io;
+
+use katsuba_utils::binary;
 use serde::{Deserialize, Serialize};
 
 /// A navigation node in the zone.
-#[binrw]
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct NavigationNode {
     /// The location of the node.
@@ -25,7 +21,6 @@ pub struct NavigationNode {
 }
 
 /// A link between two [`NavigationNode`]s in the graph.
-#[binrw]
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct NavigationLink {
     /// The first [`NavigationNode`] identifier.
@@ -35,72 +30,95 @@ pub struct NavigationLink {
 }
 
 /// A graph of navigation nodes and their interconnections.
-#[binrw]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct NavigationGraph {
-    #[br(temp)]
-    #[bw(calc = self.nodes.iter().map(|n| n.id).max().unwrap_or(0))]
-    #[serde(skip)]
-    _last_id: u16,
-
-    #[br(temp)]
-    #[bw(calc = self.nodes.len() as u32)]
-    #[serde(skip)]
-    node_count: u32,
-
     /// The navigation nodes, representing the edges of the graph.
-    #[br(count = node_count)]
     pub nodes: Vec<NavigationNode>,
-
-    #[br(temp)]
-    #[bw(calc = self.links.len() as u32)]
-    link_count: u32,
-
     /// The links between the nodes, representing the vertices of
     /// the graph.
-    #[br(count = link_count)]
     pub links: Vec<NavigationLink>,
 }
 
 impl NavigationGraph {
     /// Attempts to parse a NAV graph from a given [`Read`]er.
-    pub fn parse<R: Read + Seek>(mut reader: R) -> BinResult<Self> {
-        reader.read_le()
+    pub fn parse<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        Ok(Self {
+            nodes: binary::uint32(&mut reader).and_then(|len| {
+                binary::seq(&mut reader, len, |r| {
+                    Ok(NavigationNode {
+                        location: [
+                            binary::float32(r)?,
+                            binary::float32(r)?,
+                            binary::float32(r)?,
+                        ],
+                        id: binary::uint16(r)?,
+                    })
+                })
+            })?,
+            links: binary::uint32(&mut reader).and_then(|len| {
+                binary::seq(&mut reader, len, |r| {
+                    Ok(NavigationLink {
+                        first: binary::uint16(r)?,
+                        second: binary::uint16(r)?,
+                    })
+                })
+            })?,
+        })
     }
 
     /// Writes the NAV graph to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, mut writer: W) -> BinResult<()> {
-        writer.write_le(self)
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        binary::write_seq(&mut writer, true, &self.nodes, |v, w| {
+            for v in v.location {
+                binary::write_float32(w, v)?;
+            }
+            binary::write_uint16(w, v.id)?;
+
+            Ok(())
+        })?;
+        binary::write_seq(&mut writer, true, &self.links, |v, w| {
+            binary::write_uint16(w, v.first)?;
+            binary::write_uint16(w, v.second)?;
+
+            Ok(())
+        })?;
+
+        Ok(())
     }
 }
 
 /// A navigation graph across zones.
-#[binrw]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ZoneNavigationGraph {
     /// The raw [`NavigationGraph`].
     pub graph: NavigationGraph,
-
-    #[br(temp)]
-    #[bw(calc = self.zone_names.len() as u32)]
-    zone_count: u32,
-
     /// A list of zone names covered by the graph.
     ///
     /// Each index corresponds to a [`NavigationNode`]'s identifier.
-    #[br(args(zone_count as _, false), parse_with = read_string_list)]
-    #[bw(args(false), write_with = write_string_list)]
     pub zone_names: Vec<String>,
 }
 
 impl ZoneNavigationGraph {
     /// Attempts to parse a zonenav graph from a given [`Read`]er.
-    pub fn parse<R: Read + Seek>(mut reader: R) -> BinResult<Self> {
-        reader.read_le()
+    pub fn parse<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        Ok(Self {
+            graph: NavigationGraph::parse(&mut reader)?,
+            zone_names: binary::uint32(&mut reader).and_then(|len| {
+                binary::seq(&mut reader, len, |r| {
+                    let len = binary::uint32(r)?;
+                    binary::str(r, len, false)
+                })
+            })?,
+        })
     }
 
     /// Writes the zonenav graph to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, mut writer: W) -> BinResult<()> {
-        writer.write_le(self)
+    pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        self.graph.write(&mut writer)?;
+        binary::write_seq(&mut writer, true, &self.zone_names, |v, w| {
+            binary::write_str(w, v, false)
+        })?;
+
+        Ok(())
     }
 }

@@ -586,7 +586,6 @@ dependencies = [
 name = "katsuba-nav"
 version = "0.1.0"
 dependencies = [
- "binrw",
  "katsuba-utils",
  "serde",
 ]
