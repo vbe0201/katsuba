@@ -42,6 +42,7 @@ pub struct NavigationGraph {
 impl NavigationGraph {
     /// Attempts to parse a NAV graph from a given [`Read`]er.
     pub fn parse<R: io::Read>(mut reader: R) -> io::Result<Self> {
+        binary::uint16(&mut reader)?;
         Ok(Self {
             nodes: binary::uint32(&mut reader).and_then(|len| {
                 binary::seq(&mut reader, len, |r| {
@@ -68,6 +69,10 @@ impl NavigationGraph {
 
     /// Writes the NAV graph to the given [`Write`]r.
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
+        binary::write_uint16(
+            &mut writer,
+            self.nodes.iter().map(|n| n.id).max().unwrap_or(0),
+        )?;
         binary::write_seq(&mut writer, true, &self.nodes, |v, w| {
             for v in v.location {
                 binary::write_float32(w, v)?;

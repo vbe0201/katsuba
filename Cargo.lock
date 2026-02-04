@@ -546,7 +546,6 @@ dependencies = [
 name = "katsuba-bcd"
 version = "0.1.0"
 dependencies = [
- "binrw",
  "bitflags 2.9.0",
  "katsuba-utils",
  "serde",
