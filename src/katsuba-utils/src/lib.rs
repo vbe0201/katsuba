@@ -7,3 +7,4 @@ pub mod align;
 #[cfg(feature = "binrw-ext")]
 pub mod binrw_ext;
 pub mod hash;
+pub mod hints;

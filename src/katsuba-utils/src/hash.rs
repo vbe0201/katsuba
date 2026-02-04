@@ -10,11 +10,7 @@ pub fn string_id(input: &[u8]) -> u32 {
     for (i, &b) in input.iter().enumerate() {
         let value = (b as i32) - 32;
         let shift = (i as u32 * 5) & 31;
-
-        state ^= value.wrapping_shl(shift);
-        if shift > 24 {
-            state ^= value.wrapping_shr(32 - shift);
-        }
+        state ^= value.rotate_left(shift);
     }
 
     state.unsigned_abs()

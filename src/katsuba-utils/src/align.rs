@@ -5,7 +5,7 @@
 /// # Panics
 ///
 /// Panics in debug mode when `align` is not a power of two.
-#[inline(always)]
+#[inline]
 pub const fn align_down(value: usize, align: usize) -> usize {
     debug_assert!(align.is_power_of_two());
     value & !(align - 1)
@@ -16,7 +16,7 @@ pub const fn align_down(value: usize, align: usize) -> usize {
 /// # Panics
 ///
 /// Panics in debug mode when `align` is not a power of two.
-#[inline(always)]
+#[inline]
 pub const fn align_up(value: usize, align: usize) -> usize {
     align_down(value + align - 1, align)
 }
