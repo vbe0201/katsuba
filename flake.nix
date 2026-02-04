@@ -1,41 +1,26 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    systems.url = "github:nix-systems/default";
-    devenv.url = "github:cachix/devenv";
-    nix2container.url = "github:nlewo/nix2container";
-    nix2container.inputs.nixpkgs.follows = "nixpkgs";
-    mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
-  };
-
-  nixConfig = {
-    extra-trusted-public-keys = "devenv.cachix.org-1:w1cLUi8dv3hnoSPGAuibQv+f9TZLr6cv/Hm9XgU50cw=";
-    extra-substituters = "https://devenv.cachix.org";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
   outputs = {
-    self,
-    flake-parts,
+    flake-utils,
+    rust-overlay,
     ...
   } @ inputs:
-    flake-parts.lib.mkFlake {inherit inputs;} {
-      imports = [
-        inputs.devenv.flakeModule
-      ];
+    flake-utils.lib.eachDefaultSystem (
+      system: let
+        overlays = [(import rust-overlay)];
+        pkgs = import inputs.nixpkgs {
+          inherit system overlays;
+        };
 
-      systems = import inputs.systems;
-
-      perSystem = {
-        config,
-        pkgs,
-        system,
-        self',
-        ...
-      }: let
         katsuba_toml = builtins.fromTOML (builtins.readFile ./src/katsuba/Cargo.toml);
         katsuba_py_toml = builtins.fromTOML (builtins.readFile ./src/katsuba-py/pyproject.toml);
       in {
-        packages.katsuba = pkgs.rustPlatform.buildRustPackage {
+        packages.default = pkgs.rustPlatform.buildRustPackage {
           pname = katsuba_toml.package.name;
           version = katsuba_toml.package.version;
           src = ./.;
@@ -58,20 +43,15 @@
           buildAndTestSubdir = "src/katsuba-py";
         };
 
-        packages.default = self'.packages.katsuba;
-
-        devenv.shells.default = {
-          packages = with pkgs; [git maturin];
-
-          languages = {
-            nix.enable = true;
-            python = {
-              enable = true;
-              package = pkgs.python3;
-            };
-            rust.enable = true;
-          };
+        devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
+            maturin
+            python3
+            (rust-bin.stable.latest.default.override {
+              extensions = ["rust-src" "rust-analyzer"];
+            })
+          ];
         };
-      };
-    };
+      }
+    );
 }

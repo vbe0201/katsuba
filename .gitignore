@@ -79,6 +79,4 @@ Thumbs.db
 /*.xml
 
 # Nix
-.devenv*
 .direnv
-devenv.local.nix
