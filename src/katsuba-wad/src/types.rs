@@ -1,11 +1,8 @@
 //! Common types and structures in the KIWAD format.
 
-use binrw::{
-    binrw,
-    io::{Read, Seek, Write},
-    BinReaderExt, BinResult, BinWriterExt,
-};
-use katsuba_utils::binrw_ext::{read_prefixed_string, write_prefixed_string};
+use std::io;
+
+use katsuba_utils::binary;
 use thiserror::Error;
 
 use crate::crc;
@@ -33,7 +30,6 @@ pub struct CrcMismatch {
 }
 
 /// The header of a KIWAD archive.
-#[binrw]
 #[derive(Clone, Copy, Debug)]
 pub struct Header {
     /// The format version in use.
@@ -42,7 +38,6 @@ pub struct Header {
     pub file_count: u32,
     /// Implementation-defined config flags associated with
     /// the archive.
-    #[br(if(version >= 2))]
     pub flags: Option<u8>,
 }
 
@@ -54,7 +49,6 @@ impl Header {
 }
 
 /// Metadata for a file stored in an archive.
-#[binrw]
 #[derive(Clone, Debug)]
 pub struct File {
     /// The starting offset of the file data.
@@ -64,31 +58,20 @@ pub struct File {
     /// The compressed size of the file contents.
     pub compressed_size: u32,
     /// Whether the file is stored compressed.
-    #[br(map = |x: u8| x != 0)]
-    #[bw(map = |&x| x as u8)]
     pub compressed: bool,
     /// The CRC32 checksum of the uncompressed file contents.
     pub crc: u32,
-
     /// Whether this file has unpatched data in the archive that
     /// needs to be ignored.
     ///
     /// Unpatched files are basically just placeholder for actual
     /// data later to be filled in.
-    #[brw(ignore)]
     pub is_unpatched: bool,
-
-    #[br(temp)]
-    #[bw(calc(name.len() as u32 + 1))]
-    name_len: u32,
-
     /// The name of the file in the archive.
     ///
     /// When accessing this by going through an archive's journal,
     /// expect this string to be empty. Instead, use the map key
     /// for this value.
-    #[br(args(name_len as usize, true), parse_with = read_prefixed_string)]
-    #[bw(args(true), write_with = write_prefixed_string)]
     pub name: String,
 }
 
@@ -126,14 +109,11 @@ impl File {
 ///
 /// Implementations must consider this and keep the raw
 /// archive bytes around even after parsing this structure.
-#[binrw]
-#[brw(magic = b"KIWAD")]
 #[derive(Clone, Debug)]
 pub struct Archive {
     /// The [`Header`] of the archive.
     pub header: Header,
     /// [`File`] metadata describing every stored file.
-    #[br(count = header.file_count)]
     pub files: Vec<File>,
 }
 
@@ -144,13 +124,56 @@ impl Archive {
     }
 
     /// Parses the archive from the given [`Read`]er.
-    pub fn parse<R: Read + Seek>(mut reader: R) -> BinResult<Self> {
-        reader.read_le()
+    pub fn parse<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        binary::magic(reader, *b"KIWAD")?;
+
+        let mut header = Header {
+            version: binary::uint32(reader)?,
+            file_count: binary::uint32(reader)?,
+            flags: None,
+        };
+
+        if header.version >= 2 {
+            header.flags = Some(binary::uint8(reader)?);
+        }
+
+        let files = binary::seq(reader, header.file_count, |r| {
+            Ok(File {
+                offset: binary::uint32(r)?,
+                uncompressed_size: binary::uint32(r)?,
+                compressed_size: binary::uint32(r)?,
+                compressed: binary::boolean(r)?,
+                crc: binary::uint32(r)?,
+                is_unpatched: false,
+                name: binary::uint32(r).and_then(|len| binary::str(r, len, true))?,
+            })
+        })?;
+
+        Ok(Archive { header, files })
     }
 
     /// Writes the archive data to the given [`Write`]r.
-    pub fn write<W: Write + Seek>(&self, mut writer: W) -> BinResult<()> {
-        writer.write_le(self)
+    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        binary::write_magic(writer, b"KIWAD")?;
+
+        binary::write_uint32(writer, self.header.version)?;
+        binary::write_uint32(writer, self.header.file_count)?;
+        if let Some(flags) = self.header.flags {
+            binary::write_uint8(writer, flags)?;
+        }
+
+        binary::write_seq(writer, false, &self.files, |w, f| {
+            binary::write_uint32(w, f.offset)?;
+            binary::write_uint32(w, f.uncompressed_size)?;
+            binary::write_uint32(w, f.compressed_size)?;
+            binary::write_boolean(w, f.compressed)?;
+            binary::write_uint32(w, f.crc)?;
+            binary::write_str(w, &f.name, true)?;
+
+            Ok(())
+        })?;
+
+        Ok(())
     }
 
     /// Verifies the CRCs of every file in the archive given the

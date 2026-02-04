@@ -4,17 +4,16 @@ version = "0.1.0"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
 description = "Library for working with KIWAD archives"
 license = "ISC"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-katsuba-utils = { path = "../katsuba-utils", features = ["binrw-ext"] }
+katsuba-utils = { path = "../katsuba-utils" }
 
-binrw = { workspace = true }
-crc32fast = "1.4"
+crc32fast = "1.5"
 globset = "0.4"
 libdeflater = { workspace = true }
 memmap2 = "0.9"
-tempfile = { version = "3.17", optional = true }
+tempfile = { version = "3.24", optional = true }
 thiserror = { workspace = true }
 
 [features]

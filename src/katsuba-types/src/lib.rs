@@ -1,15 +1,14 @@
 //! Implements the [wiztype] format for game type dumps.
 //!
-//! A type list is represented through [`TypeList`] and is a mapping
-//! of a type's name hash to its static reflection metadata.
-//!
-//! Therefore, this crate provides a way for Rust code to work with
-//! these types in order to mimick runtime serialization behavior.
+//! A [`TypeList`] is a typed mapping of a type's hash to its static
+//! reflection metadata for use in serialization logic. This crate
+//! provides a way for Rust code to work with these types.
 //!
 //! # Version Support
 //!
-//! This crate generally tries to implement every format version a
-//! recent release of wiztype offers to produce.
+//! This crate strives to support all format versions produced by
+//! wiztype transparently and internally. Users should be able to
+//! obtain the same mappings as long as they feed in valid data.
 //!
 //! [wiztype]: https://github.com/wizspoil/wiztype
 
@@ -19,7 +18,6 @@
 use std::{collections::HashMap, io};
 
 use serde::{Deserialize, Deserializer};
-use smartstring::alias::String;
 use thiserror::Error;
 
 mod property;
@@ -72,7 +70,6 @@ impl TypeList {
     /// Merges all entries from `other` into `self`.
     pub fn merge(&mut self, mut other: TypeList) {
         self.0.reserve(other.0.len());
-
         for (k, v) in other.0.drain() {
             self.0.insert(k, v);
         }

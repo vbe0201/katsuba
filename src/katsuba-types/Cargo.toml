@@ -12,5 +12,4 @@ katsuba-utils = { path = "../katsuba-utils" }
 bitflags = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = "1"
-smartstring = { version = "1.0", features = ["serde"] }
 thiserror = { workspace = true }

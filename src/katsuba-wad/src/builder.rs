@@ -16,7 +16,7 @@ const ALWAYS_UNCOMPRESSED: &[&str] = &["mp3", "ogg"];
 /// Errors that may occur when assembling KIWAD archives.
 #[derive(Debug, Error)]
 pub enum BuilderError {
-    /// An I/O error occurred while working with files.
+    /// An I/O error occurred while building the archive.
     #[error("{0}")]
     Io(#[from] io::Error),
 
@@ -28,22 +28,9 @@ pub enum BuilderError {
     #[error("failed to compress archive file: {0}")]
     Zlib(#[from] CompressionError),
 
-    /// The archive could not be serialized to the output file.
-    #[error("failed to serialize archive: {0}")]
-    Serialize(binrw::Error),
-
     /// Received an invalid path for the output archive file.
     #[error("path to output archive file must have a parent component")]
     Path,
-}
-
-impl From<binrw::Error> for BuilderError {
-    fn from(value: binrw::Error) -> Self {
-        match value {
-            binrw::Error::Io(e) => Self::Io(e),
-            e => Self::Serialize(e),
-        }
-    }
 }
 
 #[inline(always)]

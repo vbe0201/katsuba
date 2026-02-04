@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 pub mod align;
+pub mod binary;
 #[cfg(feature = "binrw-ext")]
 pub mod binrw_ext;
 pub mod hash;

@@ -5,8 +5,6 @@ use std::{
     ptr,
 };
 
-use smartstring::alias::String;
-
 use super::{drop, Value};
 
 /// Representation of an object in the ObjectProperty system.

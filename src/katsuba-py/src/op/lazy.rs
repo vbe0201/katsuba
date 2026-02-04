@@ -156,7 +156,7 @@ impl LazyObjectIter {
             // There is a property, but it might not be in the object due to
             // selective deserialization with flag masks.
             if let Ok(v) = slf.object.__getitem__(slf.py(), &property.name) {
-                let name = property.name.into_pyobject(slf.py()).unwrap();
+                let name = property.name.clone().into_pyobject(slf.py()).unwrap();
                 return (name, v).into_pyobject(slf.py()).ok();
             }
         }

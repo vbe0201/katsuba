@@ -3,8 +3,6 @@
 //! Values have dynamic types and can be composed, at the cost of
 //! incurring memory and performance overhead.
 
-pub use smartstring::alias::String;
-
 mod color;
 pub use color::*;
 

@@ -2,7 +2,6 @@ use std::{collections::HashMap, fmt};
 
 use katsuba_utils::hash;
 use serde::de::{Error, MapAccess, Visitor};
-use smartstring::alias::String;
 
 use super::TypeDef;
 

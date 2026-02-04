@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use smartstring::alias::String;
 
 /// A value that is either a string or an integer.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]

@@ -15,7 +15,7 @@ use crate::{glob, types as wad_types};
 /// Errors that may occur when working with KIWAD archives.
 #[derive(Debug, Error)]
 pub enum ArchiveError {
-    /// An I/O operation when reading or mapping a file failed.
+    /// I/O error from reading or mapping a file.
     #[error("failed to open archive: {0}")]
     Io(#[from] io::Error),
 
@@ -23,22 +23,9 @@ pub enum ArchiveError {
     #[error("failed to decompress archive file: {0}")]
     Zlib(#[from] DecompressionError),
 
-    /// Failed to parse the archive file.
-    #[error("failed to parse archive: {0}")]
-    Parse(binrw::Error),
-
     /// CRC validation of an archive file failed.
     #[error("{0}")]
     Crc(#[from] wad_types::CrcMismatch),
-}
-
-impl From<binrw::Error> for ArchiveError {
-    fn from(value: binrw::Error) -> Self {
-        match value {
-            binrw::Error::Io(e) => Self::Io(e),
-            e => Self::Parse(e),
-        }
-    }
 }
 
 /// Representation of a KIWAD archive loaded into memory.
@@ -253,7 +240,7 @@ impl MemoryMappedArchive {
         };
 
         // Parse the archive and build the file journal.
-        let mut archive = wad_types::Archive::parse(io::Cursor::new(&this.mapping))?;
+        let mut archive = wad_types::Archive::parse(&mut io::Cursor::new(&this.mapping))?;
         archive.verify_crcs(&this.mapping)?;
         this.journal.build_from(archive);
 
@@ -290,7 +277,7 @@ impl HeapArchive {
         };
 
         // Parse the archive and build the file journal.
-        let mut archive = wad_types::Archive::parse(io::Cursor::new(&this.data))?;
+        let mut archive = wad_types::Archive::parse(&mut &*this.data)?;
         archive.verify_crcs(&this.data)?;
         this.journal.build_from(archive);
 
