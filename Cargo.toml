@@ -3,7 +3,6 @@ members = ["src/*"]
 resolver = "2"
 
 [workspace.dependencies]
-binrw = "0.14"
 bitflags = "2.9"
 byteorder = "1.5"
 libdeflater = { version = "1.23", features = ["freestanding"] }

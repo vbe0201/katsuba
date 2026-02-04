@@ -7,7 +7,3 @@ license = "ISC"
 edition = "2021"
 
 [dependencies]
-binrw = { workspace = true, optional = true }
-
-[features]
-binrw-ext = ["binrw"]
