@@ -166,13 +166,13 @@ pub(crate) fn read_bit_size(
     de: &SerializerParts,
     reader: &mut BitReader<'_>,
 ) -> Result<u32, Error> {
-    (!de.options.shallow)
-        .then(|| {
-            let v = utils::read_bits(reader, u32::BITS)? as u32 - u32::BITS;
-            // Reader is at an already aligned position now, so we're
-            // not accidentally discarding data that might be needed.
-            reader.realign_to_byte();
-            Ok(v)
-        })
-        .unwrap_or(Ok(0))
+    if !de.options.shallow {
+        let v = utils::read_bits(reader, u32::BITS)? as u32 - u32::BITS;
+        // Reader is at an already aligned position now, so we're
+        // not accidentally discarding data that might be needed.
+        reader.realign_to_byte();
+        Ok(v)
+    } else {
+        Ok(0)
+    }
 }
