@@ -68,12 +68,11 @@ fn display_utf8<'a, Transformer: Fn(&'a str) -> O, O: Iterator<Item = char> + 'a
             Err(error) => {
                 let (valid, after_valid) = input.split_at(error.valid_up_to());
 
-                t(unsafe { str::from_utf8(valid).unwrap_unchecked() })
-                    .try_for_each(|c| f.write_char(c))?;
+                t(str::from_utf8(valid).unwrap()).try_for_each(|c| f.write_char(c))?;
                 f.write_char(char::REPLACEMENT_CHARACTER)?;
 
                 if let Some(invalid_sequence_length) = error.error_len() {
-                    input = unsafe { after_valid.get_unchecked(invalid_sequence_length..) };
+                    input = after_valid.get(invalid_sequence_length..).unwrap();
                 } else {
                     break;
                 }

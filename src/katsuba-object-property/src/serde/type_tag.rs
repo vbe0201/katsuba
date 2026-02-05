@@ -1,30 +1,15 @@
-use katsuba_bit_buf::BitReader;
+use bitter::LittleEndianReader;
 use katsuba_types::{TypeDef, TypeList};
 
-use super::{utils, Error};
+use super::{Error, utils};
 
-/// A type tag which defines the encoding of an object
-/// identity scheme.
-pub trait TypeTag: Sized {
-    /// Reads an object identity from the deserializer
-    /// and returns a matching type definition.
-    fn identity<'a>(
-        reader: &mut BitReader<'_>,
-        types: &'a TypeList,
-    ) -> Result<Option<&'a TypeDef>, Error>;
-}
-
-/// A [`TypeTag`] that identifies regular PropertyClasses.
-pub struct PropertyClass;
-
-impl TypeTag for PropertyClass {
-    fn identity<'a>(
-        reader: &mut BitReader<'_>,
-        types: &'a TypeList,
-    ) -> Result<Option<&'a TypeDef>, Error> {
-        let hash = utils::read_bits(reader, u32::BITS)? as u32;
-        find_class_def(types, hash)
-    }
+#[inline]
+pub fn property_class<'a>(
+    reader: &mut LittleEndianReader<'_>,
+    types: &'a TypeList,
+) -> Result<Option<&'a TypeDef>, Error> {
+    let hash = utils::read_bits_aligned(reader, u32::BITS)? as u32;
+    find_class_def(types, hash)
 }
 
 #[inline]

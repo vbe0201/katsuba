@@ -1,25 +1,23 @@
 use std::collections::BTreeMap;
 
-use katsuba_bit_buf::BitReader;
+use bitter::{BitReader, LittleEndianReader};
 use katsuba_types::{PropertyFlags, TypeDef};
 use katsuba_utils::{align::align_down, hash::djb2, hash::string_id};
 
-use super::{property, utils, Error, SerializerFlags, SerializerParts, TypeTag};
-use crate::{value::Object, Value};
+use super::{Error, SerializerFlags, SerializerParts, property, type_tag, utils};
+use crate::{Value, value::Object};
 
-pub fn deserialize<T: TypeTag>(
+pub fn deserialize(
     de: &mut SerializerParts,
-    reader: &mut BitReader<'_>,
+    reader: &mut LittleEndianReader<'_>,
 ) -> Result<Value, Error> {
     de.with_recursion_limit(|de| {
-        reader.realign_to_byte();
-
         let types = de.types.clone();
-        let res = match T::identity(reader, &types) {
+        let res = match type_tag::property_class(reader, &types) {
             // If a type definition exists, read the full object.
             Ok(Some(type_def)) => {
                 let object_size = read_bit_size(de, reader)? as usize;
-                deserialize_properties::<T>(de, object_size, type_def, reader)?
+                deserialize_properties(de, object_size, type_def, reader)?
             }
 
             // If we encountered a null pointer, return an empty value.
@@ -32,16 +30,18 @@ pub fn deserialize<T: TypeTag>(
 
                 let object_size = read_bit_size(de, reader)? as usize;
                 let aligned_object_size = align_down(object_size, u8::BITS as _);
+                let remainder_bits = (object_size - aligned_object_size) as u32;
 
                 // When skipping an object, we must make sure to consume
                 // exactly as many bits as specified or we might end up
                 // with property size mismatches.
                 //
                 // We first read the whole bytes out of the given bit size,
-                // then refill the buffer and consume only the remainder.
-                reader.read_bytes(utils::bits_to_bytes(aligned_object_size))?;
-                reader.refill_bits();
-                reader.consume((object_size - aligned_object_size) as u32)?;
+                // then read the remaining bits.
+                utils::read_bytes(reader, utils::bits_to_bytes(aligned_object_size))?;
+                if remainder_bits > 0 {
+                    utils::read_bits(reader, remainder_bits)?;
+                }
 
                 Value::Empty
             }
@@ -55,18 +55,18 @@ pub fn deserialize<T: TypeTag>(
     })
 }
 
-fn deserialize_properties<T: TypeTag>(
+fn deserialize_properties(
     de: &mut SerializerParts,
     object_size: usize,
     type_def: &TypeDef,
-    reader: &mut BitReader<'_>,
+    reader: &mut LittleEndianReader<'_>,
 ) -> Result<Value, Error> {
     let mut inner = BTreeMap::new();
 
     if de.options.shallow {
-        deserialize_properties_shallow::<T>(&mut inner, de, type_def, reader)?;
+        deserialize_properties_shallow(&mut inner, de, type_def, reader)?;
     } else {
-        deserialize_properties_deep::<T>(&mut inner, de, object_size, type_def, reader)?;
+        deserialize_properties_deep(&mut inner, de, object_size, type_def, reader)?;
     }
 
     let hash = match de.options.djb2_only {
@@ -81,11 +81,11 @@ fn deserialize_properties<T: TypeTag>(
 }
 
 #[inline]
-fn deserialize_properties_shallow<T: TypeTag>(
+fn deserialize_properties_shallow(
     obj: &mut BTreeMap<String, Value>,
     de: &mut SerializerParts,
     type_def: &TypeDef,
-    reader: &mut BitReader<'_>,
+    reader: &mut LittleEndianReader<'_>,
 ) -> Result<(), Error> {
     // In shallow mode, we walk masked properties in order.
     let mask = de.options.property_mask;
@@ -109,7 +109,7 @@ fn deserialize_properties_shallow<T: TypeTag>(
             }
         }
 
-        let value = property::deserialize::<T>(de, property, reader)?;
+        let value = property::deserialize(de, property, reader)?;
         obj.insert(property.name.clone(), value);
     }
 
@@ -117,21 +117,19 @@ fn deserialize_properties_shallow<T: TypeTag>(
 }
 
 #[inline]
-fn deserialize_properties_deep<T: TypeTag>(
+fn deserialize_properties_deep(
     obj: &mut BTreeMap<String, Value>,
     de: &mut SerializerParts,
     mut object_size: usize,
     type_def: &TypeDef,
-    reader: &mut BitReader<'_>,
+    reader: &mut LittleEndianReader<'_>,
 ) -> Result<(), Error> {
     // In deep mode, the properties name themselves.
     while object_size > 0 {
         // Back up the current buffer length and read the property size.
         // This will also count padding bits to byte boundaries.
-        let previous_buf_len = reader.remaining_bits();
-        reader.realign_to_byte();
-
-        let property_size = utils::read_bits(reader, u32::BITS)? as usize;
+        let previous_buf_len = reader.bits_remaining().unwrap();
+        let property_size = utils::read_bits_aligned(reader, u32::BITS)? as usize;
 
         // Read the property's hash and find the object in type defs.
         let property_hash = utils::read_bits(reader, u32::BITS)? as u32;
@@ -142,10 +140,10 @@ fn deserialize_properties_deep<T: TypeTag>(
             .ok_or(Error::UnknownProperty(property_hash))?;
 
         // Deserialize the property's value.
-        let value = property::deserialize::<T>(de, property, reader)?;
+        let value = property::deserialize(de, property, reader)?;
 
         // Validate the size expectations.
-        let actual_size = previous_buf_len - reader.remaining_bits();
+        let actual_size = previous_buf_len - reader.bits_remaining().unwrap();
         if property_size != actual_size {
             return Err(Error::PropertySizeMismatch {
                 expected: property_size,
@@ -168,14 +166,10 @@ fn deserialize_properties_deep<T: TypeTag>(
 #[inline]
 pub(crate) fn read_bit_size(
     de: &SerializerParts,
-    reader: &mut BitReader<'_>,
+    reader: &mut LittleEndianReader<'_>,
 ) -> Result<u32, Error> {
     if !de.options.shallow {
-        let v = utils::read_bits(reader, u32::BITS)? as u32 - u32::BITS;
-        // Reader is at an already aligned position now, so we're
-        // not accidentally discarding data that might be needed.
-        reader.realign_to_byte();
-        Ok(v)
+        utils::read_bits(reader, u32::BITS).map(|v| v as u32 - u32::BITS)
     } else {
         Ok(0)
     }

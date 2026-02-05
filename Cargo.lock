@@ -124,6 +124,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitter"
+version = "0.8.1"
+source = "git+https://github.com/vbe0201/bitter.git#048198983a8a301d948eaac223f8d0319247b130"
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -510,13 +515,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "katsuba-bit-buf"
-version = "0.1.0"
-dependencies = [
- "katsuba-utils",
-]
-
-[[package]]
 name = "katsuba-client-sig"
 version = "0.1.0"
 dependencies = [
@@ -552,8 +550,8 @@ name = "katsuba-object-property"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.9.0",
+ "bitter",
  "byteorder",
- "katsuba-bit-buf",
  "katsuba-types",
  "katsuba-utils",
  "libdeflater",
@@ -630,18 +628,16 @@ checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
 
 [[package]]
 name = "libdeflate-sys"
-version = "1.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413b667c8a795fcbe6287a75a8ce92b1dae928172c716fe95044cb2ec7877941"
+version = "1.25.0"
+source = "git+https://github.com/vbe0201/libdeflater.git#458fb1cee9d4ed3caea493460d8ba663453d56fc"
 dependencies = [
  "cc",
 ]
 
 [[package]]
 name = "libdeflater"
-version = "1.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d78376c917eec0550b9c56c858de50e1b7ebf303116487562e624e63ce51453a"
+version = "1.25.0"
+source = "git+https://github.com/vbe0201/libdeflater.git#458fb1cee9d4ed3caea493460d8ba663453d56fc"
 dependencies = [
  "libdeflate-sys",
 ]

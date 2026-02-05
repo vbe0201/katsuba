@@ -5,9 +5,8 @@ use katsuba_object_property::serde;
 use katsuba_types::PropertyFlags;
 
 use super::Command;
-use crate::cli::{helpers, Bias, InputsOutputs, Processor};
+use crate::cli::{Bias, InputsOutputs, Processor, helpers};
 
-mod guess;
 mod utils;
 
 /// Subcommand for working with ObjectProperty serialization.
@@ -80,29 +79,6 @@ enum ObjectPropertyCommand {
         #[clap(short, long, default_value_t = false)]
         ignore_unknown_types: bool,
     },
-
-    /// Attempts to deserialize ObjectProperty binary state
-    /// into JSON with a guessed serializer config.
-    ///
-    /// This means that you shouldn't have to provide most of
-    /// the options in the base command to get working output.
-    ///
-    /// Note however that this command is not a golden bullet;
-    /// it will report the configuration it tried regardless of
-    /// success or failure and you may want to tweak it manually.
-    Guess {
-        /// Path to the file to deserialize.
-        path: PathBuf,
-
-        /// Whether the deserialized value should be pretty-printed
-        /// on success.
-        ///
-        /// Since the output can get pretty spammy and distract from
-        /// the serializer configuration report, users may want to
-        /// disable this when analyzing unknown configuration.
-        #[clap(short, long)]
-        quiet: bool,
-    },
 }
 
 impl Command for ObjectProperty {
@@ -141,15 +117,10 @@ impl Command for ObjectProperty {
                             buf = buf.get(4..).unwrap();
                         }
 
-                        de.deserialize::<serde::PropertyClass>(buf)
-                            .map_err(Into::into)
+                        de.deserialize(buf).map_err(Into::into)
                     })
                     .write_with(helpers::write_as_json)
                     .process(inputs, outputs)
-            }
-
-            ObjectPropertyCommand::Guess { path, quiet } => {
-                guess::guess(options, type_list, path, quiet)
             }
         }
     }

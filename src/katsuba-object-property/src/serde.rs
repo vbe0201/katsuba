@@ -11,9 +11,6 @@ mod de;
 
 mod enum_variant;
 
-#[cfg(feature = "option-guessing")]
-mod guess;
-
 mod object;
 
 mod property;
@@ -157,9 +154,6 @@ pub(super) struct ZlibParts {
     scratch1: Vec<u8>,
     scratch2: Vec<u8>,
 }
-
-// SAFETY: No interior mutability. This should be in libdeflater?
-unsafe impl Sync for ZlibParts {}
 
 impl ZlibParts {
     pub fn new() -> Self {

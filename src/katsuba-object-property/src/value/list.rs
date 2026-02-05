@@ -1,10 +1,9 @@
 use std::{
-    mem::ManuallyDrop,
+    mem,
     ops::{Deref, DerefMut},
-    ptr,
 };
 
-use super::{drop, Value};
+use super::{Value, drop};
 
 /// A list of values with a non-recursive drop impl.
 ///
@@ -42,9 +41,8 @@ impl IntoIterator for List {
     type Item = Value;
     type IntoIter = <Vec<Value> as IntoIterator>::IntoIter;
 
-    fn into_iter(self) -> Self::IntoIter {
-        let this = ManuallyDrop::new(self);
-        unsafe { ptr::read(&this.inner).into_iter() }
+    fn into_iter(mut self) -> Self::IntoIter {
+        mem::take(&mut self.inner).into_iter()
     }
 }
 

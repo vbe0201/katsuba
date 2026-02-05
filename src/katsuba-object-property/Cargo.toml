@@ -7,11 +7,11 @@ license = "ISC"
 edition = "2024"
 
 [dependencies]
-katsuba-bit-buf = { path = "../katsuba-bit-buf" }
 katsuba-types = { path = "../katsuba-types" }
 katsuba-utils = { path = "../katsuba-utils" }
 
 bitflags = { workspace = true }
+bitter = "0.8"
 byteorder = { workspace = true }
 libdeflater = { workspace = true }
 log = { workspace = true }

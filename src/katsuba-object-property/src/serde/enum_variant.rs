@@ -1,13 +1,13 @@
-use katsuba_bit_buf::BitReader;
+use bitter::LittleEndianReader;
 use katsuba_types::Property;
 
-use super::{utils, Error, SerializerFlags, SerializerParts};
+use super::{Error, SerializerFlags, SerializerParts, utils};
 use crate::Value;
 
 pub fn deserialize(
     de: &SerializerParts,
     property: &Property,
-    reader: &mut BitReader<'_>,
+    reader: &mut LittleEndianReader<'_>,
 ) -> Result<Value, Error> {
     if de
         .options

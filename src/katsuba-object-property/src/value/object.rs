@@ -1,11 +1,10 @@
 use std::{
     collections::BTreeMap,
-    mem::{self, ManuallyDrop},
+    mem,
     ops::{Deref, DerefMut},
-    ptr,
 };
 
-use super::{drop, Value};
+use super::{Value, drop};
 
 /// Representation of an object in the ObjectProperty system.
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -42,9 +41,8 @@ impl IntoIterator for Object {
     type Item = (String, Value);
     type IntoIter = <BTreeMap<String, Value> as IntoIterator>::IntoIter;
 
-    fn into_iter(self) -> Self::IntoIter {
-        let this = ManuallyDrop::new(self);
-        unsafe { ptr::read(&this.inner).into_iter() }
+    fn into_iter(mut self) -> Self::IntoIter {
+        mem::take(&mut self.inner).into_iter()
     }
 }
 

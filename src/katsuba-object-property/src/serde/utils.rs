@@ -1,48 +1,67 @@
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
-use katsuba_bit_buf::{utils::sign_extend, BitReader};
-use katsuba_utils::align::align_up;
+use std::io;
+
+use bitter::{BitReader, LittleEndianReader, sign_extend};
+use byteorder::{LittleEndian, ReadBytesExt};
+use katsuba_utils::align::align_down;
 
 use super::{Error, SerializerFlags, SerializerOptions};
 use crate::value::*;
 
 #[inline]
-pub const fn bits_to_bytes(bits: usize) -> usize {
-    align_up(bits, u8::BITS as _) >> 3
+pub fn bits_to_bytes(bits: usize) -> usize {
+    bits.next_multiple_of(u8::BITS as usize) >> 3
 }
 
 #[inline]
-pub fn read_bits(reader: &mut BitReader<'_>, nbits: u32) -> Result<u64, Error> {
-    if reader.buffered_bits() < nbits {
-        reader.refill_bits();
+pub fn align(reader: &mut LittleEndianReader<'_>) -> Result<(), Error> {
+    let bits = reader.lookahead_bits() as usize;
+    let aligned_bits = align_down(bits, u8::BITS as usize);
+
+    let pad = (bits - aligned_bits) as u32;
+    if pad != 0 {
+        read_bits(reader, pad)?;
     }
 
-    let v = reader.peek(nbits)?;
-    reader.consume(nbits)?;
-    Ok(v)
+    Ok(())
 }
 
 #[inline]
-pub fn read_signed_bits(reader: &mut BitReader<'_>, nbits: u32) -> Result<i64, Error> {
+pub fn read_bits(reader: &mut LittleEndianReader<'_>, nbits: u32) -> Result<u64, Error> {
+    reader
+        .read_bits(nbits)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::UnexpectedEof, "reached premature EOF").into())
+}
+
+#[inline]
+pub fn read_signed_bits(reader: &mut LittleEndianReader<'_>, nbits: u32) -> Result<i64, Error> {
     let v = read_bits(reader, nbits)?;
     Ok(sign_extend(v, nbits))
 }
 
 #[inline]
-pub fn read_u64(reader: &mut BitReader<'_>) -> Result<u64, Error> {
-    reader.realign_to_byte();
+pub fn read_bits_aligned(reader: &mut LittleEndianReader<'_>, nbits: u32) -> Result<u64, Error> {
+    align(reader)?;
     reader
-        .read_bytes(8)
-        .map(LittleEndian::read_u64)
-        .map_err(Into::into)
+        .read_bits(nbits)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::UnexpectedEof, "reached premature EOF").into())
 }
 
 #[inline]
-pub fn read_bool(reader: &mut BitReader<'_>) -> Result<bool, Error> {
+pub fn read_signed_bits_aligned(
+    reader: &mut LittleEndianReader<'_>,
+    nbits: u32,
+) -> Result<i64, Error> {
+    let v = read_bits_aligned(reader, nbits)?;
+    Ok(sign_extend(v, nbits))
+}
+
+#[inline]
+pub fn read_bool(reader: &mut LittleEndianReader<'_>) -> Result<bool, Error> {
     read_bits(reader, 1).map(|v| v != 0)
 }
 
 #[inline]
-pub fn read_compact_length(reader: &mut BitReader<'_>) -> Result<usize, Error> {
+pub fn read_compact_length(reader: &mut LittleEndianReader<'_>) -> Result<usize, Error> {
     let is_large = read_bool(reader)?;
     let v = match is_large {
         true => read_bits(reader, u32::BITS - 1),
@@ -53,11 +72,14 @@ pub fn read_compact_length(reader: &mut BitReader<'_>) -> Result<usize, Error> {
 }
 
 #[inline]
-pub fn read_string_length(reader: &mut BitReader<'_>, compact: bool) -> Result<usize, Error> {
+pub fn read_string_length(
+    reader: &mut LittleEndianReader<'_>,
+    compact: bool,
+) -> Result<usize, Error> {
     let len = match compact {
         true => read_compact_length(reader)?,
         false => {
-            reader.realign_to_byte();
+            align(reader)?;
             read_bits(reader, u16::BITS)? as usize
         }
     };
@@ -66,11 +88,14 @@ pub fn read_string_length(reader: &mut BitReader<'_>, compact: bool) -> Result<u
 }
 
 #[inline]
-pub fn read_container_length(reader: &mut BitReader<'_>, compact: bool) -> Result<usize, Error> {
+pub fn read_container_length(
+    reader: &mut LittleEndianReader<'_>,
+    compact: bool,
+) -> Result<usize, Error> {
     let len = match compact {
         true => read_compact_length(reader)?,
         false => {
-            reader.realign_to_byte();
+            align(reader)?;
             read_bits(reader, u32::BITS)? as usize
         }
     };
@@ -79,8 +104,21 @@ pub fn read_container_length(reader: &mut BitReader<'_>, compact: bool) -> Resul
 }
 
 #[inline]
+pub fn read_bytes<'a>(reader: &mut LittleEndianReader<'a>, len: usize) -> Result<&'a [u8], Error> {
+    align(reader)?;
+
+    let rem = reader.remainder().data();
+    let (buf, rem) = rem
+        .split_at_checked(len)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::UnexpectedEof, "reached premature EOF"))?;
+
+    *reader = LittleEndianReader::new(rem);
+    Ok(buf)
+}
+
+#[inline]
 pub fn read_string<'a>(
-    reader: &mut BitReader<'a>,
+    reader: &mut LittleEndianReader<'a>,
     opts: &SerializerOptions,
 ) -> Result<&'a [u8], Error> {
     let len = read_string_length(
@@ -90,8 +128,7 @@ pub fn read_string<'a>(
     )?;
 
     if len != 0 {
-        reader.realign_to_byte();
-        reader.read_bytes(len).map_err(Into::into)
+        read_bytes(reader, len)
     } else {
         Ok(&[])
     }
@@ -99,7 +136,7 @@ pub fn read_string<'a>(
 
 #[inline]
 pub fn read_wstring(
-    reader: &mut BitReader<'_>,
+    reader: &mut LittleEndianReader<'_>,
     opts: &SerializerOptions,
 ) -> Result<Vec<u16>, Error> {
     let len = read_string_length(
@@ -110,7 +147,9 @@ pub fn read_wstring(
 
     let mut out = Vec::with_capacity(len);
     if len != 0 {
-        reader.realign_to_byte();
+        align(reader)?;
+
+        // TODO: Optimize this with manual mode.
         for _ in 0..len {
             out.push(read_bits(reader, u16::BITS)? as u16);
         }
@@ -120,26 +159,18 @@ pub fn read_wstring(
 }
 
 #[inline]
-pub fn read_color(reader: &mut BitReader<'_>) -> Result<Color, Error> {
-    if reader.buffered_bits() < u32::BITS {
-        reader.refill_bits();
-    }
-
-    let r = reader.peek(u8::BITS)? as u8;
-    reader.consume(u8::BITS)?;
-    let g = reader.peek(u8::BITS)? as u8;
-    reader.consume(u8::BITS)?;
-    let b = reader.peek(u8::BITS)? as u8;
-    reader.consume(u8::BITS)?;
-    let a = reader.peek(u8::BITS)? as u8;
-    reader.consume(u8::BITS)?;
+pub fn read_color(reader: &mut LittleEndianReader<'_>) -> Result<Color, Error> {
+    let b = read_bits_aligned(reader, u8::BITS)? as u8;
+    let g = read_bits(reader, u8::BITS)? as u8;
+    let r = read_bits(reader, u8::BITS)? as u8;
+    let a = read_bits(reader, u8::BITS)? as u8;
 
     Ok(Color { r, g, b, a })
 }
 
 #[inline]
-pub fn read_vec3(reader: &mut BitReader<'_>) -> Result<Vec3, Error> {
-    let mut data = reader.read_bytes(12)?;
+pub fn read_vec3(reader: &mut LittleEndianReader<'_>) -> Result<Vec3, Error> {
+    let mut data = read_bytes(reader, 12)?;
 
     let x = data.read_f32::<LittleEndian>()?;
     let y = data.read_f32::<LittleEndian>()?;
@@ -149,32 +180,31 @@ pub fn read_vec3(reader: &mut BitReader<'_>) -> Result<Vec3, Error> {
 }
 
 #[inline]
-pub fn read_quat(reader: &mut BitReader<'_>) -> Result<Quaternion, Error> {
-    let mut data = reader.read_bytes(16)?;
+pub fn read_quat(reader: &mut LittleEndianReader<'_>) -> Result<Quaternion, Error> {
+    let mut data = read_bytes(reader, 16)?;
 
+    let w = data.read_f32::<LittleEndian>()?;
     let x = data.read_f32::<LittleEndian>()?;
     let y = data.read_f32::<LittleEndian>()?;
     let z = data.read_f32::<LittleEndian>()?;
-    let w = data.read_f32::<LittleEndian>()?;
 
     Ok(Quaternion { x, y, z, w })
 }
 
 #[inline]
-pub fn read_euler(reader: &mut BitReader<'_>) -> Result<Euler, Error> {
-    let mut data = reader.read_bytes(12)?;
+pub fn read_euler(reader: &mut LittleEndianReader<'_>) -> Result<Euler, Error> {
+    let mut data = read_bytes(reader, 12)?;
 
-    // TODO: Is this order correct?
     let pitch = data.read_f32::<LittleEndian>()?;
-    let roll = data.read_f32::<LittleEndian>()?;
     let yaw = data.read_f32::<LittleEndian>()?;
+    let roll = data.read_f32::<LittleEndian>()?;
 
     Ok(Euler { pitch, roll, yaw })
 }
 
 #[inline]
-pub fn read_matrix(reader: &mut BitReader<'_>) -> Result<Matrix, Error> {
-    let mut data = reader.read_bytes(36)?;
+pub fn read_matrix(reader: &mut LittleEndianReader<'_>) -> Result<Matrix, Error> {
+    let mut data = read_bytes(reader, 36)?;
 
     let i = [
         data.read_f32::<LittleEndian>()?,

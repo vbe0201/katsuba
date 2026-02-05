@@ -20,8 +20,6 @@ pub use object::*;
 mod strings;
 pub use strings::*;
 
-// TODO: Evaluate optimizations.
-
 /// A runtime value from the ObjectProperty system.
 ///
 /// Its type is dynamically assigned at runtime, which mandates

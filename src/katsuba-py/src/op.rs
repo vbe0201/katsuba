@@ -5,8 +5,8 @@ use std::{
 };
 
 use katsuba_object_property::{
-    serde::{self, SerializerFlags},
     Value,
+    serde::{self, SerializerFlags},
 };
 use pyo3::{
     exceptions::{PyKeyError, PyValueError},
@@ -14,7 +14,7 @@ use pyo3::{
     types::PyType,
 };
 
-use crate::{error, KatsubaError};
+use crate::{KatsubaError, error};
 
 mod conversion;
 
@@ -38,7 +38,7 @@ impl TypeList {
 
     pub fn find(&self, hash: u32) -> PyResult<katsuba_types::TypeDef> {
         self.0
-             .0
+            .0
             .get(&hash)
             .cloned()
             .ok_or_else(|| PyValueError::new_err(format!("'{hash}' not in type list")))
@@ -71,7 +71,7 @@ impl TypeList {
     pub fn name_for(&self, type_hash: u32) -> PyResult<&str> {
         let entry = self
             .0
-             .0
+            .0
             .get(&type_hash)
             .ok_or_else(|| PyKeyError::new_err(format!("'{type_hash}'")))?;
 
@@ -175,7 +175,7 @@ impl Serializer {
 
     pub fn deserialize(&mut self, data: &[u8]) -> PyResult<LazyObject> {
         self.0
-            .deserialize::<serde::PropertyClass>(data)
+            .deserialize(data)
             .map(|v| {
                 let value = Arc::new(v);
                 let (hash, obj) = match &*value {

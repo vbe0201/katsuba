@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use byteorder::{ReadBytesExt, LE};
-use katsuba_bit_buf::BitReader;
+use bitter::LittleEndianReader;
+use byteorder::{LE, ReadBytesExt};
 use katsuba_types::TypeList;
 use libdeflater::Decompressor;
 
@@ -33,7 +33,7 @@ impl ZlibParts {
         &'a mut self,
         opts: &mut SerializerOptions,
         mut data: &'a [u8],
-    ) -> Result<BitReader<'a>, Error> {
+    ) -> Result<LittleEndianReader<'a>, Error> {
         // If the data is manually compressed, uncompress into scratch.
         if opts.manual_compression {
             zlib_decompress(&mut self.inflater, data, &mut self.scratch1)?;
@@ -51,7 +51,7 @@ impl ZlibParts {
             data = &self.scratch2;
         }
 
-        Ok(BitReader::new(data))
+        Ok(LittleEndianReader::new(data))
     }
 }
 
@@ -73,43 +73,12 @@ impl Serializer {
         })
     }
 
-    /// Attempts to guess the serializer configuration based on a
-    /// concrete data stream.
-    ///
-    /// The resulting serializer instance should be ready to use,
-    /// but the user may still need to tweak the settings themselves.
-    ///
-    /// It is generally only advised to use the resulting config as
-    /// a first fit, it is not guaranteed to be accurate.
-    #[cfg(feature = "option-guessing")]
-    pub fn with_guessed_options(types: Arc<TypeList>, data: &[u8]) -> Result<Self, Error> {
-        Self::with_guessed_options_from_base(Default::default(), types, data)
-    }
-
-    /// Attempts to guess the serializer configuration based on a
-    /// concrete data stream.
-    ///
-    /// This one takes a base config and modifies it based on guessed
-    /// properties of the input format.
-    ///
-    /// This is generally recommended when users know something about
-    /// the format that can't be guessed precisely, like the property
-    /// filter mask.
-    #[cfg(feature = "option-guessing")]
-    pub fn with_guessed_options_from_base(
-        opts: SerializerOptions,
-        types: Arc<TypeList>,
-        data: &[u8],
-    ) -> Result<Self, Error> {
-        super::guess::Guesser::new(opts, types).guess(data)
-    }
-
     /// Deserializes an object [`Value`] from the given data.
-    pub fn deserialize<T: TypeTag>(&mut self, data: &[u8]) -> Result<Value, Error> {
+    pub fn deserialize(&mut self, data: &[u8]) -> Result<Value, Error> {
         let mut reader = self.zlib_parts.configure(&mut self.parts.options, data)?;
         log::info!("Deserializing object with config {:?}", self.parts.options);
 
-        let value = object::deserialize::<T>(&mut self.parts, &mut reader)?;
+        let value = object::deserialize(&mut self.parts, &mut reader)?;
         if let Value::Empty = value {
             return Err(Error::NullRoot);
         }
