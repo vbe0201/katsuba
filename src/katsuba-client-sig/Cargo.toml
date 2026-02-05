@@ -12,6 +12,6 @@ katsuba-utils = { path = "../katsuba-utils" }
 base64 = "0.22"
 byteorder = { workspace = true }
 rand = "0.8"
-rsa = { version = "0.9.7", features = ["sha1"] }
+rsa = { version = "0.9.10", features = ["sha1"] }
 sha1 = "0.10.6"
 thiserror = { workspace = true }

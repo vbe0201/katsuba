@@ -10,7 +10,7 @@ use pyo3::{
 use super::{conversion::value_to_python, TypeList};
 
 #[derive(Clone)]
-#[pyclass(module = "katsuba.op")]
+#[pyclass(module = "katsuba.op", skip_from_py_object)]
 pub struct LazyList(Arc<Value>, NonNull<List>);
 
 impl LazyList {
@@ -46,7 +46,7 @@ impl LazyList {
         list.len()
     }
 
-    pub fn __getitem__(&self, py: Python<'_>, idx: usize) -> PyResult<Py<PyAny>> {
+    pub fn __getitem__<'py>(&self, py: Python<'py>, idx: usize) -> PyResult<Bound<'py, PyAny>> {
         let list = self.get_ref();
 
         list.get(idx)
@@ -67,7 +67,7 @@ impl LazyListIter {
         slf
     }
 
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Py<PyAny>> {
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Bound<'_, PyAny>> {
         let idx = slf.idx;
         slf.idx += 1;
 
@@ -76,7 +76,7 @@ impl LazyListIter {
 }
 
 #[derive(Clone)]
-#[pyclass(module = "katsuba.op")]
+#[pyclass(module = "katsuba.op", skip_from_py_object)]
 pub struct LazyObject(Arc<Value>, u32, NonNull<Object>);
 
 impl LazyObject {
@@ -109,12 +109,12 @@ impl LazyObject {
         obj.contains_key(key)
     }
 
-    pub fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<Py<PyAny>> {
+    pub fn __getitem__<'py>(&self, py: Python<'py>, key: &str) -> PyResult<Bound<'py, PyAny>> {
         self.get(py, key)
             .ok_or_else(|| PyKeyError::new_err(key.to_string()))
     }
 
-    pub fn get(&self, py: Python<'_>, key: &str) -> Option<Py<PyAny>> {
+    pub fn get<'py>(&self, py: Python<'py>, key: &str) -> Option<Bound<'py, PyAny>> {
         let obj = self.get_ref();
 
         obj.get(key)
