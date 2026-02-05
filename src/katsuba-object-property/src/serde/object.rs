@@ -94,14 +94,19 @@ fn deserialize_properties_shallow<T: TypeTag>(
         .iter()
         .filter(|p| p.flags.contains(mask) && !p.flags.contains(PropertyFlags::DEPRECATED))
     {
-        if property.flags.contains(PropertyFlags::DELTA_ENCODE)
-            && !utils::read_bool(reader)?
-            && de
-                .options
-                .flags
-                .contains(SerializerFlags::FORBID_DELTA_ENCODE)
-        {
-            return Err(Error::MissingDelta);
+        if property.flags.contains(PropertyFlags::DELTA_ENCODE) {
+            let delta_present = utils::read_bool(reader)?;
+            if !delta_present {
+                if de
+                    .options
+                    .flags
+                    .contains(SerializerFlags::FORBID_DELTA_ENCODE)
+                {
+                    return Err(Error::MissingDelta);
+                }
+
+                continue;
+            }
         }
 
         let value = property::deserialize::<T>(de, property, reader)?;
