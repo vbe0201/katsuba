@@ -19,5 +19,9 @@ phf = { version = "0.13", features = ["macros"] }
 serde = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
+[dev-dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
 [features]
 default = []
