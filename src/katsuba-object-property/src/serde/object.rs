@@ -25,8 +25,8 @@ pub fn deserialize(
 
             // If no type definition exists but we're allowed to skip it,
             // consume the bits the object is supposed to occupy.
-            Err(_) if de.options.skip_unknown_types => {
-                log::warn!("Encountered unknown type; skipping it");
+            Err(Error::UnknownType(tag)) if de.options.skip_unknown_types => {
+                log::warn!("Encountered unknown type with tag '{tag}'; skipping it");
 
                 let object_size = read_bit_size(de, reader)? as usize;
                 let aligned_object_size = align_down(object_size, u8::BITS as _);
