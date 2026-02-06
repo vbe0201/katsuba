@@ -18,8 +18,8 @@ pub fn safely(value: Value) {
                     stack.push(child);
                 }
             }
-            Value::Object { hash: _, obj } => {
-                for (_, child) in obj {
+            Value::Object(obj) => {
+                for (_, child) in *obj {
                     stack.push(child);
                 }
             }

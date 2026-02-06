@@ -1,4 +1,4 @@
-use std::{ptr::NonNull, sync::Arc};
+use std::sync::Arc;
 
 use katsuba_object_property::value::{List, Object, Value};
 use pyo3::{
@@ -7,50 +7,73 @@ use pyo3::{
     types::PyTuple,
 };
 
-use super::{conversion::value_to_python, TypeList};
+use super::conversion::value_to_python;
+
+/// A path segment for navigating into nested values.
+#[derive(Clone)]
+pub enum PathSegment {
+    Key(Arc<str>),
+    Index(usize),
+}
+
+/// Navigates through a Value tree following a path.
+fn navigate<'a>(root: &'a Value, path: &[PathSegment]) -> &'a Value {
+    let mut current = root;
+    for segment in path {
+        current = match (current, segment) {
+            (Value::Object(obj), PathSegment::Key(key)) => obj.get(key.as_ref()).unwrap(),
+            (Value::List(list), PathSegment::Index(idx)) => list.get(*idx).unwrap(),
+            _ => panic!("invalid path segment for current value type"),
+        };
+    }
+    current
+}
 
 #[derive(Clone)]
 #[pyclass(module = "katsuba.op", skip_from_py_object)]
-pub struct LazyList(Arc<Value>, NonNull<List>);
-
-impl LazyList {
-    // SAFETY: `current` must be derived from `base` in some way.
-    pub unsafe fn new(base: Arc<Value>, current: &List) -> Self {
-        Self(base, NonNull::from(current))
-    }
-
-    #[inline(always)]
-    fn get_ref(&self) -> &List {
-        // SAFETY: Constructor ensures our list is fine and we never get a mut ref.
-        unsafe { self.1.as_ref() }
-    }
+pub struct LazyList {
+    root: Arc<Value>,
+    path: Vec<PathSegment>,
 }
 
-// SAFETY: Raw pointers are never exposed for mutation.
-unsafe impl Send for LazyList {}
-unsafe impl Sync for LazyList {}
+impl LazyList {
+    pub fn new(root: Arc<Value>, path: Vec<PathSegment>) -> Self {
+        Self { root, path }
+    }
+
+    #[inline]
+    fn get_ref(&self) -> &List {
+        match navigate(&self.root, &self.path) {
+            Value::List(list) => list,
+            _ => unreachable!(),
+        }
+    }
+}
 
 #[pymethods]
 impl LazyList {
     pub fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<LazyListIter>> {
-        let iter = LazyListIter {
-            list: slf.clone(),
-            idx: 0,
-        };
-
-        Py::new(slf.py(), iter)
+        Py::new(
+            slf.py(),
+            LazyListIter {
+                list: slf.clone(),
+                idx: 0,
+            },
+        )
     }
 
     pub fn __len__(&self) -> usize {
-        let list = self.get_ref();
-        list.len()
+        self.get_ref().len()
     }
 
     pub fn __getitem__<'py>(&self, py: Python<'py>, idx: usize) -> PyResult<Bound<'py, PyAny>> {
-        let list = self.get_ref();
-
-        list.get(idx)
-            .map(|v| unsafe { value_to_python(self.0.clone(), v, py) })
+        self.get_ref()
+            .get(idx)
+            .map(|v| {
+                let mut path = self.path.clone();
+                path.push(PathSegment::Index(idx));
+                value_to_python(Arc::clone(&self.root), path, v, py)
+            })
             .ok_or_else(|| PyIndexError::new_err("list index out of range"))
     }
 }
@@ -70,25 +93,28 @@ impl LazyListIter {
     fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Bound<'_, PyAny>> {
         let idx = slf.idx;
         slf.idx += 1;
-
         slf.list.__getitem__(slf.py(), idx).ok()
     }
 }
 
 #[derive(Clone)]
 #[pyclass(module = "katsuba.op", skip_from_py_object)]
-pub struct LazyObject(Arc<Value>, u32, NonNull<Object>);
+pub struct LazyObject {
+    root: Arc<Value>,
+    path: Vec<PathSegment>,
+}
 
 impl LazyObject {
-    // SAFETY: `current` must be derived from `base` in some way.
-    pub unsafe fn new(base: Arc<Value>, hash: u32, current: &Object) -> Self {
-        Self(base, hash, NonNull::from(current))
+    pub fn new(root: Arc<Value>, path: Vec<PathSegment>) -> Self {
+        Self { root, path }
     }
 
-    #[inline(always)]
+    #[inline]
     fn get_ref(&self) -> &Object {
-        // SAFETY: Constructor ensures our list is fine and we never get a mut ref.
-        unsafe { self.2.as_ref() }
+        match navigate(&self.root, &self.path) {
+            Value::Object(obj) => obj.as_ref(),
+            _ => panic!("path does not lead to an Object"),
+        }
     }
 }
 
@@ -96,17 +122,15 @@ impl LazyObject {
 impl LazyObject {
     #[getter]
     pub fn type_hash(&self) -> u32 {
-        self.1
+        self.get_ref().type_hash
     }
 
     pub fn __len__(&self) -> usize {
-        let obj = self.get_ref();
-        obj.len()
+        self.get_ref().len()
     }
 
     pub fn __contains__(&self, key: &str) -> bool {
-        let obj = self.get_ref();
-        obj.contains_key(key)
+        self.get_ref().contains_key(key)
     }
 
     pub fn __getitem__<'py>(&self, py: Python<'py>, key: &str) -> PyResult<Bound<'py, PyAny>> {
@@ -116,26 +140,39 @@ impl LazyObject {
 
     pub fn get<'py>(&self, py: Python<'py>, key: &str) -> Option<Bound<'py, PyAny>> {
         let obj = self.get_ref();
-
-        obj.get(key)
-            .map(|v| unsafe { value_to_python(self.0.clone(), v, py) })
+        obj.get_key_value(key).map(|(k, v)| {
+            let mut path = self.path.clone();
+            path.push(PathSegment::Key(Arc::clone(k)));
+            value_to_python(Arc::clone(&self.root), path, v, py)
+        })
     }
 
-    pub fn items(&self, py: Python<'_>, types: &TypeList) -> PyResult<Py<LazyObjectIter>> {
-        let iter = LazyObjectIter {
-            object: self.clone(),
-            entry: types.find(self.1)?,
-            idx: 0,
-        };
+    pub fn get_index<'py>(&self, py: Python<'py>, idx: usize) -> Option<Bound<'py, PyTuple>> {
+        let obj = self.get_ref();
+        let (key, value) = obj.get_index(idx)?;
 
-        Py::new(py, iter)
+        let mut path = self.path.clone();
+        path.push(PathSegment::Key(Arc::clone(key)));
+
+        let key = key.as_ref().into_pyobject(py).unwrap();
+        let value = value_to_python(Arc::clone(&self.root), path, value, py);
+        (key, value).into_pyobject(py).ok()
+    }
+
+    pub fn items(&self, py: Python<'_>) -> PyResult<Py<LazyObjectIter>> {
+        Py::new(
+            py,
+            LazyObjectIter {
+                object: self.clone(),
+                idx: 0,
+            },
+        )
     }
 }
 
 #[pyclass(module = "katsuba.op")]
 pub struct LazyObjectIter {
     object: LazyObject,
-    entry: katsuba_types::TypeDef,
     idx: usize,
 }
 
@@ -146,23 +183,8 @@ impl LazyObjectIter {
     }
 
     fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Bound<'_, PyTuple>> {
-        loop {
-            let idx = slf.idx;
-            slf.idx += 1;
-
-            // If this returns None, there are no valid properties anymore.
-            let property = slf.entry.properties.get(idx)?;
-
-            // There is a property, but it might not be in the object due to
-            // selective deserialization with flag masks.
-            if let Ok(v) = slf.object.__getitem__(slf.py(), &property.name) {
-                let name = property.name.clone().into_pyobject(slf.py()).unwrap();
-                return (name, v).into_pyobject(slf.py()).ok();
-            }
-        }
+        let idx = slf.idx;
+        slf.idx += 1;
+        slf.object.get_index(slf.py(), idx)
     }
 }
-
-// SAFETY: Raw pointers are never exposed for mutation.
-unsafe impl Send for LazyObject {}
-unsafe impl Sync for LazyObject {}

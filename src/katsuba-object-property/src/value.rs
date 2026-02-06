@@ -51,13 +51,7 @@ pub enum Value {
     /// A homogenous list of elements.
     List(List),
     /// An object which maps field names to values.
-    Object {
-        #[cfg_attr(feature = "serde", serde(rename = "$__type"))]
-        hash: u32,
-
-        #[cfg_attr(feature = "serde", serde(flatten))]
-        obj: Object,
-    },
+    Object(Box<Object>),
 
     /// Representation of an RGBA color.
     Color(Color),

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::btree_map, path::PathBuf};
+use std::{borrow::Cow, path::PathBuf};
 
 use katsuba_object_property::serde;
 use pyo3::{exceptions::PyKeyError, prelude::*, types::PyType};
@@ -53,22 +53,16 @@ impl Archive {
     }
 
     pub fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<ArchiveIter>> {
-        let iter = slf.0.files().clone().into_keys();
-        Py::new(slf.py(), ArchiveIter { iter })
+        let keys = slf.0.files().keys().cloned().collect::<Vec<_>>().into_iter();
+        Py::new(slf.py(), ArchiveIter { keys })
     }
 
     pub fn iter_glob(slf: PyRef<'_, Self>, pattern: &str) -> PyResult<Py<GlobArchiveIter>> {
         let matcher = katsuba_wad::glob::Matcher::new(pattern)
             .map_err(|e| KatsubaError::new_err(format!("{e:?}")))?;
-        let iter = slf.0.files().clone().into_keys();
+        let keys = slf.0.files().keys().cloned().collect::<Vec<_>>().into_iter();
 
-        Py::new(
-            slf.py(),
-            GlobArchiveIter {
-                matcher,
-                iter: ArchiveIter { iter },
-            },
-        )
+        Py::new(slf.py(), GlobArchiveIter { matcher, keys })
     }
 
     #[classmethod]
@@ -107,7 +101,7 @@ impl Archive {
 
 #[pyclass(module = "katsuba.wad")]
 pub struct ArchiveIter {
-    iter: btree_map::IntoKeys<String, katsuba_wad::types::File>,
+    keys: std::vec::IntoIter<String>,
 }
 
 #[pymethods]
@@ -117,14 +111,14 @@ impl ArchiveIter {
     }
 
     pub fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<String> {
-        slf.iter.next()
+        slf.keys.next()
     }
 }
 
 #[pyclass(module = "katsuba.wad")]
 pub struct GlobArchiveIter {
     matcher: katsuba_wad::glob::Matcher,
-    iter: ArchiveIter,
+    keys: std::vec::IntoIter<String>,
 }
 
 #[pymethods]
@@ -135,9 +129,9 @@ impl GlobArchiveIter {
 
     pub fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<String> {
         loop {
-            match slf.iter.iter.next() {
+            match slf.keys.next() {
                 Some(path) if slf.matcher.is_match(&path) => break Some(path),
-                Some(..) => continue,
+                Some(_) => continue,
                 None => break None,
             }
         }

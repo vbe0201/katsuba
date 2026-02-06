@@ -16,7 +16,8 @@ katsuba-types = { path = "../katsuba-types" }
 katsuba-utils = { path = "../katsuba-utils" }
 katsuba-wad = { path = "../katsuba-wad" }
 
-pyo3 = { version = "0.28", features = ["abi3-py310"] }
+bytemuck = "1"
+pyo3 = { version = "0.28", features = ["abi3-py311"] }
 
 [build-dependencies]
 pyo3-build-config = { version = "0.28" }

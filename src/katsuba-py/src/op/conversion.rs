@@ -1,4 +1,4 @@
-use std::{ptr, sync::Arc};
+use std::sync::Arc;
 
 use katsuba_object_property::value::*;
 use pyo3::{IntoPyObjectExt, prelude::*, types::PyBytes};
@@ -6,31 +6,15 @@ use pyo3::{IntoPyObjectExt, prelude::*, types::PyBytes};
 use super::{lazy::*, leaf_types};
 
 fn convert_to_utf16<'py>(py: Python<'py>, x: &[u16]) -> Bound<'py, PyAny> {
-    let ptr = x.as_ptr().cast::<u8>();
-    let len = x.len() * 2;
-
-    unsafe {
-        let unicode = pyo3::ffi::PyUnicode_DecodeUTF16(
-            ptr.cast(),
-            len as isize,
-            // "strict" errors are the default
-            ptr::null(),
-            // native byte ordering
-            ptr::null_mut(),
-        );
-
-        // If we successfully decode the string, we can return it as-is.
-        // Otherwise, handing back the raw bytes seems most reasonable.
-        match Bound::from_owned_ptr_or_opt(py, unicode) {
-            Some(v) => v,
-            None => PyBytes::from_ptr(py, ptr, len).into_any(),
-        }
+    match String::from_utf16(x) {
+        Ok(s) => s.into_bound_py_any(py).unwrap(),
+        Err(_) => PyBytes::new(py, bytemuck::cast_slice(x)).into_any(),
     }
 }
 
-// SAFETY: `value` must be derived from `base` in some way.
-pub unsafe fn value_to_python<'py>(
-    base: Arc<Value>,
+pub fn value_to_python<'py>(
+    root: Arc<Value>,
+    path: Vec<PathSegment>,
     value: &Value,
     py: Python<'py>,
 ) -> Bound<'py, PyAny> {
@@ -45,10 +29,8 @@ pub unsafe fn value_to_python<'py>(
         Value::String(v) => v.0.as_slice().into_bound_py_any(py).unwrap(),
         Value::WString(v) => convert_to_utf16(py, &v.0),
 
-        Value::List(v) => unsafe { LazyList::new(base, v).into_bound_py_any(py).unwrap() },
-        Value::Object { hash, obj } => unsafe {
-            LazyObject::new(base, *hash, obj).into_bound_py_any(py).unwrap()
-        },
+        Value::List(_) => LazyList::new(root, path).into_bound_py_any(py).unwrap(),
+        Value::Object(_) => LazyObject::new(root, path).into_bound_py_any(py).unwrap(),
 
         Value::Color(v) => {
             let Color { r, g, b, a } = *v;

@@ -1,18 +1,23 @@
 use std::{
-    collections::BTreeMap,
     mem,
     ops::{Deref, DerefMut},
+    sync::Arc,
 };
+
+use indexmap::IndexMap;
 
 use super::{Value, drop};
 
 /// Representation of an object in the ObjectProperty system.
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Object {
+    /// The identifying type hash of this object.
+    #[cfg_attr(feature = "serde", serde(rename = "$__type"))]
+    pub type_hash: u32,
     /// A mapping of class member names to their values.
-    pub inner: BTreeMap<String, Value>,
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub inner: IndexMap<Arc<str>, Value>,
 }
 
 impl Drop for Object {
@@ -24,7 +29,7 @@ impl Drop for Object {
 }
 
 impl Deref for Object {
-    type Target = BTreeMap<String, Value>;
+    type Target = IndexMap<Arc<str>, Value>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
@@ -38,8 +43,8 @@ impl DerefMut for Object {
 }
 
 impl IntoIterator for Object {
-    type Item = (String, Value);
-    type IntoIter = <BTreeMap<String, Value> as IntoIterator>::IntoIter;
+    type Item = (Arc<str>, Value);
+    type IntoIter = <IndexMap<Arc<str>, Value> as IntoIterator>::IntoIter;
 
     fn into_iter(mut self) -> Self::IntoIter {
         mem::take(&mut self.inner).into_iter()
@@ -47,8 +52,8 @@ impl IntoIterator for Object {
 }
 
 impl<'a> IntoIterator for &'a Object {
-    type Item = (&'a String, &'a Value);
-    type IntoIter = <&'a BTreeMap<String, Value> as IntoIterator>::IntoIter;
+    type Item = (&'a Arc<str>, &'a Value);
+    type IntoIter = <&'a IndexMap<Arc<str>, Value> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -56,8 +61,8 @@ impl<'a> IntoIterator for &'a Object {
 }
 
 impl<'a> IntoIterator for &'a mut Object {
-    type Item = (&'a String, &'a mut Value);
-    type IntoIter = <&'a mut BTreeMap<String, Value> as IntoIterator>::IntoIter;
+    type Item = (&'a Arc<str>, &'a mut Value);
+    type IntoIter = <&'a mut IndexMap<Arc<str>, Value> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()

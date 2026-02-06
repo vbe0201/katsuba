@@ -15,8 +15,9 @@
 #![deny(rust_2018_idioms, rustdoc::broken_intra_doc_links)]
 #![forbid(unsafe_code)]
 
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, io, sync::Arc};
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Deserializer};
 use thiserror::Error;
 
@@ -27,6 +28,8 @@ mod serde_impl;
 
 mod string_or_int;
 pub use string_or_int::*;
+
+pub use indexmap;
 
 /// Errors that may occur when working with [`TypeList`]s.
 #[derive(Debug, Error)]
@@ -92,26 +95,27 @@ impl<'de> Deserialize<'de> for TypeList {
 pub struct TypeDef {
     /// The type name.
     #[serde(default)]
-    pub name: String,
+    pub name: Arc<str>,
     /// The properties of the class.
     #[serde(deserialize_with = "deserialize_property_list")]
-    pub properties: Vec<Property>,
+    pub properties: IndexMap<u32, Property>,
 }
 
-fn deserialize_property_list<'de, D>(deserializer: D) -> Result<Vec<Property>, D::Error>
+fn deserialize_property_list<'de, D>(deserializer: D) -> Result<IndexMap<u32, Property>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let mut properties: Vec<_> = HashMap::<String, Property>::deserialize(deserializer)?
-        .drain()
-        .map(|(name, mut property)| {
-            property.name = name;
-            property
-        })
-        .collect();
+    let mut properties: IndexMap<u32, _> =
+        HashMap::<Arc<str>, Property>::deserialize(deserializer)?
+            .drain()
+            .map(|(name, mut property)| {
+                property.name = name;
+                (property.hash, property)
+            })
+            .collect();
 
     // Sort properties by ID for correct order.
-    properties.sort_by(|a, b| a.id.cmp(&b.id));
+    properties.sort_by(|_, v1, _, v2| v1.id.cmp(&v2.id));
 
     Ok(properties)
 }

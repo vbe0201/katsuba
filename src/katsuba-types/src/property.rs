@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use bitflags::bitflags;
 use katsuba_utils::hash;
-use serde::{de::Error, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, de::Error};
 use thiserror::Error;
 
 use super::StringOrInt;
@@ -63,7 +63,7 @@ bitflags! {
 pub struct Property {
     /// The name of the property.
     #[serde(skip)]
-    pub name: String,
+    pub name: Arc<str>,
     /// The type of the property.
     pub r#type: String,
     /// The ID of the property.

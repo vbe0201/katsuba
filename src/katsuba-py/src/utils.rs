@@ -1,32 +1,35 @@
 use pyo3::{
-    exceptions::PyTypeError,
+    buffer::PyBuffer,
     prelude::*,
-    types::{PyByteArray, PyBytes, PyString},
+    types::{PyBytes, PyString},
 };
 
-#[inline]
-unsafe fn downcast_to_bytes<'a>(value: &'a Bound<'_, PyAny>) -> PyResult<&'a [u8]> {
-    if let Ok(value) = value.cast::<PyString>() {
-        value.to_str().map(str::as_bytes)
-    } else if let Ok(value) = value.cast::<PyBytes>() {
-        Ok(value.as_bytes())
-    } else if let Ok(value) = value.cast::<PyByteArray>() {
-        Ok(unsafe { value.as_bytes() })
-    } else {
-        Err(PyTypeError::new_err("Cannot hash the given type"))
+fn hash_with<F: Fn(&[u8]) -> u32>(input: &Bound<'_, PyAny>, f: F) -> PyResult<u32> {
+    // str doesn't implement buffer protocol
+    if let Ok(s) = input.cast::<PyString>() {
+        return s.to_str().map(|s| f(s.as_bytes()));
     }
+
+    // bytes has safe zero-copy access
+    if let Ok(b) = input.cast::<PyBytes>() {
+        return Ok(f(b.as_bytes()));
+    }
+
+    // For bytearray, memoryview, etc., use buffer protocol (requires copy)
+    let buffer: PyBuffer<u8> = PyBuffer::get(input)?;
+    Ok(f(&buffer.to_vec(input.py())?))
 }
 
 /// Hashes the given `input` using the KingsIsle String ID algorithm.
 #[pyfunction]
 fn string_id(input: &Bound<'_, PyAny>) -> PyResult<u32> {
-    unsafe { downcast_to_bytes(input).map(katsuba_utils::hash::string_id) }
+    hash_with(input, katsuba_utils::hash::string_id)
 }
 
 /// Hashes the given `input` using the DJB2 algorithm.
 #[pyfunction]
 fn djb2(input: &Bound<'_, PyAny>) -> PyResult<u32> {
-    unsafe { downcast_to_bytes(input).map(katsuba_utils::hash::djb2) }
+    hash_with(input, katsuba_utils::hash::djb2)
 }
 
 pub fn katsuba_utils(m: &Bound<'_, PyModule>) -> PyResult<()> {

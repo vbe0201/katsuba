@@ -182,11 +182,18 @@ class LazyObject:
         :return: The value of the property, or ``None`` if not found.
         """
 
-    def items(self, types: TypeList) -> Iterator[tuple[str, Any]]:
+    def get_index(self, idx: int) -> tuple[str, Any] | None:
+        """
+        Accesses the property at the given index.
+
+        :param idx: The index into the object's properties.
+        :return: A tuple of (name, value), or ``None`` if out of range.
+        """
+
+    def items(self) -> Iterator[tuple[str, Any]]:
         """
         Iterates over all the properties inside this object.
 
-        :param types: A type list that provides information for this type.
         :return: An iterator yielding pairs of property name and value.
         """
 

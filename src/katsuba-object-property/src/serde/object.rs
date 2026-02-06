@@ -1,8 +1,12 @@
-use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use bitter::{BitReader, LittleEndianReader};
+use indexmap::IndexMap;
 use katsuba_types::{PropertyFlags, TypeDef};
-use katsuba_utils::{align::align_down, hash::djb2, hash::string_id};
+use katsuba_utils::{
+    align::align_down,
+    hash::{djb2, string_id},
+};
 
 use super::{Error, SerializerFlags, SerializerParts, property, type_tag, utils};
 use crate::{Value, value::Object};
@@ -61,7 +65,7 @@ fn deserialize_properties(
     type_def: &TypeDef,
     reader: &mut LittleEndianReader<'_>,
 ) -> Result<Value, Error> {
-    let mut inner = BTreeMap::new();
+    let mut inner = IndexMap::with_capacity(type_def.properties.len());
 
     if de.options.shallow {
         deserialize_properties_shallow(&mut inner, de, type_def, reader)?;
@@ -74,15 +78,15 @@ fn deserialize_properties(
         false => string_id(type_def.name.as_bytes()),
     };
 
-    Ok(Value::Object {
-        hash,
-        obj: Object { inner },
-    })
+    Ok(Value::Object(Box::new(Object {
+        type_hash: hash,
+        inner,
+    })))
 }
 
 #[inline]
 fn deserialize_properties_shallow(
-    obj: &mut BTreeMap<String, Value>,
+    obj: &mut IndexMap<Arc<str>, Value>,
     de: &mut SerializerParts,
     type_def: &TypeDef,
     reader: &mut LittleEndianReader<'_>,
@@ -91,7 +95,7 @@ fn deserialize_properties_shallow(
     let mask = de.options.property_mask;
     for property in type_def
         .properties
-        .iter()
+        .values()
         .filter(|p| p.flags.contains(mask) && !p.flags.contains(PropertyFlags::DEPRECATED))
     {
         if property.flags.contains(PropertyFlags::DELTA_ENCODE) {
@@ -118,7 +122,7 @@ fn deserialize_properties_shallow(
 
 #[inline]
 fn deserialize_properties_deep(
-    obj: &mut BTreeMap<String, Value>,
+    obj: &mut IndexMap<Arc<str>, Value>,
     de: &mut SerializerParts,
     mut object_size: usize,
     type_def: &TypeDef,
@@ -135,8 +139,7 @@ fn deserialize_properties_deep(
         let property_hash = utils::read_bits(reader, u32::BITS)? as u32;
         let property = type_def
             .properties
-            .iter()
-            .find(|p| p.hash == property_hash)
+            .get(&property_hash)
             .ok_or(Error::UnknownProperty(property_hash))?;
 
         // Deserialize the property's value.

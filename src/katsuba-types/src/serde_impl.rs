@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap, fmt, sync::Arc};
 
 use katsuba_utils::hash;
 use serde::de::{Error, MapAccess, Visitor};
@@ -8,7 +8,7 @@ use super::TypeDef;
 impl TypeDef {
     // Converts a deserialized v1 TypeDef into a v2 one.
     #[inline]
-    fn into_v2(mut self, name: String) -> (u32, Self) {
+    fn into_v2(mut self, name: Arc<str>) -> (u32, Self) {
         self.name = name;
         (hash::string_id(self.name.as_bytes()), self)
     }
@@ -38,8 +38,8 @@ impl<'de> Visitor<'de> for TypeListVisitor {
         let mut classes = HashMap::new();
 
         // Start by trying to extract the version entry of the format.
-        if let Some(key) = map.next_key()? {
-            if key == "version" {
+        if let Some(key) = map.next_key::<Arc<str>>()? {
+            if &*key == "version" {
                 self.version = map.next_value::<u32>()?;
             } else {
                 classes.reserve(map.size_hint().unwrap_or(0));

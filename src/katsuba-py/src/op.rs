@@ -4,10 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use katsuba_object_property::{
-    Value,
-    serde::{self, SerializerFlags},
-};
+use katsuba_object_property::serde::{self, SerializerFlags};
 use pyo3::{
     exceptions::{PyKeyError, PyValueError},
     prelude::*,
@@ -176,15 +173,7 @@ impl Serializer {
     pub fn deserialize(&mut self, data: &[u8]) -> PyResult<LazyObject> {
         self.0
             .deserialize(data)
-            .map(|v| {
-                let value = Arc::new(v);
-                let (hash, obj) = match &*value {
-                    Value::Object { hash, obj } => (*hash, obj),
-                    _ => unreachable!(),
-                };
-
-                unsafe { LazyObject::new(value.clone(), hash, obj) }
-            })
+            .map(|v| LazyObject::new(Arc::new(v), Vec::new()))
             .map_err(error::op_to_py_err)
     }
 }
