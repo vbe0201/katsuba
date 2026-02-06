@@ -26,6 +26,15 @@ pub enum ArchiveError {
     /// CRC validation of an archive file failed.
     #[error("{0}")]
     Crc(#[from] wad_types::CrcMismatch),
+
+    /// File data ranges overlap, indicating a potential zip bomb.
+    #[error("overlapping data ranges detected between '{file1}' and '{file2}'")]
+    OverlappingRanges {
+        /// The first file with overlapping data.
+        file1: String,
+        /// The second file with overlapping data.
+        file2: String,
+    },
 }
 
 /// Representation of a KIWAD archive loaded into memory.
@@ -195,15 +204,48 @@ impl Journal {
         self.inner.insert(name, file);
     }
 
-    fn build_from(&mut self, archive: wad_types::Archive) {
+    fn build_from(&mut self, archive: wad_types::Archive) -> Result<(), ArchiveError> {
         let wad_types::Archive { header, files } = archive;
 
         self.header = header;
         files.into_iter().for_each(|f| self.insert(f));
+        self.validate_no_overlaps()
     }
 
     fn find(&self, file: &str) -> Option<&wad_types::File> {
         self.inner.get(file)
+    }
+
+    fn validate_no_overlaps(&self) -> Result<(), ArchiveError> {
+        // Collect byte ranges as (start, end, name) for non-empty files.
+        let mut ranges: Vec<_> = self
+            .inner
+            .iter()
+            .filter(|(_, f)| !f.is_unpatched && f.size() > 0)
+            .map(|(name, f)| {
+                let start = f.offset as u64;
+                let end = start + f.size() as u64;
+                (start, end, name.as_str())
+            })
+            .collect();
+
+        // Sort by start offset so overlapping ranges become adjacent.
+        ranges.sort_unstable_by_key(|&(start, _, _)| start);
+
+        // Two sorted ranges [a, b) and [c, d) overlap if c < b.
+        for pair in ranges.windows(2) {
+            let (_, end, name1) = pair[0];
+            let (start, _, name2) = pair[1];
+
+            if start < end {
+                return Err(ArchiveError::OverlappingRanges {
+                    file1: name1.to_string(),
+                    file2: name2.to_string(),
+                });
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -242,7 +284,7 @@ impl MemoryMappedArchive {
         // Parse the archive and build the file journal.
         let mut archive = wad_types::Archive::parse(&mut io::Cursor::new(&this.mapping))?;
         archive.verify_crcs(&this.mapping)?;
-        this.journal.build_from(archive);
+        this.journal.build_from(archive)?;
 
         Ok(this)
     }
@@ -279,7 +321,7 @@ impl HeapArchive {
         // Parse the archive and build the file journal.
         let mut archive = wad_types::Archive::parse(&mut &*this.data)?;
         archive.verify_crcs(&this.data)?;
-        this.journal.build_from(archive);
+        this.journal.build_from(archive)?;
 
         Ok(this)
     }
@@ -300,5 +342,102 @@ fn file_mode(_f: &fs::File) -> u32 {
 
         #[cfg(not(unix))]
         () => 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::File;
+
+    fn make_file(name: &str, offset: u32, size: u32) -> (String, File) {
+        (
+            name.to_string(),
+            File {
+                offset,
+                uncompressed_size: size,
+                compressed_size: 0,
+                compressed: false,
+                crc: 0,
+                is_unpatched: false,
+                name: String::new(),
+            },
+        )
+    }
+
+    fn journal_with_files(files: Vec<(String, File)>) -> Journal {
+        let mut journal = Journal::new(0o644);
+        journal.inner = files.into_iter().collect();
+        journal
+    }
+
+    #[test]
+    fn no_overlap_adjacent_ranges() {
+        let journal = journal_with_files(vec![make_file("a", 0, 100), make_file("b", 100, 100)]);
+        assert!(journal.validate_no_overlaps().is_ok());
+    }
+
+    #[test]
+    fn no_overlap_gap_between() {
+        let journal = journal_with_files(vec![make_file("a", 0, 100), make_file("b", 200, 100)]);
+        assert!(journal.validate_no_overlaps().is_ok());
+    }
+
+    #[test]
+    fn overlap_partial() {
+        let journal = journal_with_files(vec![make_file("a", 0, 100), make_file("b", 50, 100)]);
+        let err = journal.validate_no_overlaps().unwrap_err();
+        assert!(matches!(err, ArchiveError::OverlappingRanges { .. }));
+    }
+
+    #[test]
+    fn overlap_complete() {
+        let journal = journal_with_files(vec![make_file("a", 0, 100), make_file("b", 0, 100)]);
+        let err = journal.validate_no_overlaps().unwrap_err();
+        assert!(matches!(err, ArchiveError::OverlappingRanges { .. }));
+    }
+
+    #[test]
+    fn overlap_contained() {
+        let journal = journal_with_files(vec![make_file("a", 0, 200), make_file("b", 50, 50)]);
+        let err = journal.validate_no_overlaps().unwrap_err();
+        assert!(matches!(err, ArchiveError::OverlappingRanges { .. }));
+    }
+
+    #[test]
+    fn overlap_multiple_files() {
+        let journal = journal_with_files(vec![
+            make_file("a", 0, 100),
+            make_file("b", 50, 100),
+            make_file("c", 200, 100),
+        ]);
+        let err = journal.validate_no_overlaps().unwrap_err();
+        assert!(matches!(err, ArchiveError::OverlappingRanges { .. }));
+    }
+
+    #[test]
+    fn empty_files_ignored() {
+        let journal = journal_with_files(vec![make_file("a", 0, 0), make_file("b", 0, 0)]);
+        assert!(journal.validate_no_overlaps().is_ok());
+    }
+
+    #[test]
+    fn unpatched_files_ignored() {
+        let mut files = vec![make_file("a", 0, 100), make_file("b", 50, 100)];
+        files[1].1.is_unpatched = true;
+        let journal = journal_with_files(files);
+        assert!(journal.validate_no_overlaps().is_ok());
+    }
+
+    #[test]
+    fn single_file_ok() {
+        let journal = journal_with_files(vec![make_file("a", 0, 100)]);
+        assert!(journal.validate_no_overlaps().is_ok());
+    }
+
+    #[test]
+    fn empty_journal_ok() {
+        let journal = journal_with_files(vec![]);
+        assert!(journal.validate_no_overlaps().is_ok());
     }
 }

@@ -1,12 +1,46 @@
 use std::{
     env,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
+use eyre::bail;
 use katsuba_executor::{Buffer, Executor, Task};
 use katsuba_wad::{Archive, Inflater};
 
 use crate::{cli::OutputSource, utils::DirectoryTree};
+
+fn validate_extract_path(base: &Path, archive_path: &str) -> eyre::Result<PathBuf> {
+    let path = Path::new(archive_path);
+
+    // Reject absolute paths outright.
+    if path.is_absolute() {
+        bail!("absolute path not allowed in archive: '{archive_path}'");
+    }
+
+    // Traverse the path while checking for directory escapes.
+    let mut result = base.to_path_buf();
+    let base_depth = base.components().count();
+
+    for component in path.components() {
+        match component {
+            Component::Normal(c) => {
+                result.push(c);
+            }
+            Component::ParentDir => {
+                if result.components().count() <= base_depth {
+                    bail!("path traversal detected in archive path '{archive_path}'");
+                }
+                result.pop();
+            }
+            Component::CurDir => (),
+            Component::Prefix(_) | Component::RootDir => {
+                bail!("invalid path component in archive path '{archive_path}'");
+            }
+        }
+    }
+
+    Ok(result)
+}
 
 struct SafeArchiveDrop<'a> {
     ex: &'a Executor,
@@ -57,12 +91,14 @@ fn create_directory_tree(ex: &Executor, archive: &Archive, out: &Path) -> eyre::
     // Pre-compute the directory structure we need to create.
     let mut tree = DirectoryTree::new();
     for file in archive.files().keys() {
+        validate_extract_path(out, file)?;
         tree.add(file.as_ref());
     }
 
     // Create all the directories with minimal required syscalls.
     for path in tree {
-        let task = Task::create_dir(out.join(path));
+        let path = validate_extract_path(out, &path.to_string_lossy())?;
+        let task = Task::create_dir(path);
         for pending in ex.dispatch(task) {
             pending?;
         }
@@ -105,7 +141,8 @@ pub fn extract_archive(
     // operations to the executor.
     let mut inflater = Inflater::new();
     for (path, file) in sad.archive.files() {
-        let path = out.join(path);
+        // Validate the path to prevent directory traversal attacks.
+        let path = validate_extract_path(&out, path)?;
 
         // SAFETY: We can never end up with dangling references into
         // `archive` because `sad` joins all pending tasks on drop.
