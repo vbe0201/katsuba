@@ -5,38 +5,30 @@ use std::{
 };
 
 use eyre::Context;
-use katsuba_executor::{Buffer, Executor};
+use rayon::prelude::*;
 
-use self::sealed::Missing;
 use super::{InputSource, OutputSource};
 use crate::utils;
 
-mod sealed {
-    pub struct Missing;
-}
-
-/// A [`Read`]er over a compatible input source.
+/// A reader over a compatible input source.
 pub enum Reader {
     Stdin(io::Cursor<Vec<u8>>),
     File(io::BufReader<fs::File>),
 }
 
 impl Reader {
-    /// Gets the data in the reader as a [`Buffer`], if possible.
-    pub fn get_buffer(&mut self, ex: &Executor) -> eyre::Result<Buffer<'_>> {
+    pub fn into_vec(self) -> io::Result<Vec<u8>> {
         match self {
-            Self::Stdin(buf) => Ok(Buffer::borrowed(buf.get_ref())),
-            Self::File(f) => {
+            Self::Stdin(buf) => Ok(buf.into_inner()),
+            Self::File(mut f) => {
                 let size = f
                     .get_ref()
                     .metadata()
                     .map(|m| m.len() as usize)
                     .unwrap_or(0);
-
-                ex.request_buffer(size, |buf| {
-                    f.read_to_end(buf)?;
-                    Ok(())
-                })
+                let mut buf = Vec::with_capacity(size);
+                f.read_to_end(&mut buf)?;
+                Ok(buf)
             }
         }
     }
@@ -81,144 +73,87 @@ impl Seek for Reader {
     }
 }
 
-/// A bias to hint to the [`Processor`] which executor type should
-/// be preferred for workloads consisting of a single input.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Bias {
-    Current,
-    Threaded,
+fn open_stdin() -> eyre::Result<Reader> {
+    let mut stdin = utils::stdin_reader();
+    let mut buf = Vec::new();
+    stdin.read_to_end(&mut buf)?;
+
+    Ok(Reader::Stdin(io::Cursor::new(buf)))
 }
 
-/// Processes input sources and maps them to output sources.
-pub struct Processor<R, W> {
-    bias: Bias,
-    reader_fn: R,
-    writer_fn: W,
+fn open_file(path: &Path) -> eyre::Result<Reader> {
+    let file =
+        fs::File::open(path).with_context(|| format!("failed to open '{}'", path.display()))?;
+    Ok(Reader::File(io::BufReader::new(file)))
 }
 
-impl Processor<Missing, Missing> {
-    /// Creates a new processor in uninitialized state.
-    ///
-    /// The bias nudges the processor towards which executor to use for
-    /// single-file workloads. Workloads of many files will always use
-    /// a threaded executor, if available, regardless of bias.
-    pub fn new(bias: Bias) -> eyre::Result<Self> {
-        Ok(Self {
-            bias,
-            reader_fn: Missing,
-            writer_fn: Missing,
-        })
-    }
-
-    /// Configures a callback for reading an input source into an arbitrary
-    /// type for further processing.
-    #[inline]
-    pub fn read_with<F, T>(self, f: F) -> Processor<F, Missing>
-    where
-        F: FnMut(Reader, &Executor) -> eyre::Result<T>,
-    {
-        Processor {
-            bias: self.bias,
-            reader_fn: f,
-            writer_fn: Missing,
+/// Processes inputs sequentially. Use for commands that handle parallelism internally.
+pub fn process<T>(
+    input: InputSource,
+    output: OutputSource,
+    mut read: impl FnMut(Reader) -> eyre::Result<T>,
+    mut write: impl FnMut(Option<PathBuf>, T, OutputSource) -> eyre::Result<()>,
+) -> eyre::Result<()> {
+    match (input, output) {
+        (InputSource::Stdin, out) => {
+            let value = read(open_stdin()?)?;
+            write(None, value, out)
         }
+
+        (InputSource::File(path), out) => {
+            let value = read(open_file(&path)?)?;
+            write(Some(path), value, out)
+        }
+
+        (InputSource::Files(paths), OutputSource::Dir(dir, suffix)) => {
+            fs::create_dir_all(&dir)?;
+            for path in paths {
+                let value = read(open_file(&path)?)?;
+                write(Some(path), value, OutputSource::Dir(dir.clone(), suffix))?;
+            }
+
+            Ok(())
+        }
+
+        _ => unreachable!("invalid input/output combination"),
     }
 }
 
-impl<R, T> Processor<R, Missing>
+/// Processes inputs with rayon parallelism for batch operations.
+pub fn process_par<T, S, R, W>(
+    input: InputSource,
+    output: OutputSource,
+    init: impl Fn() -> S + Sync + Send,
+    read: R,
+    write: W,
+) -> eyre::Result<()>
 where
-    R: FnMut(Reader, &Executor) -> eyre::Result<T>,
+    T: Send,
+    S: Send,
+    R: Fn(&mut S, Reader) -> eyre::Result<T> + Sync,
+    W: Fn(Option<PathBuf>, T, OutputSource) -> eyre::Result<()> + Sync,
 {
-    /// Configures a callback for writing an element to an output source.
-    pub fn write_with<F>(self, f: F) -> Processor<R, F>
-    where
-        F: FnMut(&Executor, Option<PathBuf>, T, OutputSource) -> eyre::Result<()>,
-    {
-        Processor {
-            bias: self.bias,
-            reader_fn: self.reader_fn,
-            writer_fn: f,
+    match (input, output) {
+        (InputSource::Stdin, out) => {
+            let value = read(&mut init(), open_stdin()?)?;
+            write(None, value, out)
         }
-    }
-}
 
-impl<R, W, T> Processor<R, W>
-where
-    R: FnMut(Reader, &Executor) -> eyre::Result<T>,
-    W: FnMut(&Executor, Option<PathBuf>, T, OutputSource) -> eyre::Result<()>,
-{
-    fn stdin(&self) -> eyre::Result<Reader> {
-        let mut stdin = utils::stdin_reader();
-
-        let mut buf = io::Cursor::new(Vec::new());
-        stdin.read_to_end(buf.get_mut())?;
-
-        Ok(Reader::Stdin(buf))
-    }
-
-    fn file(&self, path: &Path) -> eyre::Result<Reader> {
-        let file = fs::File::open(path)
-            .with_context(|| format!("failed to open file '{}'", path.display()))?;
-
-        Ok(Reader::File(io::BufReader::new(file)))
-    }
-
-    /// Processes the given input source into the given output source.
-    ///
-    /// Depending on the configuration, this may use single-threaded or
-    /// multi-threaded I/O for processing.
-    pub fn process(mut self, input: InputSource, output: OutputSource) -> eyre::Result<()> {
-        let mut executor = match self.bias {
-            Bias::Current => Executor::current(),
-            Bias::Threaded => Executor::get()?,
-        };
-
-        match (input, output) {
-            (InputSource::Stdin, out) => {
-                let reader = self.stdin()?;
-
-                let value = (self.reader_fn)(reader, &executor)?;
-                (self.writer_fn)(&mut executor, None, value, out)
-            }
-
-            (InputSource::File(path), out) => {
-                let reader = self.file(&path)?;
-
-                let value = (self.reader_fn)(reader, &executor)?;
-                (self.writer_fn)(&mut executor, Some(path), value, out)
-            }
-
-            (InputSource::Files(paths), OutputSource::Dir(out, suffix)) => {
-                // When processing multiple input files, we ignore the bias.
-                if let Bias::Current = self.bias {
-                    executor = Executor::get()?;
-                }
-
-                // Create the specified out directory if it doesn't exist.
-                fs::create_dir_all(&out)?;
-
-                // Dispatch work for all input paths onto the executor.
-                for path in paths {
-                    let reader = self.file(&path)?;
-                    let value = (self.reader_fn)(reader, &executor)?;
-
-                    (self.writer_fn)(
-                        &mut executor,
-                        Some(path),
-                        value,
-                        OutputSource::Dir(out.clone(), suffix),
-                    )?;
-                }
-
-                // Await the completion of all pending tasks on the executor.
-                for pending in executor.join() {
-                    pending?;
-                }
-
-                Ok(())
-            }
-
-            _ => unreachable!("bad state of input/output sources"),
+        (InputSource::File(path), out) => {
+            let value = read(&mut init(), open_file(&path)?)?;
+            write(Some(path), value, out)
         }
+
+        (InputSource::Files(paths), OutputSource::Dir(dir, suffix)) => {
+            fs::create_dir_all(&dir)?;
+            paths
+                .into_par_iter()
+                .try_for_each_init(init, |state, path| {
+                    let value = read(state, open_file(&path)?)?;
+                    write(Some(path), value, OutputSource::Dir(dir.clone(), suffix))
+                })
+        }
+
+        _ => unreachable!("invalid input/output combination"),
     }
 }

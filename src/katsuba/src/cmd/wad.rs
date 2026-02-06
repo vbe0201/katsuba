@@ -8,7 +8,7 @@ use eyre::Context;
 use katsuba_wad::{Archive, ArchiveBuilder};
 
 use super::Command;
-use crate::cli::{Bias, InputsOutputs, Processor, Reader};
+use crate::cli::{InputsOutputs, Reader, process};
 
 mod extract;
 
@@ -110,17 +110,18 @@ impl Command for Wad {
 
             WadCommand::Unpack { args } => {
                 let (inputs, outputs) = args.evaluate("")?;
-                Processor::new(Bias::Threaded)?
-                    .read_with(move |r, _| {
+                process(
+                    inputs,
+                    outputs,
+                    |r| {
                         let res = match r {
                             Reader::Stdin(buf) => Archive::from_vec(buf.into_inner()),
                             Reader::File(f) => Archive::mmap(f.into_inner()),
                         };
-
                         res.map_err(Into::into)
-                    })
-                    .write_with(extract::extract_archive)
-                    .process(inputs, outputs)
+                    },
+                    extract::extract_archive,
+                )
             }
         }
     }

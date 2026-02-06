@@ -1,11 +1,13 @@
 use std::{
     env,
+    fs::{self, File},
+    io::{BufWriter, Write},
     path::{Component, Path, PathBuf},
 };
 
 use eyre::bail;
-use katsuba_executor::{Buffer, Executor, Task};
 use katsuba_wad::{Archive, Inflater};
+use rayon::prelude::*;
 
 use crate::{cli::OutputSource, utils::DirectoryTree};
 
@@ -42,52 +44,7 @@ fn validate_extract_path(base: &Path, archive_path: &str) -> eyre::Result<PathBu
     Ok(result)
 }
 
-struct SafeArchiveDrop<'a> {
-    ex: &'a Executor,
-    archive: Archive,
-}
-
-impl Drop for SafeArchiveDrop<'_> {
-    fn drop(&mut self) {
-        // Join all pending tasks on the executor to make sure none of
-        // them hold onto dangling `archive` references anymore after
-        // dropping it.
-        self.ex.join().for_each(drop);
-    }
-}
-
-fn fetch_file_contents<'a>(
-    ex: &'a Executor,
-    archive: &'a Archive,
-    inflater: &mut Inflater,
-    file: &katsuba_wad::types::File,
-) -> eyre::Result<Option<Buffer<'a>>> {
-    if file.is_unpatched {
-        return Ok(None);
-    }
-
-    let contents = archive
-        .file_contents(file)
-        .ok_or_else(|| eyre::eyre!("missing file contents in archive"))?;
-
-    match file.compressed {
-        true => {
-            let len = file.uncompressed_size as usize;
-
-            ex.request_buffer(len, |buf| {
-                buf.resize(len, 0);
-                inflater.decompress_into(buf, contents)?;
-
-                Ok(())
-            })
-            .map(Some)
-        }
-
-        false => Ok(Some(Buffer::borrowed(contents))),
-    }
-}
-
-fn create_directory_tree(ex: &Executor, archive: &Archive, out: &Path) -> eyre::Result<()> {
+fn create_directory_tree(archive: &Archive, out: &Path) -> eyre::Result<()> {
     // Pre-compute the directory structure we need to create.
     let mut tree = DirectoryTree::new();
     for file in archive.files().keys() {
@@ -98,23 +55,49 @@ fn create_directory_tree(ex: &Executor, archive: &Archive, out: &Path) -> eyre::
     // Create all the directories with minimal required syscalls.
     for path in tree {
         let path = validate_extract_path(out, &path.to_string_lossy())?;
-        let task = Task::create_dir(path);
-        for pending in ex.dispatch(task) {
-            pending?;
-        }
+        fs::create_dir_all(&path)?;
     }
 
-    // Join all pending operations here so we don't accidentally
-    // try to write into directories that don't exist yet.
-    for pending in ex.join() {
-        pending?;
+    Ok(())
+}
+
+/// Writes a buffer to a file, handling platform-specific optimizations.
+///
+/// On Windows, closing files has significant overhead due to NTFS metadata
+/// updates. We offload the file close to a separate thread pool to avoid
+/// blocking the extraction pipeline.
+fn write_file(path: PathBuf, data: &[u8], _mode: u32) -> eyre::Result<()> {
+    let file = File::create(&path)?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = file.set_permissions(fs::Permissions::from_mode(_mode));
+    }
+
+    let mut writer = BufWriter::new(file);
+    writer.write_all(data)?;
+
+    // On Windows, offload the flush+close to the blocking thread pool
+    // to avoid the NTFS metadata update overhead blocking extraction.
+    #[cfg(windows)]
+    {
+        blocking::unblock(move || {
+            let _ = writer.flush();
+            drop(writer);
+        })
+        .detach();
+    }
+
+    #[cfg(not(windows))]
+    {
+        writer.flush()?;
     }
 
     Ok(())
 }
 
 pub fn extract_archive(
-    ex: &Executor,
     inpath: Option<PathBuf>,
     archive: Archive,
     out: OutputSource,
@@ -129,37 +112,49 @@ pub fn extract_archive(
     out.push(input_stem);
 
     // First, create all the directories for the output files.
-    create_directory_tree(ex, &archive, &out)?;
+    create_directory_tree(&archive, &out)?;
 
-    // This guard ensures we can safely share references into `archive`
-    // with the pool without risking dangling in the case of an error.
-    let sad = SafeArchiveDrop { ex, archive };
-    let mode = sad.archive.mode();
+    let mode = archive.mode();
 
-    // Next, we do the extraction of data out of the archive on the
-    // current thread while simultaneously dispatching the file I/O
-    // operations to the executor.
-    let mut inflater = Inflater::new();
-    for (path, file) in sad.archive.files() {
-        // Validate the path to prevent directory traversal attacks.
-        let path = validate_extract_path(&out, path)?;
-
-        // SAFETY: We can never end up with dangling references into
-        // `archive` because `sad` joins all pending tasks on drop.
-        let buffer = match fetch_file_contents(ex, &sad.archive, &mut inflater, file)? {
-            Some(buf) => buf,
-            None => {
-                log::warn!("Skipping unpatched file '{}'", path.display());
-                continue;
+    // Collect files that need extraction, validating paths upfront.
+    let files_to_extract: Vec<_> = archive
+        .files()
+        .iter()
+        .filter_map(|(path, file)| {
+            if file.is_unpatched {
+                log::warn!("Skipping unpatched file '{path}'");
+                return None;
             }
-        };
-        let buffer = unsafe { buffer.extend_lifetime() };
 
-        let task = Task::create_file(path, buffer, mode);
-        for pending in ex.dispatch(task) {
-            pending?;
-        }
-    }
+            match validate_extract_path(&out, path) {
+                Ok(dest_path) => Some((path.as_str(), file, dest_path)),
+                Err(e) => {
+                    log::error!("Skipping file due to path validation error: {e}");
+                    None
+                }
+            }
+        })
+        .collect();
 
-    Ok(())
+    // Extract files in parallel using rayon.
+    // Each thread gets its own Inflater for decompression.
+    files_to_extract.par_iter().try_for_each_init(
+        Inflater::new,
+        |inflater, (path, file, dest_path)| {
+            let contents = archive
+                .file_contents(file)
+                .ok_or_else(|| eyre::eyre!("missing file contents for '{path}'"))?;
+
+            let data = match file.compressed {
+                true => {
+                    let len = file.uncompressed_size as usize;
+                    inflater.decompress(contents, len)?
+                }
+                false => contents,
+            };
+            write_file(dest_path.clone(), data, mode)?;
+
+            Ok(())
+        },
+    )
 }

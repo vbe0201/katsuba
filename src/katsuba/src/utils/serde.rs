@@ -1,9 +1,9 @@
 use std::{
-    io::{self, IsTerminal, Write},
+    fs,
+    io::{self, BufWriter, IsTerminal, Write},
     path::PathBuf,
 };
 
-use katsuba_executor::{Executor, Task};
 use serde::Serialize;
 
 /// Serializes the given value to the respective output source.
@@ -12,23 +12,15 @@ use serde::Serialize;
 /// another application, a minified representation will be emitted.
 ///
 /// Output to stdout always gets pretty-printed.
-///
-/// This will use the given executor to dispatch the work, so a call
-/// to [`Executor::join`] is necessary to ensure all tasks complete.
 pub fn serialize_to_output_source<T: Serialize>(
-    ex: &Executor,
     out: Option<PathBuf>,
     value: &T,
 ) -> eyre::Result<()> {
     if let Some(out) = out {
-        // We use a blanket size for buffers since they will grow as needed anyway.
-        // But also most files shouldn't be this large so the memory can be reused.
-        let buffer = ex.request_buffer(1024 * 1024, |buf| serde_json::to_writer(buf, value))?;
-
-        let task = Task::create_file(out, buffer, 0o666);
-        for pending in ex.dispatch(task) {
-            pending?;
-        }
+        let file = fs::File::create(&out)?;
+        let mut writer = BufWriter::new(file);
+        serde_json::to_writer(&mut writer, value)?;
+        writer.flush()?;
     } else {
         let mut stdout = io::stdout().lock();
 

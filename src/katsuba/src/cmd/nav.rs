@@ -2,7 +2,7 @@ use clap::{Args, Subcommand, ValueEnum};
 use katsuba_nav::{NavigationGraph, ZoneNavigationGraph};
 
 use super::Command;
-use crate::cli::{helpers, Bias, InputsOutputs, Processor};
+use crate::cli::{InputsOutputs, helpers, process_par};
 
 /// Subcommand for working with NAV data.
 #[derive(Debug, Args)]
@@ -35,18 +35,23 @@ impl Command for Nav {
         match self.command {
             NavCommand::De(args) => {
                 let (inputs, outputs) = args.evaluate("de.json")?;
-                let processor = Processor::new(Bias::Current)?;
 
                 match self.file_type {
-                    FileType::Nav => processor
-                        .read_with(|r, _| NavigationGraph::parse(r).map_err(Into::into))
-                        .write_with(helpers::write_as_json)
-                        .process(inputs, outputs),
+                    FileType::Nav => process_par(
+                        inputs,
+                        outputs,
+                        || (),
+                        |_, r| NavigationGraph::parse(r).map_err(Into::into),
+                        helpers::write_as_json,
+                    ),
 
-                    FileType::ZoneNav => processor
-                        .read_with(|r, _| ZoneNavigationGraph::parse(r).map_err(Into::into))
-                        .write_with(helpers::write_as_json)
-                        .process(inputs, outputs),
+                    FileType::ZoneNav => process_par(
+                        inputs,
+                        outputs,
+                        || (),
+                        |_, r| ZoneNavigationGraph::parse(r).map_err(Into::into),
+                        helpers::write_as_json,
+                    ),
                 }
             }
         }

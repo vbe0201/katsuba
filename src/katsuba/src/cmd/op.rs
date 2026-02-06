@@ -5,7 +5,7 @@ use katsuba_object_property::serde;
 use katsuba_types::PropertyFlags;
 
 use super::Command;
-use crate::cli::{Bias, InputsOutputs, Processor, helpers};
+use crate::cli::{InputsOutputs, Reader, helpers, process_par};
 
 mod utils;
 
@@ -99,13 +99,14 @@ impl Command for ObjectProperty {
                 ignore_unknown_types,
             } => {
                 let (inputs, outputs) = args.evaluate("de.xml")?;
-
                 options.skip_unknown_types = ignore_unknown_types;
-                let mut de = serde::Serializer::new(options, type_list)?;
 
-                Processor::new(Bias::Current)?
-                    .read_with(move |mut r, ex| {
-                        let buf = r.get_buffer(ex)?;
+                process_par(
+                    inputs,
+                    outputs,
+                    || serde::Serializer::new(options, type_list.clone()).unwrap(),
+                    |de: &mut serde::Serializer, r: Reader| {
+                        let buf = r.into_vec()?;
                         let mut buf: &[u8] = &buf;
 
                         // If the data starts with the `BINd` magic, it is a game file.
@@ -118,9 +119,9 @@ impl Command for ObjectProperty {
                         }
 
                         de.deserialize(buf).map_err(Into::into)
-                    })
-                    .write_with(helpers::write_as_json)
-                    .process(inputs, outputs)
+                    },
+                    helpers::write_as_json,
+                )
             }
         }
     }

@@ -13,7 +13,6 @@ features = ["serde"]
 [dependencies]
 katsuba-bcd = { path = "../katsuba-bcd" }
 katsuba-client-sig = { path = "../katsuba-client-sig" }
-katsuba-executor = { path = "../katsuba-executor" }
 katsuba-nav = { path = "../katsuba-nav" }
 katsuba-poi = { path = "../katsuba-poi" }
 katsuba-types = { path = "../katsuba-types" }
@@ -27,9 +26,13 @@ eyre = "0.6"
 glob = "0.3"
 log = { workspace = true }
 mimalloc = { version = "*", features = ["v3"] }
+rayon = "1.11"
 serde = { workspace = true }
 serde_json = { workspace = true }
 walkdir = "2"
+
+[target.'cfg(windows)'.dependencies]
+blocking = "1.6"
 
 [dependencies.simple_logger]
 version = "5.0"
