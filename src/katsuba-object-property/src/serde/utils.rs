@@ -224,3 +224,68 @@ pub fn read_matrix(reader: &mut LittleEndianReader<'_>) -> Result<Matrix, Error>
 
     Ok(Matrix { i, j, k })
 }
+
+#[inline]
+pub fn read_size_int(reader: &mut LittleEndianReader<'_>) -> Result<Size<i32>, Error> {
+    let width = read_signed_bits_aligned(reader, i32::BITS)? as i32;
+    let height = read_signed_bits(reader, i32::BITS)? as i32;
+    Ok(Size { width, height })
+}
+
+#[inline]
+pub fn read_point_int(reader: &mut LittleEndianReader<'_>) -> Result<Point<i32>, Error> {
+    let x = read_signed_bits_aligned(reader, i32::BITS)? as i32;
+    let y = read_signed_bits(reader, i32::BITS)? as i32;
+    Ok(Point { x, y })
+}
+
+#[inline]
+pub fn read_point_uint(reader: &mut LittleEndianReader<'_>) -> Result<Point<u32>, Error> {
+    let x = read_bits_aligned(reader, u32::BITS)? as u32;
+    let y = read_bits(reader, u32::BITS)? as u32;
+    Ok(Point { x, y })
+}
+
+#[inline]
+pub fn read_point_uchar(reader: &mut LittleEndianReader<'_>) -> Result<Point<u8>, Error> {
+    let x = read_bits_aligned(reader, u8::BITS)? as u8;
+    let y = read_bits(reader, u8::BITS)? as u8;
+    Ok(Point { x, y })
+}
+
+#[inline]
+pub fn read_point_float(reader: &mut LittleEndianReader<'_>) -> Result<Point<f32>, Error> {
+    let x = read_bits_aligned(reader, u32::BITS).map(|v| f32::from_bits(v as u32))?;
+    let y = read_bits(reader, u32::BITS).map(|v| f32::from_bits(v as u32))?;
+    Ok(Point { x, y })
+}
+
+#[inline]
+pub fn read_rect_int(reader: &mut LittleEndianReader<'_>) -> Result<Rect<i32>, Error> {
+    let left = read_signed_bits_aligned(reader, i32::BITS)? as i32;
+    let top = read_signed_bits(reader, i32::BITS)? as i32;
+    let right = read_signed_bits(reader, i32::BITS)? as i32;
+    let bottom = read_signed_bits(reader, i32::BITS)? as i32;
+
+    Ok(Rect {
+        left,
+        top,
+        right,
+        bottom,
+    })
+}
+
+#[inline]
+pub fn read_rect_float(reader: &mut LittleEndianReader<'_>) -> Result<Rect<f32>, Error> {
+    let left = read_bits_aligned(reader, u32::BITS).map(|v| f32::from_bits(v as u32))?;
+    let top = read_bits(reader, u32::BITS).map(|v| f32::from_bits(v as u32))?;
+    let right = read_bits(reader, u32::BITS).map(|v| f32::from_bits(v as u32))?;
+    let bottom = read_bits(reader, u32::BITS).map(|v| f32::from_bits(v as u32))?;
+
+    Ok(Rect {
+        left,
+        top,
+        right,
+        bottom,
+    })
+}

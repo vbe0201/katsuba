@@ -62,6 +62,10 @@ pub enum Value {
 
     /// A 2D point with integer coordinates.
     PointInt(Point<i32>),
+    /// A 2D point with byte coordinates.
+    PointUChar(Point<u8>),
+    /// A 2D point with unsigned integer coordinates.
+    PointUInt(Point<u32>),
     /// A 2D point with floating-point coordinates.
     PointFloat(Point<f32>),
 

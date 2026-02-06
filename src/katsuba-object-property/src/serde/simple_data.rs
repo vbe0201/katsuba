@@ -24,8 +24,9 @@ pub fn deserialize(
         "unsigned long" => utils::read_bits_aligned(reader, u32::BITS).map(Value::Unsigned),
         "float" => utils::read_bits_aligned(reader, u32::BITS)
             .map(|v| Value::Float(f32::from_bits(v as u32) as f64)),
-        "double" => utils::read_bits_aligned(reader, u64::BITS)
-            .map(|v| Value::Float(f64::from_bits(v))),
+        "double" => {
+            utils::read_bits_aligned(reader, u64::BITS).map(|v| Value::Float(f64::from_bits(v)))
+        }
         "unsigned __int64" => utils::read_bits_aligned(reader, u64::BITS).map(Value::Unsigned),
         "gid" => utils::read_bits_aligned(reader, u64::BITS).map(Value::Unsigned),
         "union gid" => utils::read_bits_aligned(reader, u64::BITS).map(Value::Unsigned),
@@ -56,77 +57,13 @@ pub fn deserialize(
         "class Quaternion" => utils::read_quat(reader).map(Value::Quat),
         "class Euler" => utils::read_euler(reader).map(Value::Euler),
         "class Matrix3x3" => utils::read_matrix(reader).map(|v| Value::Mat3x3(Box::new(v))),
-        "class Size<int>" => {
-            let width = match utils::read_signed_bits_aligned(reader, i32::BITS) {
-                Ok(v) => v as i32,
-                Err(e) => return Some(Err(e)),
-            };
-            let height = match utils::read_signed_bits(reader, i32::BITS) {
-                Ok(v) => v as i32,
-                Err(e) => return Some(Err(e)),
-            };
-            Ok(Value::SizeInt(Size { width, height }))
-        }
-        "class Point<int>" => {
-            let x = match utils::read_signed_bits_aligned(reader, i32::BITS) {
-                Ok(v) => v as i32,
-                Err(e) => return Some(Err(e)),
-            };
-            let y = match utils::read_signed_bits(reader, i32::BITS) {
-                Ok(v) => v as i32,
-                Err(e) => return Some(Err(e)),
-            };
-            Ok(Value::PointInt(Point { x, y }))
-        }
-        "class Point<float>" => {
-            let x = match utils::read_bits_aligned(reader, u32::BITS) {
-                Ok(v) => f32::from_bits(v as u32),
-                Err(e) => return Some(Err(e)),
-            };
-            let y = match utils::read_bits(reader, u32::BITS) {
-                Ok(v) => f32::from_bits(v as u32),
-                Err(e) => return Some(Err(e)),
-            };
-            Ok(Value::PointFloat(Point { x, y }))
-        }
-        "class Rect<int>" => {
-            let left = match utils::read_signed_bits_aligned(reader, i32::BITS) {
-                Ok(v) => v as i32,
-                Err(e) => return Some(Err(e)),
-            };
-            let top = match utils::read_signed_bits(reader, i32::BITS) {
-                Ok(v) => v as i32,
-                Err(e) => return Some(Err(e)),
-            };
-            let right = match utils::read_signed_bits(reader, i32::BITS) {
-                Ok(v) => v as i32,
-                Err(e) => return Some(Err(e)),
-            };
-            let bottom = match utils::read_signed_bits(reader, i32::BITS) {
-                Ok(v) => v as i32,
-                Err(e) => return Some(Err(e)),
-            };
-            Ok(Value::RectInt(Rect { left, top, right, bottom }))
-        }
-        "class Rect<float>" => {
-            let left = match utils::read_bits_aligned(reader, u32::BITS) {
-                Ok(v) => f32::from_bits(v as u32),
-                Err(e) => return Some(Err(e)),
-            };
-            let top = match utils::read_bits(reader, u32::BITS) {
-                Ok(v) => f32::from_bits(v as u32),
-                Err(e) => return Some(Err(e)),
-            };
-            let right = match utils::read_bits(reader, u32::BITS) {
-                Ok(v) => f32::from_bits(v as u32),
-                Err(e) => return Some(Err(e)),
-            };
-            let bottom = match utils::read_bits(reader, u32::BITS) {
-                Ok(v) => f32::from_bits(v as u32),
-                Err(e) => return Some(Err(e)),
-            };
-            Ok(Value::RectFloat(Rect { left, top, right, bottom }))
-        }
+        "class Size<int>" => utils::read_size_int(reader).map(Value::SizeInt),
+        "class Point<int>" => utils::read_point_int(reader).map(Value::PointInt),
+        "class Point<unsigned char>" => utils::read_point_uchar(reader).map(Value::PointUChar),
+        "class Point<unsigned int>" => utils::read_point_uint(reader).map(Value::PointUInt),
+        "class Point<float>" => utils::read_point_float(reader).map(Value::PointFloat),
+        "class Rect<int>" => utils::read_rect_int(reader).map(Value::RectInt),
+        "class Rect<float>" => utils::read_rect_float(reader).map(Value::RectFloat),
 
         _ => return None,
     };

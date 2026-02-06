@@ -34,7 +34,9 @@ pub fn value_to_python<'py>(
 
         Value::Color(v) => {
             let Color { r, g, b, a } = *v;
-            leaf_types::Color { r, g, b, a }.into_bound_py_any(py).unwrap()
+            leaf_types::Color { r, g, b, a }
+                .into_bound_py_any(py)
+                .unwrap()
         }
         Value::Vec3(v) => {
             let Vec3 { x, y, z } = *v;
@@ -54,16 +56,32 @@ pub fn value_to_python<'py>(
         }
         Value::Mat3x3(v) => {
             let Matrix { i, j, k } = **v;
-            leaf_types::Matrix { i, j, k }.into_bound_py_any(py).unwrap()
+            leaf_types::Matrix { i, j, k }
+                .into_bound_py_any(py)
+                .unwrap()
         }
 
         Value::PointInt(v) => {
             let Point { x, y } = *v;
             leaf_types::PointInt { x, y }.into_bound_py_any(py).unwrap()
         }
+        Value::PointUChar(v) => {
+            let Point { x, y } = *v;
+            leaf_types::PointUChar { x, y }
+                .into_bound_py_any(py)
+                .unwrap()
+        }
+        Value::PointUInt(v) => {
+            let Point { x, y } = *v;
+            leaf_types::PointUInt { x, y }
+                .into_bound_py_any(py)
+                .unwrap()
+        }
         Value::PointFloat(v) => {
             let Point { x, y } = *v;
-            leaf_types::PointFloat { x, y }.into_bound_py_any(py).unwrap()
+            leaf_types::PointFloat { x, y }
+                .into_bound_py_any(py)
+                .unwrap()
         }
 
         Value::SizeInt(v) => {

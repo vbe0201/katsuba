@@ -51,6 +51,22 @@ pub struct PointInt {
 }
 
 #[pyclass(module = "katsuba.op")]
+pub struct PointUChar {
+    #[pyo3(get, set)]
+    pub x: u8,
+    #[pyo3(get, set)]
+    pub y: u8,
+}
+
+#[pyclass(module = "katsuba.op")]
+pub struct PointUInt {
+    #[pyo3(get, set)]
+    pub x: u32,
+    #[pyo3(get, set)]
+    pub y: u32,
+}
+
+#[pyclass(module = "katsuba.op")]
 pub struct PointFloat {
     #[pyo3(get, set)]
     pub x: f32,
