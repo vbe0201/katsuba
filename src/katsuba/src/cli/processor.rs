@@ -17,7 +17,7 @@ pub enum Reader {
 }
 
 impl Reader {
-    pub fn into_vec(self) -> io::Result<Vec<u8>> {
+    pub fn read_to_vec(self) -> io::Result<Vec<u8>> {
         match self {
             Self::Stdin(buf) => Ok(buf.into_inner()),
             Self::File(mut f) => {
@@ -28,6 +28,10 @@ impl Reader {
                     .unwrap_or(0);
                 let mut buf = Vec::with_capacity(size);
                 f.read_to_end(&mut buf)?;
+
+                #[cfg(windows)]
+                blocking::unblock(move || drop(f)).detach();
+
                 Ok(buf)
             }
         }

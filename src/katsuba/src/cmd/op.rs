@@ -5,7 +5,7 @@ use katsuba_object_property::serde;
 use katsuba_types::PropertyFlags;
 
 use super::Command;
-use crate::cli::{InputsOutputs, Reader, helpers, process_par};
+use crate::cli::{InputsOutputs, helpers, process_par};
 
 mod utils;
 
@@ -105,8 +105,8 @@ impl Command for ObjectProperty {
                     inputs,
                     outputs,
                     || serde::Serializer::new(options, type_list.clone()).unwrap(),
-                    |de: &mut serde::Serializer, r: Reader| {
-                        let buf = r.into_vec()?;
+                    |de, r| {
+                        let buf = r.read_to_vec()?;
                         let mut buf: &[u8] = &buf;
 
                         // If the data starts with the `BINd` magic, it is a game file.

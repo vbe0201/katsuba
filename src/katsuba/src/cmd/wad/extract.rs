@@ -78,21 +78,15 @@ fn write_file(path: PathBuf, data: &[u8], _mode: u32) -> eyre::Result<()> {
     let mut writer = BufWriter::new(file);
     writer.write_all(data)?;
 
-    // On Windows, offload the flush+close to the blocking thread pool
-    // to avoid the NTFS metadata update overhead blocking extraction.
     #[cfg(windows)]
-    {
-        blocking::unblock(move || {
-            let _ = writer.flush();
-            drop(writer);
-        })
-        .detach();
-    }
+    blocking::unblock(move || {
+        let _ = writer.flush();
+        drop(writer);
+    })
+    .detach();
 
     #[cfg(not(windows))]
-    {
-        writer.flush()?;
-    }
+    writer.flush()?;
 
     Ok(())
 }
