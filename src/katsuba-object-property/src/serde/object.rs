@@ -172,7 +172,7 @@ pub(crate) fn read_bit_size(
     reader: &mut LittleEndianReader<'_>,
 ) -> Result<u32, Error> {
     if !de.options.shallow {
-        utils::read_bits(reader, u32::BITS).map(|v| v as u32 - u32::BITS)
+        utils::read_bits(reader, u32::BITS).map(|v| (v as u32).saturating_sub(u32::BITS))
     } else {
         Ok(0)
     }

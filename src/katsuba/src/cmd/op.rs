@@ -102,6 +102,7 @@ impl Command for ObjectProperty {
                 options.skip_unknown_types = ignore_unknown_types;
 
                 let original_flags = options.flags;
+                let original_shallow = options.shallow;
                 process_par(
                     inputs,
                     outputs,
@@ -118,6 +119,7 @@ impl Command for ObjectProperty {
 
                             buf = buf.get(4..).unwrap();
                         } else {
+                            de.parts.options.shallow = original_shallow;
                             de.parts.options.flags = original_flags;
                         }
 

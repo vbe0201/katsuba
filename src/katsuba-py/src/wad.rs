@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::PathBuf};
 use katsuba_object_property::serde;
 use pyo3::{exceptions::PyKeyError, prelude::*, types::PyType};
 
-use crate::{error, op, KatsubaError};
+use crate::{KatsubaError, error, op};
 
 fn extract_file_contents<'a>(
     archive: &'a katsuba_wad::Archive,
@@ -53,14 +53,26 @@ impl Archive {
     }
 
     pub fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<ArchiveIter>> {
-        let keys = slf.0.files().keys().cloned().collect::<Vec<_>>().into_iter();
+        let keys = slf
+            .0
+            .files()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>()
+            .into_iter();
         Py::new(slf.py(), ArchiveIter { keys })
     }
 
     pub fn iter_glob(slf: PyRef<'_, Self>, pattern: &str) -> PyResult<Py<GlobArchiveIter>> {
         let matcher = katsuba_wad::glob::Matcher::new(pattern)
             .map_err(|e| KatsubaError::new_err(format!("{e:?}")))?;
-        let keys = slf.0.files().keys().cloned().collect::<Vec<_>>().into_iter();
+        let keys = slf
+            .0
+            .files()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>()
+            .into_iter();
 
         Py::new(slf.py(), GlobArchiveIter { matcher, keys })
     }
@@ -87,15 +99,21 @@ impl Archive {
         let raw = self.__getitem__(file)?;
         let mut raw: &[u8] = &raw;
 
+        let original_flags = serializer.0.parts.options.flags;
+        let original_shallow = serializer.0.parts.options.shallow;
+
         // Set generic configuration for game files if this is one.
         if raw.get(0..4) == Some(serde::BIND_MAGIC) {
-            serializer.0.parts.options.flags |= serde::SerializerFlags::STATEFUL_FLAGS;
+            serializer.0.parts.options.flags = serde::SerializerFlags::STATEFUL_FLAGS;
             serializer.0.parts.options.shallow = false;
 
             raw = raw.get(4..).unwrap();
         }
 
-        serializer.deserialize(raw)
+        let v = serializer.deserialize(raw);
+        serializer.0.parts.options.flags = original_flags;
+        serializer.0.parts.options.shallow = original_shallow;
+        v
     }
 }
 

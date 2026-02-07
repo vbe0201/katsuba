@@ -21,7 +21,7 @@ pub fn deserialize(
             .map(Value::Enum)
             .map_err(Into::into)
     } else {
-        let value = utils::read_bits(reader, u32::BITS)?;
+        let value = utils::read_bits(reader, u32::BITS)? as u32;
         Ok(Value::Enum(value as i64))
     }
 }

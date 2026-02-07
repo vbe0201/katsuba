@@ -187,6 +187,7 @@ impl SerializerParts {
     {
         self.options.recursion_limit -= 1;
         if self.options.recursion_limit < 0 {
+            self.options.recursion_limit = i8::MAX;
             return Err(Error::Recursion);
         }
 
