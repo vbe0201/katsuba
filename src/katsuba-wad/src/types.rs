@@ -19,14 +19,20 @@ pub(crate) fn is_unpatched_file(data: &[u8]) -> bool {
         && suffix.iter().all(|&x| x == 0)
 }
 
-/// Error type produced by [`Archive::verify_crcs`].
-#[derive(Clone, Copy, Debug, PartialEq, Error)]
-#[error("CRC mismatch -- expected {expected}, got {actual}")]
-pub struct CrcMismatch {
-    /// The expected CRC value.
-    pub expected: u32,
-    /// The actual computed CRC value.
-    pub actual: u32,
+/// Error type produced by [`Archive::verify`].
+#[derive(Clone, Debug, PartialEq, Error)]
+
+pub enum VerificationError {
+    #[error("corrupted journal detected")]
+    BadJournal,
+
+    #[error("CRC mismatch -- expected {expected}, got {actual}")]
+    CrcMismatch {
+        /// The expected CRC value.
+        expected: u32,
+        /// The actual computed CRC value.
+        actual: u32,
+    },
 }
 
 /// The header of a KIWAD archive.
@@ -178,14 +184,11 @@ impl Archive {
 
     /// Verifies the CRCs of every file in the archive given the
     /// raw bytes of the archive file.
-    ///
-    /// # Panics
-    ///
-    /// Panics when the KIWAD archive encodes file journal entries
-    /// with no matching data.
-    pub fn verify_crcs(&mut self, raw_archive: &[u8]) -> Result<(), CrcMismatch> {
+    pub fn verify(&mut self, raw_archive: &[u8]) -> Result<(), VerificationError> {
         self.files.iter_mut().try_for_each(|f| {
-            let data = f.extract(raw_archive).unwrap();
+            let data = f
+                .extract(raw_archive)
+                .ok_or(VerificationError::BadJournal)?;
             let hash = crc::hash(data);
 
             if hash == f.crc {
@@ -198,7 +201,7 @@ impl Archive {
                     return Ok(());
                 }
 
-                Err(CrcMismatch {
+                Err(VerificationError::CrcMismatch {
                     expected: f.crc,
                     actual: hash,
                 })

@@ -23,9 +23,9 @@ pub enum ArchiveError {
     #[error("failed to decompress archive file: {0}")]
     Zlib(#[from] DecompressionError),
 
-    /// CRC validation of an archive file failed.
+    /// Failed to verify the archive integrity.
     #[error("{0}")]
-    Crc(#[from] wad_types::CrcMismatch),
+    Verification(#[from] wad_types::VerificationError),
 
     /// File data ranges overlap, indicating a potential zip bomb.
     #[error("overlapping data ranges detected between '{file1}' and '{file2}'")]
@@ -44,8 +44,10 @@ pub enum ArchiveError {
 ///
 /// It supports two modes of interacting with an underlying
 /// archive file: read or mmap.
+#[derive(Debug)]
 pub struct Archive(ArchiveInner);
 
+#[derive(Debug)]
 enum ArchiveInner {
     MemoryMapped(MemoryMappedArchive),
     Heap(HeapArchive),
@@ -177,6 +179,7 @@ impl Archive {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct Journal {
     // A mapping of file names to their journal entry.
     pub inner: BTreeMap<String, wad_types::File>,
@@ -249,6 +252,7 @@ impl Journal {
     }
 }
 
+#[derive(Debug)]
 struct MemoryMappedArchive {
     // The journal of files in the archive.
     journal: Journal,
@@ -258,32 +262,21 @@ struct MemoryMappedArchive {
     // By guaranteed drop order, this will be unmapped before the
     // file below is closed.
     mapping: Mmap,
-
-    // The backing file of the above mapping.
-    //
-    // Owned by this structure so the mapping never becomes invalid.
-    // Closed when this structure is dropped.
-    #[allow(unused)]
-    file: fs::File,
 }
 
 impl MemoryMappedArchive {
     fn new(file: fs::File) -> Result<Self, ArchiveError> {
         let mut this = Self {
-            // SAFETY: We own the file and keep it around until the mapping
-            // is closed; see comments in `MemoryMappedArchive` above.
-            //
-            // Since archive files are generally treated as read-only by us
-            // and most other applications, we likely won't run into any
+            // SAFETY: Since archive files are generally treated as read-only
+            // by us and most other applications, we likely won't run into any
             // synchronization conflicts we need to account for.
             mapping: unsafe { MmapOptions::new().populate().map(&file)? },
             journal: Journal::new(file_mode(&file)),
-            file,
         };
 
         // Parse the archive and build the file journal.
         let mut archive = wad_types::Archive::parse(&mut io::Cursor::new(&this.mapping))?;
-        archive.verify_crcs(&this.mapping)?;
+        archive.verify(&this.mapping)?;
         this.journal.build_from(archive)?;
 
         Ok(this)
@@ -296,6 +289,7 @@ impl MemoryMappedArchive {
     }
 }
 
+#[derive(Debug)]
 struct HeapArchive {
     // The journal of files in the archive.
     journal: Journal,
@@ -320,7 +314,7 @@ impl HeapArchive {
 
         // Parse the archive and build the file journal.
         let mut archive = wad_types::Archive::parse(&mut &*this.data)?;
-        archive.verify_crcs(&this.data)?;
+        archive.verify(&this.data)?;
         this.journal.build_from(archive)?;
 
         Ok(this)

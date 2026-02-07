@@ -20,7 +20,9 @@ fn uncompressed() -> Result<(), ArchiveError> {
 
     assert_eq!(
         archive.file_contents(file).unwrap(),
-        &[117, 110, 99, 111, 109, 112, 114, 101, 115, 115, 101, 100, 32, 100, 97, 116, 97, 10]
+        &[
+            117, 110, 99, 111, 109, 112, 114, 101, 115, 115, 101, 100, 32, 100, 97, 116, 97, 10
+        ]
     );
 
     Ok(())
@@ -82,4 +84,12 @@ fn inflate_twice() -> Result<(), ArchiveError> {
     assert_eq!(a, b);
 
     Ok(())
+}
+
+#[test]
+fn oob_access() {
+    assert!(matches!(
+        Archive::open_heap("tests/data/oob.wad").unwrap_err(),
+        ArchiveError::Verification(katsuba_wad::types::VerificationError::BadJournal)
+    ));
 }
