@@ -1,6 +1,6 @@
 [package]
 name = "katsuba-py"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
 description = "Python language bindings to Katsuba libraries"
 license = "ISC"
