@@ -119,7 +119,7 @@ pub fn process<T>(
             Ok(())
         }
 
-        _ => unreachable!("invalid input/output combination"),
+        _ => eyre::bail!("invalid input output combination"),
     }
 }
 
@@ -158,6 +158,6 @@ where
                 })
         }
 
-        _ => unreachable!("invalid input/output combination"),
+        _ => eyre::bail!("invalid input output combination"),
     }
 }
