@@ -77,16 +77,13 @@ fn write_file(path: PathBuf, data: &[u8], _mode: u32) -> eyre::Result<()> {
 
     let mut writer = BufWriter::new(file);
     writer.write_all(data)?;
+    writer.flush()?;
 
     #[cfg(windows)]
     blocking::unblock(move || {
-        let _ = writer.flush();
         drop(writer);
     })
     .detach();
-
-    #[cfg(not(windows))]
-    writer.flush()?;
 
     Ok(())
 }

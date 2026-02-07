@@ -101,6 +101,7 @@ impl Command for ObjectProperty {
                 let (inputs, outputs) = args.evaluate("de.xml")?;
                 options.skip_unknown_types = ignore_unknown_types;
 
+                let original_flags = options.flags;
                 process_par(
                     inputs,
                     outputs,
@@ -116,6 +117,8 @@ impl Command for ObjectProperty {
                             de.parts.options.flags = serde::SerializerFlags::STATEFUL_FLAGS;
 
                             buf = buf.get(4..).unwrap();
+                        } else {
+                            de.parts.options.flags = original_flags;
                         }
 
                         de.deserialize(buf).map_err(Into::into)
