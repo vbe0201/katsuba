@@ -745,16 +745,18 @@ checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
 
 [[package]]
 name = "libdeflate-sys"
-version = "1.25.0"
-source = "git+https://github.com/vbe0201/libdeflater.git#458fb1cee9d4ed3caea493460d8ba663453d56fc"
+version = "1.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00a79ad60585106c017426fa56ee413b171d382034b48600ba43506d620edca2"
 dependencies = [
  "cc",
 ]
 
 [[package]]
 name = "libdeflater"
-version = "1.25.0"
-source = "git+https://github.com/vbe0201/libdeflater.git#458fb1cee9d4ed3caea493460d8ba663453d56fc"
+version = "1.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7fe6c6fe919bdd730ae2d9cd065f0b8ef5cb9f119978fdce05fa5f9e4f3e7e4"
 dependencies = [
  "libdeflate-sys",
 ]
