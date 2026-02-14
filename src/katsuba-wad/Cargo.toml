@@ -9,7 +9,6 @@ edition = "2024"
 [dependencies]
 katsuba-utils = { path = "../katsuba-utils" }
 
-crc32fast = "1.5"
 globset = "0.4"
 libdeflater = { workspace = true }
 memmap2 = "0.9"
