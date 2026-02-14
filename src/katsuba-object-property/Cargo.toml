@@ -11,7 +11,7 @@ katsuba-types = { path = "../katsuba-types" }
 katsuba-utils = { path = "../katsuba-utils" }
 
 bitflags = { workspace = true }
-bitter = "0.8"
+bitter = "0.9"
 byteorder = { workspace = true }
 indexmap = { workspace = true, features = ["serde"] }
 libdeflater = { workspace = true }

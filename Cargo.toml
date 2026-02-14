@@ -26,6 +26,3 @@ panic = "abort"
 inherits = "release"
 strip = false
 debug = true
-
-[patch.crates-io]
-bitter = { git = "https://github.com/vbe0201/bitter.git" }
