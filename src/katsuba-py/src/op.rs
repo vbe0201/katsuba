@@ -8,18 +8,12 @@ use katsuba_object_property::serde::{self, SerializerFlags};
 use pyo3::{
     exceptions::{PyKeyError, PyValueError},
     prelude::*,
-    types::PyType,
+    types::{PyDict, PyType},
 };
 
 use crate::{KatsubaError, error};
 
 mod conversion;
-
-mod lazy;
-pub use lazy::*;
-
-mod leaf_types;
-pub use leaf_types::*;
 
 #[derive(Clone)]
 #[pyclass(module = "katsuba.op", skip_from_py_object)]
@@ -160,11 +154,31 @@ impl Serializer {
             .map_err(error::op_to_py_err)
     }
 
-    pub fn deserialize(&mut self, data: &[u8]) -> PyResult<LazyObject> {
-        self.0
-            .deserialize(data)
-            .map(|v| LazyObject::new(Arc::new(v), Vec::new()))
-            .map_err(error::op_to_py_err)
+    pub fn deserialize<'py>(
+        &mut self,
+        py: Python<'py>,
+        data: &[u8],
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let value = self.0.deserialize(data).map_err(error::op_to_py_err)?;
+        Ok(conversion::value_to_python(&value, py))
+    }
+}
+
+#[pyclass(extends=PyDict, module = "katsuba.op")]
+pub struct Object {
+    type_hash: u32,
+}
+
+#[pymethods]
+impl Object {
+    #[new]
+    pub fn new(type_hash: u32) -> Self {
+        Object { type_hash }
+    }
+
+    #[getter]
+    pub fn type_hash(&self) -> u32 {
+        self.type_hash
     }
 }
 
@@ -188,19 +202,7 @@ pub fn katsuba_op(m: &Bound<'_, PyModule>) -> PyResult<()> {
         SerializerFlags::FORBID_DELTA_ENCODE.bits(),
     )?;
 
-    m.add_class::<LazyList>()?;
-    m.add_class::<LazyObject>()?;
-
-    m.add_class::<Vec3>()?;
-    m.add_class::<Quaternion>()?;
-    m.add_class::<Matrix>()?;
-    m.add_class::<Euler>()?;
-    m.add_class::<PointInt>()?;
-    m.add_class::<PointFloat>()?;
-    m.add_class::<SizeInt>()?;
-    m.add_class::<RectInt>()?;
-    m.add_class::<RectFloat>()?;
-    m.add_class::<Color>()?;
+    m.add_class::<Object>()?;
 
     Ok(())
 }

@@ -1,6 +1,6 @@
 [package]
 name = "katsuba-py"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Valentin B. <valentin.be@protonmail.com>"]
 description = "Python language bindings to Katsuba libraries"
 license = "ISC"
@@ -17,7 +17,7 @@ katsuba-utils = { path = "../katsuba-utils" }
 katsuba-wad = { path = "../katsuba-wad" }
 
 bytemuck = "1"
-pyo3 = { version = "0.28", features = ["abi3-py311"] }
+pyo3 = { version = "0.28", features = ["abi3-py312"] }
 
 [build-dependencies]
 pyo3-build-config = { version = "0.28" }

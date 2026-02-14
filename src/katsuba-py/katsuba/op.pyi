@@ -8,7 +8,7 @@ This is a wrapper over the `katsuba-object-property` Rust crate.
 
 from os import PathLike
 from pathlib import Path
-from typing import Any, Iterator, Literal, Self, Sequence
+from typing import Any, Literal, Self, Sequence
 
 STATEFUL_FLAGS: Literal[1 << 0]
 COMPACT_LENGTH_PREFIXES: Literal[1 << 1]
@@ -44,7 +44,7 @@ class TypeList:
     def open_many(cls, paths: Sequence[str | PathLike | Path]) -> Self:
         """
         Opens all given JSON files and merges them into one type list.
-        
+
         :param paths: A sequence of paths to open.
         :return: The merged list instance.
         """
@@ -94,107 +94,23 @@ class SerializerOptions:
     @skip_unknown_types.setter
     def skip_unknown_types(self, v: bool) -> None: ...
 
-class LazyList:
+class Object(dict[str, Any]):
     """
-    A list storing deserialized ObjectProperty values.
+    A deserialized object.
 
-    List elements are lazily resolved from Rust to Python types
-    when they are accessed. This is where the name comes from.
+    Subclasses :class:`dict` so all properties are accessible as dict keys.
+    The ``type_hash`` attribute identifies the object's C++ type.
+
+    :param type_hash: The type hash identifying the object's C++ type.
     """
-
-    def __len__(self) -> int:
-        """
-        Counts the elements in the list.
-
-        :return: The element count.
-        """
-
-    def __getitem__(self, idx: int) -> Any:
-        """
-        Resolves a list element at the given index.
-
-        :param idx: The positive index into the list.
-        :return: The value stored at this index in the list.
-        :raises IndexError: The index is out of range.
-        """
-
-    def __iter__(self) -> Iterator[Any]:
-        """
-        Iterates over all values in the list.
-
-        :return: An iterator that yields all values.
-        """
-
-class LazyObject:
-    """
-    A container storing deserialized ObjectProperty objects.
-
-    An object is type-erased and only identified by its unique
-    hash value. It holds several properties representing the
-    class members of the C++ type.
-
-    Properties are lazily resolved from Rust to Python types
-    when they are accessed. This is where the name comes from.
-    """
+    def __new__(cls, type_hash: int) -> Self: ...
 
     @property
-    def type_hash(self) -> int:
-        """
-        Gets the type hash that corresponds to the stored object.
-
-        :return: The hash value.
-        """
-
-    def __len__(self) -> int:
-        """
-        Gets the number of properties stored in this object.
-
-        :return: The property count.
-        """
-
-    def __contains__(self, property: str) -> bool:
-        """
-        Whether a given property is stored in this object.
-
-        :param property: The name of the property.
-        :return: Whether the property is there or not.
-        """
-
-    def __getitem__(self, property: str) -> Any:
-        """
-        Accesses the value for a given property in this object.
-
-        :param property: The name of the property.
-        :return: The value of the property.
-        :raises KeyError: The property is not contained in the object.
-        """
-
-    def get(self, property: str) -> Any | None:
-        """
-        Tries to get the value of a given property in this object.
-
-        :param property: The name of the property.
-        :return: The value of the property, or ``None`` if not found.
-        """
-
-    def get_index(self, idx: int) -> tuple[str, Any] | None:
-        """
-        Accesses the property at the given index.
-
-        :param idx: The index into the object's properties.
-        :return: A tuple of (name, value), or ``None`` if out of range.
-        """
-
-    def items(self) -> Iterator[tuple[str, Any]]:
-        """
-        Iterates over all the properties inside this object.
-
-        :return: An iterator yielding pairs of property name and value.
-        """
+    def type_hash(self) -> int: ...
 
 class Serializer:
     """A serializer for the ObjectProperty system.
-    
+
     This implements deserialization of objects from the binary
     format used by KingsIsle in game assets and networking.
 
@@ -203,7 +119,7 @@ class Serializer:
     """
     def __new__(cls, opts: SerializerOptions, types: TypeList) -> Self: ...
 
-    def deserialize(self, data: bytes) -> LazyObject:
+    def deserialize(self, data: bytes) -> Object:
         """
         Deserializes the given binary data to an object.
 
@@ -212,208 +128,3 @@ class Serializer:
         :raises OSError: I/O error occurred while trying to read data.
         :raises KatsubaError: Unknown type or invalid data format.
         """
-
-class Vec3:
-    """
-    Representation of a 3D vector.
-    """
-
-    @property
-    def x(self) -> float: ...
-    @x.setter
-    def x(self, v: float) -> None: ...
-
-    @property
-    def y(self) -> float: ...
-    @y.setter
-    def y(self, v: float) -> None: ...
-
-    @property
-    def z(self) -> float: ...
-    @z.setter
-    def z(self, v: float) -> None: ...
-
-class Quaternion:
-    """
-    Representation of a quaternion.
-    """
-
-    @property
-    def x(self) -> float: ...
-    @x.setter
-    def x(self, v: float) -> None: ...
-
-    @property
-    def y(self) -> float: ...
-    @y.setter
-    def y(self, v: float) -> None: ...
-
-    @property
-    def z(self) -> float: ...
-    @z.setter
-    def z(self, v: float) -> None: ...
-
-    @property
-    def w(self) -> float: ...
-    @w.setter
-    def w(self, v: float) -> None: ...
-
-class Matrix:
-    """
-    Representation of a 3x3 matrix.
-    """
-
-    @property
-    def i(self) -> tuple[float, float, float]: ...
-    @i.setter
-    def i(self, v: tuple[float, float, float]) -> None: ...
-
-    @property
-    def j(self) -> tuple[float, float, float]: ...
-    @j.setter
-    def j(self, v: tuple[float, float, float]) -> None: ...
-
-    @property
-    def k(self) -> tuple[float, float, float]: ...
-    @k.setter
-    def k(self, v: tuple[float, float, float]) -> None: ...
-
-class Euler:
-    """
-    Representation of an Euler value.
-    """
-
-    @property
-    def pitch(self) -> float: ...
-    @pitch.setter
-    def pitch(self, v: float) -> None: ...
-
-    @property
-    def yaw(self) -> float: ...
-    @yaw.setter
-    def yaw(self, v: float) -> None: ...
-
-    @property
-    def roll(self) -> float: ...
-    @roll.setter
-    def roll(self, v: float) -> None: ...
-
-class PointInt:
-    """
-    A 2D point with integer coordinates.
-    """
-
-    @property
-    def x(self) -> int: ...
-    @x.setter
-    def x(self, v: int) -> None: ...
-
-    @property
-    def y(self) -> int: ...
-    @y.setter
-    def y(self, v: int) -> None: ...
-
-class PointFloat:
-    """
-    A 2D point with float coordinates.
-    """
-
-    @property
-    def x(self) -> float: ...
-    @x.setter
-    def x(self, v: float) -> None: ...
-
-    @property
-    def y(self) -> float: ...
-    @y.setter
-    def y(self, v: float) -> None: ...
-
-class SizeInt:
-    """
-    A 2D size characterized by width and height.
-    """
-
-    @property
-    def width(self) -> int: ...
-    @width.setter
-    def width(self, v: int) -> None: ...
-
-    @property
-    def height(self) -> int: ...
-    @height.setter
-    def height(self, v: int) -> None: ...
-
-class RectInt:
-    """
-    A 2D rectangle with integer coordinates.
-    """
-
-    @property
-    def left(self) -> int: ...
-    @left.setter
-    def left(self, v: int) -> None: ...
-
-    @property
-    def top(self) -> int: ...
-    @top.setter
-    def top(self, v: int) -> None: ...
-
-    @property
-    def right(self) -> int: ...
-    @right.setter
-    def right(self, v: int) -> None: ...
-
-    @property
-    def bottom(self) -> int: ...
-    @bottom.setter
-    def bottom(self, v: int) -> None: ...
-
-class RectFloat:
-    """
-    A 2D rectangle with float coordinates.
-    """
-
-    @property
-    def left(self) -> float: ...
-    @left.setter
-    def left(self, v: float) -> None: ...
-
-    @property
-    def top(self) -> float: ...
-    @top.setter
-    def top(self, v: float) -> None: ...
-
-    @property
-    def right(self) -> float: ...
-    @right.setter
-    def right(self, v: float) -> None: ...
-
-    @property
-    def bottom(self) -> float: ...
-    @bottom.setter
-    def bottom(self, v: float) -> None: ...
-
-class Color:
-    """
-    A RGBA color.
-    """
-
-    @property
-    def r(self) -> int: ...
-    @r.setter
-    def r(self, v: int) -> None: ...
-
-    @property
-    def g(self) -> int: ...
-    @g.setter
-    def g(self, v: int) -> None: ...
-
-    @property
-    def b(self) -> int: ...
-    @b.setter
-    def b(self, v: int) -> None: ...
-
-    @property
-    def a(self) -> int: ...
-    @a.setter
-    def a(self, v: int) -> None: ...

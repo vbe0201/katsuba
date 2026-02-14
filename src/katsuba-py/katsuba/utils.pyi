@@ -6,7 +6,9 @@ Provides selected utilities from the `katsuba-utils` crate
 which are thought to be broadly useful to library users.
 """
 
-def string_id(input: str | bytes | bytearray) -> int:
+from collections.abc import Buffer
+
+def string_id(input: str | Buffer) -> int:
     """
     Hashes the given data using KingsIsle's StringId.
 
@@ -14,7 +16,7 @@ def string_id(input: str | bytes | bytearray) -> int:
     :return: The resulting hash value.
     """
 
-def djb2(input: str | bytes | bytearray) -> int:
+def djb2(input: str | Buffer) -> int:
     """
     Hashes the given data using the DJB2 algorithm.
 

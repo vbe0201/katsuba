@@ -10,7 +10,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Iterator, Self
 
-from katsuba.op import LazyObject, Serializer
+from katsuba.op import Object, Serializer
 
 class Archive:
     """
@@ -84,7 +84,7 @@ class Archive:
         :raises KatsubaError: The glob pattern was invalid.
         """
 
-    def deserialize(self, file: str, s: Serializer) -> LazyObject:
+    def deserialize(self, file: str, s: Serializer) -> Object:
         """
         Deserializes a file in the archive with the given serializer.
         

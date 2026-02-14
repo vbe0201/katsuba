@@ -1,9 +1,11 @@
-use std::sync::Arc;
-
 use katsuba_object_property::value::*;
-use pyo3::{IntoPyObjectExt, prelude::*, types::PyBytes};
+use pyo3::{
+    IntoPyObjectExt,
+    prelude::*,
+    types::{PyBytes, PyDict, PyList},
+};
 
-use super::{lazy::*, leaf_types};
+use super::Object;
 
 fn convert_to_utf16<'py>(py: Python<'py>, x: &[u16]) -> Bound<'py, PyAny> {
     match String::from_utf16(x) {
@@ -12,12 +14,13 @@ fn convert_to_utf16<'py>(py: Python<'py>, x: &[u16]) -> Bound<'py, PyAny> {
     }
 }
 
-pub fn value_to_python<'py>(
-    root: Arc<Value>,
-    path: Vec<PathSegment>,
-    value: &Value,
-    py: Python<'py>,
-) -> Bound<'py, PyAny> {
+/// Converts a [`Value`] to a native Python object, recursively resolving all nested values.
+///
+/// - [`Value::Object`] becomes an [`ObjectProperties`] dict subclass keyed by field name.
+/// - [`Value::List`] becomes a plain Python `list`.
+/// - All leaf types (Vec3, Color, …) become a `dict` with named fields.
+/// - Primitives and strings map to their natural Python equivalents.
+pub fn value_to_python<'py>(value: &Value, py: Python<'py>) -> Bound<'py, PyAny> {
     match value {
         Value::Empty => py.None().into_bound(py).into_any(),
 
@@ -29,66 +32,110 @@ pub fn value_to_python<'py>(
         Value::String(v) => v.0.as_slice().into_bound_py_any(py).unwrap(),
         Value::WString(v) => convert_to_utf16(py, &v.0),
 
-        Value::List(_) => LazyList::new(root, path).into_bound_py_any(py).unwrap(),
-        Value::Object(_) => LazyObject::new(root, path).into_bound_py_any(py).unwrap(),
+        Value::List(list) => {
+            let items: Vec<Bound<'py, PyAny>> =
+                list.inner.iter().map(|v| value_to_python(v, py)).collect();
+            PyList::new(py, items).unwrap().into_any()
+        }
+
+        Value::Object(obj) => {
+            let bound = Py::new(py, Object::new(obj.type_hash))
+                .unwrap()
+                .into_bound(py);
+            {
+                let dict = bound.as_any().cast::<PyDict>().unwrap();
+                for (k, v) in obj.iter() {
+                    dict.set_item(k.as_ref(), value_to_python(v, py)).unwrap();
+                }
+            }
+            bound.into_any()
+        }
 
         Value::Color(v) => {
             let Color { r, g, b, a } = *v;
-            leaf_types::Color { r, g, b, a }
-                .into_bound_py_any(py)
-                .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("r", r).unwrap();
+            d.set_item("g", g).unwrap();
+            d.set_item("b", b).unwrap();
+            d.set_item("a", a).unwrap();
+            d.into_any()
         }
+
         Value::Vec3(v) => {
             let Vec3 { x, y, z } = *v;
-            leaf_types::Vec3 { x, y, z }.into_bound_py_any(py).unwrap()
+            let d = PyDict::new(py);
+            d.set_item("x", x).unwrap();
+            d.set_item("y", y).unwrap();
+            d.set_item("z", z).unwrap();
+            d.into_any()
         }
+
         Value::Quat(v) => {
             let Quaternion { x, y, z, w } = *v;
-            leaf_types::Quaternion { x, y, z, w }
-                .into_bound_py_any(py)
-                .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("x", x).unwrap();
+            d.set_item("y", y).unwrap();
+            d.set_item("z", z).unwrap();
+            d.set_item("w", w).unwrap();
+            d.into_any()
         }
+
         Value::Euler(v) => {
             let Euler { pitch, roll, yaw } = *v;
-            leaf_types::Euler { pitch, roll, yaw }
-                .into_bound_py_any(py)
-                .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("pitch", pitch).unwrap();
+            d.set_item("roll", roll).unwrap();
+            d.set_item("yaw", yaw).unwrap();
+            d.into_any()
         }
+
         Value::Mat3x3(v) => {
             let Matrix { i, j, k } = **v;
-            leaf_types::Matrix { i, j, k }
-                .into_bound_py_any(py)
-                .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("i", PyList::new(py, i).unwrap()).unwrap();
+            d.set_item("j", PyList::new(py, j).unwrap()).unwrap();
+            d.set_item("k", PyList::new(py, k).unwrap()).unwrap();
+            d.into_any()
         }
 
         Value::PointInt(v) => {
             let Point { x, y } = *v;
-            leaf_types::PointInt { x, y }.into_bound_py_any(py).unwrap()
+            let d = PyDict::new(py);
+            d.set_item("x", x).unwrap();
+            d.set_item("y", y).unwrap();
+            d.into_any()
         }
+
         Value::PointUChar(v) => {
             let Point { x, y } = *v;
-            leaf_types::PointUChar { x, y }
-                .into_bound_py_any(py)
-                .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("x", x).unwrap();
+            d.set_item("y", y).unwrap();
+            d.into_any()
         }
+
         Value::PointUInt(v) => {
             let Point { x, y } = *v;
-            leaf_types::PointUInt { x, y }
-                .into_bound_py_any(py)
-                .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("x", x).unwrap();
+            d.set_item("y", y).unwrap();
+            d.into_any()
         }
+
         Value::PointFloat(v) => {
             let Point { x, y } = *v;
-            leaf_types::PointFloat { x, y }
-                .into_bound_py_any(py)
-                .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("x", x).unwrap();
+            d.set_item("y", y).unwrap();
+            d.into_any()
         }
 
         Value::SizeInt(v) => {
             let Size { width, height } = *v;
-            leaf_types::SizeInt { width, height }
-                .into_bound_py_any(py)
-                .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("width", width).unwrap();
+            d.set_item("height", height).unwrap();
+            d.into_any()
         }
 
         Value::RectInt(v) => {
@@ -98,15 +145,14 @@ pub fn value_to_python<'py>(
                 right,
                 bottom,
             } = *v;
-            leaf_types::RectInt {
-                left,
-                top,
-                right,
-                bottom,
-            }
-            .into_bound_py_any(py)
-            .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("left", left).unwrap();
+            d.set_item("top", top).unwrap();
+            d.set_item("right", right).unwrap();
+            d.set_item("bottom", bottom).unwrap();
+            d.into_any()
         }
+
         Value::RectFloat(v) => {
             let Rect {
                 left,
@@ -114,14 +160,12 @@ pub fn value_to_python<'py>(
                 right,
                 bottom,
             } = *v;
-            leaf_types::RectFloat {
-                left,
-                top,
-                right,
-                bottom,
-            }
-            .into_bound_py_any(py)
-            .unwrap()
+            let d = PyDict::new(py);
+            d.set_item("left", left).unwrap();
+            d.set_item("top", top).unwrap();
+            d.set_item("right", right).unwrap();
+            d.set_item("bottom", bottom).unwrap();
+            d.into_any()
         }
     }
 }

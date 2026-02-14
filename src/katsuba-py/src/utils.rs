@@ -5,19 +5,14 @@ use pyo3::{
 };
 
 fn hash_with<F: Fn(&[u8]) -> u32>(input: &Bound<'_, PyAny>, f: F) -> PyResult<u32> {
-    // str doesn't implement buffer protocol
     if let Ok(s) = input.cast::<PyString>() {
-        return s.to_str().map(|s| f(s.as_bytes()));
+        s.to_str().map(|s| f(s.as_bytes()))
+    } else if let Ok(b) = input.cast::<PyBytes>() {
+        Ok(f(b.as_bytes()))
+    } else {
+        let buffer: PyBuffer<u8> = PyBuffer::get(input)?;
+        Ok(f(&buffer.to_vec(input.py())?))
     }
-
-    // bytes has safe zero-copy access
-    if let Ok(b) = input.cast::<PyBytes>() {
-        return Ok(f(b.as_bytes()));
-    }
-
-    // For bytearray, memoryview, etc., use buffer protocol (requires copy)
-    let buffer: PyBuffer<u8> = PyBuffer::get(input)?;
-    Ok(f(&buffer.to_vec(input.py())?))
 }
 
 /// Hashes the given `input` using the KingsIsle String ID algorithm.

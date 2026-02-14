@@ -91,11 +91,12 @@ impl Archive {
             .map_err(error::wad_to_py_err)
     }
 
-    pub fn deserialize(
+    pub fn deserialize<'py>(
         &self,
+        py: Python<'py>,
         file: &str,
         serializer: &mut op::Serializer,
-    ) -> PyResult<op::LazyObject> {
+    ) -> PyResult<Bound<'py, PyAny>> {
         let raw = self.__getitem__(file)?;
         let mut raw: &[u8] = &raw;
 
@@ -110,7 +111,7 @@ impl Archive {
             raw = raw.get(4..).unwrap();
         }
 
-        let v = serializer.deserialize(raw);
+        let v = serializer.deserialize(py, raw);
         serializer.0.parts.options.flags = original_flags;
         serializer.0.parts.options.shallow = original_shallow;
         v
