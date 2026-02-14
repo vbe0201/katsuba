@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt, sync::Arc};
 
-use katsuba_utils::hash;
 use serde::de::{Error, MapAccess, Visitor};
 
 use super::TypeDef;
@@ -10,7 +9,7 @@ impl TypeDef {
     #[inline]
     fn into_v2(mut self, name: Arc<str>) -> (u32, Self) {
         self.name = name;
-        (hash::string_id(self.name.as_bytes()), self)
+        (self.hash, self)
     }
 }
 

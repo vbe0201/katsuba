@@ -96,6 +96,8 @@ pub struct TypeDef {
     /// The type name.
     #[serde(default)]
     pub name: Arc<str>,
+    /// The unique type identifier.
+    pub hash: u32,
     /// The properties of the class.
     #[serde(deserialize_with = "deserialize_property_list")]
     pub properties: IndexMap<u32, Property>,

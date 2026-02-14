@@ -45,6 +45,7 @@
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            clang
             maturin
             python3
             (rust-bin.stable.latest.default.override {
