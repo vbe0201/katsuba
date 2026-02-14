@@ -94,11 +94,6 @@ class SerializerOptions:
     @skip_unknown_types.setter
     def skip_unknown_types(self, v: bool) -> None: ...
 
-    @property
-    def djb2_only(self) -> bool: ...
-    @djb2_only.setter
-    def djb2_only(self, v: bool) -> None: ...
-
 class LazyList:
     """
     A list storing deserialized ObjectProperty values.

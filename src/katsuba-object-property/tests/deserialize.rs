@@ -34,7 +34,6 @@ fn parse_config(json: &str) -> SerializerOptions {
         manual_compression: config.compress,
         recursion_limit: i8::MAX,
         skip_unknown_types: false,
-        djb2_only: false,
     }
 }
 

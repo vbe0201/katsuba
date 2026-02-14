@@ -146,16 +146,6 @@ impl SerializerOptions {
     pub fn set_skip_unknown_types(&mut self, new: bool) {
         self.0.skip_unknown_types = new;
     }
-
-    #[getter]
-    pub fn get_djb2_only(&self) -> bool {
-        self.0.djb2_only
-    }
-
-    #[setter]
-    pub fn set_djb2_only(&mut self, new: bool) {
-        self.0.djb2_only = new;
-    }
 }
 
 #[pyclass(module = "katsuba.op", subclass)]

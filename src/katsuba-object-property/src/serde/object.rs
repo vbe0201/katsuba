@@ -3,10 +3,7 @@ use std::sync::Arc;
 use bitter::{BitReader, LittleEndianReader};
 use indexmap::IndexMap;
 use katsuba_types::{PropertyFlags, TypeDef};
-use katsuba_utils::{
-    align::align_down,
-    hash::{djb2, string_id},
-};
+use katsuba_utils::align::align_down;
 
 use super::{Error, SerializerFlags, SerializerParts, property, type_tag, utils};
 use crate::{Value, value::Object};
@@ -73,13 +70,8 @@ fn deserialize_properties(
         deserialize_properties_deep(&mut inner, de, object_size, type_def, reader)?;
     }
 
-    let hash = match de.options.djb2_only {
-        true => djb2(type_def.name.as_bytes()),
-        false => string_id(type_def.name.as_bytes()),
-    };
-
     Ok(Value::Object(Box::new(Object {
-        type_hash: hash,
+        type_hash: type_def.hash,
         inner,
     })))
 }
