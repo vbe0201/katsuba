@@ -17,21 +17,20 @@ pub struct ObjectProperty {
 
     /// A list of paths to JSON type list files to use.
     ///
-    /// These files are used to dynamically source the game's
-    /// reflected type information from. They are crucial for
-    /// interpreting the format of serialized data.
+    /// These files are used to dynamically source the game's reflected type information
+    /// from. They are crucial for interpreting the format of serialized data.
     ///
-    /// Multiple files can be provided, which will have their
-    /// entries merged into one type list.
+    /// Multiple files can be provided, which will have their entries merged into one
+    /// type list.
     #[clap(short, long)]
     type_lists: Vec<PathBuf>,
 
     /// Serializer configuration flags to use.
     ///
-    /// These flags are configuration bits for the serializer
-    /// instance and influence how data is interpreted.
+    /// The provided integer value will be interpreted as a bitmask of `SerializerFlags`.
+    /// This influences how the serializer will interpret the data it receives.
     ///
-    /// When in doubt what to pick, try 0 or using the guess command.
+    /// When in doubt what to pick, try the default value of 0 first.
     #[clap(short, long, default_value_t = 0)]
     flags: u32,
 
@@ -46,11 +45,10 @@ pub struct ObjectProperty {
 
     /// Whether the object is serialized shallow.
     ///
-    /// Deep mode contains additional metadata per object/property,
-    /// and is the choice for all persistent game files.
+    /// Deep mode contains additional metadata per object/property, and is the choice for all
+    /// persistent state in game files.
     ///
-    /// When in doubt what to pick, try the default value or the
-    /// guess command.
+    /// When in doubt what to pick, try the default value.
     #[clap(short, long, default_value_t = false)]
     shallow: bool,
 
@@ -58,8 +56,7 @@ pub struct ObjectProperty {
     ///
     /// This is rarely used for state transferred over the network.
     ///
-    /// When in doubt what to pick, try the default value or the
-    /// guess command.
+    /// When in doubt if you need this, just try it and see if it works.
     #[clap(short, long, default_value_t = false)]
     zlib_manual: bool,
 }
@@ -71,7 +68,20 @@ enum ObjectPropertyCommand {
         #[clap(flatten)]
         args: InputsOutputs,
 
+        /// Represents enum members as human-readable strings in the output.
+        ///
+        /// Not to be confused with `-f 4` which causes serialized enum variants
+        /// to be interpreted as strings in the binary data.
+        ///
+        /// Without this flag, enums will always be written in their integer
+        /// representation to make processing the JSON output easier for tools.
+        #[clap(short, long, default_value_t = false)]
+        string_enums: bool,
+
         /// Skips properties with unknown types during deserialization.
+        ///
+        /// Setting this flag can be helpful when getting errors along the lines
+        /// of `root object must not be null` when trying to deserialize data.
         #[clap(short, long, default_value_t = false)]
         ignore_unknown_types: bool,
     },
@@ -91,6 +101,7 @@ impl Command for ObjectProperty {
         match self.command {
             ObjectPropertyCommand::De {
                 args,
+                string_enums,
                 ignore_unknown_types,
             } => {
                 let (inputs, outputs) = args.evaluate("de.xml")?;
@@ -118,7 +129,12 @@ impl Command for ObjectProperty {
                             de.parts.options.flags = original_flags;
                         }
 
-                        de.deserialize(buf).map_err(Into::into)
+                        let mut value = de.deserialize(buf)?;
+                        if string_enums {
+                            utils::stringify_enums(&mut value, &de.parts.types);
+                        }
+
+                        Ok(value)
                     },
                     helpers::write_as_json,
                 )

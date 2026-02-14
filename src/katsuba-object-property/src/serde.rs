@@ -164,7 +164,8 @@ impl ZlibParts {
 pub struct SerializerParts {
     /// The serializer configuration in use.
     pub options: SerializerOptions,
-    pub(crate) types: Arc<TypeList>,
+    /// The [`TypeList`] used for serialization.
+    pub types: Arc<TypeList>,
 }
 
 /// A serializer and deserializer for values in the ObjectProperty system.

@@ -81,9 +81,14 @@ pub struct Property {
 }
 
 impl Property {
+    /// Gets the hash of this property's name.
+    pub fn name_hash(&self) -> u32 {
+        hash::djb2(self.name.as_bytes())
+    }
+
     /// Gets the hash of this property's type.
     pub fn type_hash(&self) -> u32 {
-        self.hash.wrapping_sub(hash::djb2(self.name.as_bytes()))
+        self.hash.wrapping_sub(self.name_hash())
     }
 
     /// Whether this property holds an enum value.
@@ -94,36 +99,27 @@ impl Property {
     /// Encodes an integral enum variant into a string representation
     /// of the value through the property's defined options.
     pub fn encode_enum_variant(&self, variant: i64) -> Result<String, EncodingError> {
-        match self.flags.contains(PropertyFlags::BITS) {
-            // Given a bitmask, check all available bits in enum_options
-            // and build a string representation similar to KI's.
-            true => {
-                let mut res = String::new();
-
-                for (name, value) in &self.enum_options {
-                    if value.to_int().map(|v| variant & v != 0).unwrap_or(false) {
-                        if !res.is_empty() {
-                            res.push_str(" | ");
-                        }
-
-                        res.push_str(name);
+        if self.flags.contains(PropertyFlags::BITS) {
+            let mut res = String::new();
+            for (name, value) in &self.enum_options {
+                if value.to_int().map(|v| variant & v != 0).unwrap_or(false) {
+                    if !res.is_empty() {
+                        res.push('|');
                     }
-                }
 
-                Ok(res)
+                    res.push_str(name);
+                }
             }
 
-            // Otherwise, we just find the name for the given value and
-            // return that as-is.
-            false => {
-                for (name, value) in &self.enum_options {
-                    if value.to_int().map(|v| v == variant).unwrap_or(false) {
-                        return Ok(name.clone());
-                    }
+            Ok(res)
+        } else {
+            for (name, value) in &self.enum_options {
+                if value.to_int().map(|v| v == variant).unwrap_or(false) {
+                    return Ok(name.clone());
                 }
-
-                Err(EncodingError::Encode(variant))
             }
+
+            Err(EncodingError::Encode(variant))
         }
     }
 
