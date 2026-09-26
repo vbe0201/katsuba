@@ -65,7 +65,7 @@ pub struct File {
     pub compressed_size: u32,
     /// Whether the file is stored compressed.
     pub compressed: bool,
-    /// The CRC32 checksum of the uncompressed file contents.
+    /// The CRC32 checksum of the file contents.
     pub crc: u32,
     /// Whether this file has unpatched data in the archive that
     /// needs to be ignored.
