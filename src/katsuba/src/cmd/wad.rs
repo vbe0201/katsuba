@@ -1,16 +1,14 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use clap::{Args, Subcommand};
 use eyre::Context;
-use katsuba_wad::{Archive, ArchiveBuilder};
+use katsuba_wad::{Archive, glob};
 
 use super::Command;
 use crate::cli::{InputsOutputs, Reader, process};
 
 mod extract;
+mod pack;
 
 /// Subcommand for working with KIWAD archives.
 #[derive(Debug, Args)]
@@ -53,6 +51,10 @@ enum WadCommand {
     Unpack {
         #[clap(flatten)]
         args: InputsOutputs,
+
+        /// If specified, extracts only files matching the glob pattern.
+        #[clap(short, long)]
+        glob: Option<String>,
     },
 }
 
@@ -68,10 +70,9 @@ impl Command for Wad {
                     eyre::bail!("input for packing must be a directory");
                 }
 
-                let output = if let Some(output) = output {
-                    output
-                } else {
-                    match input.file_name() {
+                let output = match output {
+                    Some(o) => o,
+                    None => match input.file_name() {
                         Some(p) => {
                             let p: &Path = p.as_ref();
                             p.with_extension("wad")
@@ -79,36 +80,13 @@ impl Command for Wad {
                         None => eyre::bail!(
                             "failed to determine output file. consider specifying one with '-o'"
                         ),
-                    }
+                    },
                 };
 
-                let mut builder = ArchiveBuilder::new(2, flags, &output).with_context(|| {
-                    format!("failed to build output archive at '{}'", output.display())
-                })?;
-
-                for entry in walkdir::WalkDir::new(&input) {
-                    let entry = entry.context("failed to query input directory")?;
-                    if !entry
-                        .metadata()
-                        .context("failed to obtain metadata for path")?
-                        .is_file()
-                    {
-                        continue;
-                    }
-
-                    let path = entry.path();
-                    let contents = fs::read(path)
-                        .with_context(|| format!("failed to read file at '{}'", path.display()))?;
-
-                    builder.add_file_compressed(path.strip_prefix(&input).unwrap(), &contents)?;
-                }
-
-                builder.finish()?;
-
-                Ok(())
+                pack::pack_archive(input, flags, output)
             }
 
-            WadCommand::Unpack { args } => {
+            WadCommand::Unpack { args, glob } => {
                 let (inputs, outputs) = args.evaluate("")?;
                 process(
                     inputs,
@@ -120,7 +98,16 @@ impl Command for Wad {
                         };
                         res.map_err(Into::into)
                     },
-                    extract::extract_archive,
+                    |inp, a, out| {
+                        let matcher = if let Some(pattern) = glob.as_ref() {
+                            let m = glob::Matcher::new(pattern).context("invalid glob pattern")?;
+                            Some(m)
+                        } else {
+                            None
+                        };
+
+                        extract::extract_archive(inp, a, out, matcher)
+                    },
                 )
             }
         }

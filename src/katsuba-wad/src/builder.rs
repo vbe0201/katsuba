@@ -1,5 +1,4 @@
 use std::{
-    ffi::OsStr,
     fs::File,
     io::{self, BufWriter, Seek, Write},
     path::Path,
@@ -168,7 +167,7 @@ impl ArchiveBuilder {
             compressed: false,
             crc: crc::hash(contents),
             is_unpatched: false,
-            name: name.as_ref().to_string_lossy().to_string(),
+            name: name.as_ref().to_string_lossy().replace('\\', "/"),
         };
 
         self.state.intern_file(record, contents)?;
@@ -192,16 +191,19 @@ impl ArchiveBuilder {
 
         // Check if the given file path ends with a file that is conditionally
         // uncompressed. In that case, we just delegate to `add_file`.
-        if path
-            .extension()
-            .and_then(OsStr::to_str)
-            .map(|ext| ALWAYS_UNCOMPRESSED.contains(&ext))
-            .unwrap_or(false)
-        {
+        if path.extension().is_some_and(|ext| {
+            ALWAYS_UNCOMPRESSED
+                .iter()
+                .any(|s| ext.eq_ignore_ascii_case(s))
+        }) {
             return self.add_file(name, contents);
         }
 
         let compressed = self.deflater.compress(contents)?;
+        if compressed.len() >= contents.len() {
+            return self.add_file(path, contents);
+        }
+
         let record = wad_types::File {
             offset: self.state.next_file_offset,
             uncompressed_size: checked_u32(contents.len())?,
@@ -209,7 +211,7 @@ impl ArchiveBuilder {
             compressed: true,
             crc: crc::hash(compressed),
             is_unpatched: false,
-            name: path.to_string_lossy().to_string(),
+            name: path.to_string_lossy().replace('\\', "/"),
         };
 
         self.state.intern_file(record, compressed)?;
@@ -233,13 +235,11 @@ impl ArchiveBuilder {
         // the blob cache to the end of the output file.
         self.state.archive.write(&mut self.outfile)?;
         {
-            let mut blob_cache = match self.blob_cache.into_inner() {
-                Ok(f) => f,
-                Err(e) => return Err(BuilderError::Io(e.into_error())),
-            };
-            blob_cache.seek(io::SeekFrom::Start(0))?;
+            let mut out = self.outfile.into_inner().map_err(|e| e.into_error())?;
+            let mut blob_cache = self.blob_cache.into_inner().map_err(|e| e.into_error())?;
 
-            io::copy(&mut blob_cache, &mut self.outfile)?;
+            blob_cache.seek(io::SeekFrom::Start(0))?;
+            io::copy(&mut blob_cache, &mut out)?;
         }
 
         Ok(())

@@ -23,7 +23,6 @@ pub fn serialize_to_output_source<T: Serialize>(
         writer.flush()?;
     } else {
         let mut stdout = io::stdout().lock();
-
         if stdout.is_terminal() {
             serde_json::to_writer_pretty(&mut stdout, value)?;
             writeln!(stdout)?;

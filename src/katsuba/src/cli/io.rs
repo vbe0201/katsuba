@@ -105,18 +105,20 @@ impl InputsOutputs {
             return Ok(OutputSource::Stdout);
         }
 
+        let output = std::path::absolute(self.output)?;
+
         // Determine whether the output path is going to be treated as
         // a single file or as a directory based on the inputs.
         let out = match input {
             // Several input files always need to be treated as a directory output.
-            InputSource::Files(..) => OutputSource::Dir(self.output, suffix),
+            InputSource::Files(..) => OutputSource::Dir(output, suffix),
 
             // Regardless of where the input comes from, if the output is
             // an existing directory we always create a new file in it.
-            _ if self.output.is_dir() => OutputSource::Dir(self.output, suffix),
+            _ if output.is_dir() => OutputSource::Dir(output, suffix),
 
             // Otherwise, treat stdin and single file inputs as single file outputs.
-            InputSource::Stdin | InputSource::File(..) => OutputSource::File(self.output),
+            InputSource::Stdin | InputSource::File(..) => OutputSource::File(output),
         };
 
         Ok(out)

@@ -1,5 +1,6 @@
 use std::{
-    collections::{hash_set::IntoIter, HashSet},
+    borrow::Cow,
+    collections::{HashSet, hash_set::IntoIter},
     io::{self, IsTerminal},
     path::Path,
     process,
@@ -27,10 +28,9 @@ pub fn stdin_reader() -> io::BufReader<io::StdinLock<'static>> {
 /// and returns the minimal amount of paths to be created.
 ///
 /// This ensures that we create a directory tree with the least
-/// required system calls. This has shown to greatly impact
-/// performance on Windows systems.
+/// required system calls.
 pub struct DirectoryTree<'a> {
-    inner: HashSet<&'a Path>,
+    inner: HashSet<Cow<'a, Path>>,
 }
 
 impl<'a> DirectoryTree<'a> {
@@ -43,21 +43,38 @@ impl<'a> DirectoryTree<'a> {
 
     /// Given a path to a file, interns the directory tree needed
     /// to be created for it.
-    pub fn add(&mut self, path: &'a Path) {
-        if let Some(p) = path.parent() {
-            self.inner.insert(p);
-
-            // Check for parent of parent so that we can remove
-            // entries which would just need unnecessary syscalls.
-            if let Some(p) = p.parent() {
-                self.inner.remove(p);
+    pub fn add<P: Into<Cow<'a, Path>>>(&mut self, path: P) {
+        // Convert `path` into `path.parent()`.
+        let path = match path.into() {
+            Cow::Borrowed(p) => {
+                let Some(p) = p.parent() else {
+                    return;
+                };
+                Cow::Borrowed(p)
             }
+
+            Cow::Owned(mut p) => {
+                if !p.pop() {
+                    return;
+                }
+                Cow::Owned(p)
+            }
+        };
+
+        if path.is_empty() {
+            return;
         }
+
+        for ancestor in path.ancestors().skip(1) {
+            self.inner.remove(ancestor);
+        }
+
+        self.inner.insert(path);
     }
 }
 
 impl<'a> IntoIterator for DirectoryTree<'a> {
-    type Item = &'a Path;
+    type Item = Cow<'a, Path>;
 
     type IntoIter = IntoIter<Self::Item>;
 
