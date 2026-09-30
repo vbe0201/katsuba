@@ -75,6 +75,14 @@ impl Serializer {
 
     /// Deserializes an object [`Value`] from the given data.
     pub fn deserialize(&mut self, data: &[u8]) -> Result<Value, Error> {
+        let opts = self.parts.options;
+        let res = self.deserialize_(data);
+        self.parts.options = opts;
+
+        res
+    }
+
+    fn deserialize_(&mut self, data: &[u8]) -> Result<Value, Error> {
         let mut reader = self.zlib_parts.configure(&mut self.parts.options, data)?;
         log::info!("Deserializing object with config {:?}", self.parts.options);
 
