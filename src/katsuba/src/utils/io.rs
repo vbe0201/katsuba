@@ -34,13 +34,6 @@ pub struct DirectoryTree<'a> {
 }
 
 impl<'a> DirectoryTree<'a> {
-    /// Creates an empty directory tree.
-    pub fn new() -> Self {
-        Self {
-            inner: HashSet::new(),
-        }
-    }
-
     /// Creates an empty directory tree with capacity for `cap`
     /// entries preallocated.
     pub fn with_capacity(cap: usize) -> Self {

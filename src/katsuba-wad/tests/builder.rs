@@ -1,4 +1,4 @@
-use katsuba_wad::{Archive, ArchiveBuilder, Inflater};
+use katsuba_wad::{Archive, ArchiveBuilder};
 use tempfile::NamedTempFile;
 
 #[test]
@@ -14,14 +14,10 @@ fn build_and_extract() {
     builder.finish().unwrap();
 
     let archive = Archive::heap(file).unwrap();
-    let mut inflater = Inflater::new();
 
     let a = archive.file_raw("a/b/x.txt").unwrap();
-    assert!(a.compressed);
-    assert_eq!(
-        inflater.decompress(archive.file_contents(a).unwrap(), a.uncompressed_size as _,),
-        Ok(&b"does this work?"[..])
-    );
+    assert!(!a.compressed);
+    assert_eq!(archive.file_contents(a), Some(&b"does this work?"[..]));
 
     let b = archive.file_raw("test.txt").unwrap();
     assert!(!b.compressed);
