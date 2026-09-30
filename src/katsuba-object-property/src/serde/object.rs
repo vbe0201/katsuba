@@ -88,7 +88,7 @@ fn deserialize_properties_shallow(
     for property in type_def
         .properties
         .values()
-        .filter(|p| p.flags.contains(mask) && !p.flags.contains(PropertyFlags::DEPRECATED))
+        .filter(|p| p.flags.contains(mask))
     {
         if property.flags.contains(PropertyFlags::DELTA_ENCODE) {
             let delta_present = utils::read_bool(reader)?;
