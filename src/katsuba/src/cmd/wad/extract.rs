@@ -104,7 +104,7 @@ pub fn extract_archive(
     }
 
     // Create the directory tree required for extraction.
-    let mut dirs = DirectoryTree::new();
+    let mut dirs = DirectoryTree::with_capacity(files.len());
     for (_, _, dst) in &files {
         dirs.add(dst);
     }

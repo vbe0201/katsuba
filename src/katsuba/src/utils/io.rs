@@ -41,6 +41,14 @@ impl<'a> DirectoryTree<'a> {
         }
     }
 
+    /// Creates an empty directory tree with capacity for `cap`
+    /// entries preallocated.
+    pub fn with_capacity(cap: usize) -> Self {
+        Self {
+            inner: HashSet::with_capacity(cap),
+        }
+    }
+
     /// Given a path to a file, interns the directory tree needed
     /// to be created for it.
     pub fn add<P: Into<Cow<'a, Path>>>(&mut self, path: P) {
