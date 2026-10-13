@@ -33,7 +33,10 @@ pub fn merge_type_lists(paths: Vec<PathBuf>) -> eyre::Result<TypeList> {
 /// This makes the CLI output easier to interpret for humans.
 pub fn stringify_enums(value: &mut Value, types: &TypeList) {
     fn visit_object(obj: &mut value::Object, types: &TypeList) {
-        let type_def = types.0.get(&obj.type_hash).unwrap();
+        let Some(type_def) = types.0.get(&obj.type_hash) else {
+            return;
+        };
+
         for property in type_def.properties.values() {
             if let Some(value) = obj.get_mut(&property.name) {
                 visit_property(value, types, property);

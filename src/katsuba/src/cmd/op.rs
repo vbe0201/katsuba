@@ -79,9 +79,6 @@ enum ObjectPropertyCommand {
         string_enums: bool,
 
         /// Skips properties with unknown types during deserialization.
-        ///
-        /// Setting this flag can be helpful when getting errors along the lines
-        /// of `root object must not be null` when trying to deserialize data.
         #[clap(short, long, default_value_t = false)]
         ignore_unknown_types: bool,
     },

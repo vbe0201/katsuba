@@ -21,7 +21,6 @@ pub(crate) fn is_unpatched_file(data: &[u8]) -> bool {
 
 /// Error type produced by [`Archive::verify`].
 #[derive(Clone, Debug, PartialEq, Error)]
-
 pub enum VerificationError {
     #[error("corrupted journal detected")]
     BadJournal,

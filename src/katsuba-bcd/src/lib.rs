@@ -133,7 +133,7 @@ impl GeomParams {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
                     "Received invalid GeomParams",
-                ))
+                ));
             }
         })
     }
@@ -329,8 +329,8 @@ impl Collision {
     fn parse<R: io::Read>(reader: &mut R) -> io::Result<Self> {
         let geometry_type = binary::uint32(reader)?;
         Ok(Self {
-            category_flags: binary::uint32(reader).map(CollisionFlags::from_bits_truncate)?,
-            collision_flags: binary::uint32(reader).map(CollisionFlags::from_bits_truncate)?,
+            category_flags: binary::uint32(reader).map(CollisionFlags::from_bits_retain)?,
+            collision_flags: binary::uint32(reader).map(CollisionFlags::from_bits_retain)?,
             mesh: if geometry_type == 6 {
                 Some(ProxyMesh::parse(reader)?)
             } else {
@@ -344,7 +344,9 @@ impl Collision {
         binary::write_uint32(writer, self.geometry.params_type())?;
         binary::write_uint32(writer, self.category_flags.bits())?;
         binary::write_uint32(writer, self.collision_flags.bits())?;
-        if let Some(mesh) = &self.mesh {
+        if let Some(mesh) = &self.mesh
+            && matches!(self.geometry.params, GeomParams::Mesh)
+        {
             mesh.write(writer)?;
         }
         self.geometry.write(writer)?;

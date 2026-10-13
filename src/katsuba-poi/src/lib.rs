@@ -106,7 +106,7 @@ pub struct Poi {
 }
 
 impl Poi {
-    /// Attempts to parse a BCD file from a given [`Read`]er.
+    /// Attempts to parse a POI file from a given [`Read`]er.
     pub fn parse<R: io::Read>(mut reader: R) -> io::Result<Self> {
         Ok(Self {
             zone_names: binary::uint32(&mut reader).and_then(|len| {
@@ -148,13 +148,8 @@ impl Poi {
         })
     }
 
-    /// Writes the BCD data to the given [`Write`]r.
+    /// Writes the POI data to the given [`Write`]r.
     pub fn write<W: io::Write>(&self, mut writer: W) -> io::Result<()> {
-        /*
-        pub goal_adjectives: HashMap<u64, Vec<u32>>,
-        /// A list of zone mobs for each zone ID in the file.
-        pub zone_mobs: HashMap<u32, Vec<String>>,
-             */
         binary::write_seq(&mut writer, true, &self.zone_names, |v, w| {
             binary::write_str(w, v, false)
         })?;
