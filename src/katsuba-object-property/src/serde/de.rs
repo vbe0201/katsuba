@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bitter::LittleEndianReader;
-use byteorder::{LE, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 use katsuba_types::TypeList;
 use libdeflater::Decompressor;
 
@@ -46,7 +46,7 @@ impl ZlibParts {
         }
 
         // If the data is compressed, uncompress it into scratch.
-        if opts.flags.contains(SerializerFlags::WITH_COMPRESSION) && data.read_u8()? != 0 {
+        if opts.flags.contains(SerializerFlags::WITH_COMPRESSION) && data.read_u8()? & 1 != 0 {
             zlib_decompress(&mut self.inflater, data, &mut self.scratch2)?;
             data = &self.scratch2;
         }
