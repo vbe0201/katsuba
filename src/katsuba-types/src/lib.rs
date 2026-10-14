@@ -18,6 +18,7 @@
 use std::{collections::HashMap, io, sync::Arc};
 
 use indexmap::IndexMap;
+use katsuba_utils::hash;
 use serde::{Deserialize, Deserializer};
 use thiserror::Error;
 
@@ -101,6 +102,14 @@ pub struct TypeDef {
     /// The properties of the class.
     #[serde(deserialize_with = "deserialize_property_list")]
     pub properties: IndexMap<u32, Property>,
+}
+
+impl TypeDef {
+    /// Finds a property by its name.
+    pub fn property_by_name(&self, name: &str) -> Option<&Property> {
+        let pred = hash::djb2(name.as_bytes());
+        self.properties.values().find(|p| p.name_hash() == pred)
+    }
 }
 
 fn deserialize_property_list<'de, D>(deserializer: D) -> Result<IndexMap<u32, Property>, D::Error>

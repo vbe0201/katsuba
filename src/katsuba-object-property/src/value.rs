@@ -6,6 +6,9 @@
 mod color;
 pub use color::*;
 
+#[cfg(feature = "serde")]
+mod de;
+
 mod drop;
 
 mod math;
@@ -76,4 +79,30 @@ pub enum Value {
     RectInt(Rect<i32>),
     /// A rectangle described by floating-point edges.
     RectFloat(Rect<f32>),
+}
+
+impl Value {
+    /// Attempts to deserialize an object from the given deserializer.
+    ///
+    /// # A Note on Data Validation
+    ///
+    /// Note that no data validation is very sporadic and only ensures
+    /// that the input data can be represented by a designated variant
+    /// of [`Value`].
+    ///
+    /// What is NOT done are more nuanced range checks on the concrete
+    /// values to ensure that they're valid in the context they were
+    /// provided for (e.g. a `char` value being in 8-bit range). The
+    /// responsibility for this falls on the user that consumes the
+    /// [`Value`].
+    #[cfg(feature = "serde")]
+    pub fn deserialize_obj<'de, D>(
+        deserializer: D,
+        types: &katsuba_types::TypeList,
+    ) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        de::deserialize(deserializer, types)
+    }
 }
