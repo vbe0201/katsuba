@@ -1,4 +1,4 @@
-use bitter::LittleEndianReader;
+use bitter::{LittleEndianReader, LittleEndianWriter};
 use katsuba_types::{TypeDef, TypeList};
 
 use super::{Error, utils};
@@ -10,6 +10,17 @@ pub fn property_class<'a>(
 ) -> Result<Option<&'a TypeDef>, Error> {
     let hash = utils::read_bits_aligned(reader, u32::BITS)? as u32;
     find_class_def(types, hash)
+}
+
+#[inline]
+pub fn write_property_class<'a>(
+    writer: &mut LittleEndianWriter<Vec<u8>>,
+    types: &'a TypeList,
+    hash: u32,
+) -> Result<&'a TypeDef, Error> {
+    let type_def = find_class_def(types, hash)?.ok_or(Error::UnknownType(hash))?;
+    utils::write_bits_aligned(writer, hash as u64, u32::BITS)?;
+    Ok(type_def)
 }
 
 #[inline]

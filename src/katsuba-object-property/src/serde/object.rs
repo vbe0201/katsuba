@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use bitter::{BitReader, LittleEndianReader};
+use bitter::{BitReader, LittleEndianReader, LittleEndianWriter};
 use indexmap::IndexMap;
-use katsuba_types::{PropertyFlags, TypeDef};
+use katsuba_types::{Property, PropertyFlags, TypeDef};
 use katsuba_utils::align::align_down;
 
 use super::{Error, SerializerFlags, SerializerParts, property, type_tag, utils};
@@ -56,6 +56,31 @@ pub fn deserialize(
     })
 }
 
+pub fn serialize(
+    ser: &mut SerializerParts,
+    obj: Option<&Object>,
+    writer: &mut LittleEndianWriter<Vec<u8>>,
+) -> Result<(), Error> {
+    ser.with_recursion_limit(|ser| {
+        let Some(obj) = obj else {
+            log::debug!("Writing null hash for object");
+            return utils::write_bits_aligned(writer, 0, u32::BITS);
+        };
+
+        let types = ser.types.clone();
+        let type_def = type_tag::write_property_class(writer, &types, obj.type_hash)?;
+        log::debug!("Writing object '{}'", type_def.name);
+
+        if ser.options.shallow {
+            serialize_properties_shallow(ser, obj, type_def, writer)
+        } else {
+            utils::write_prefixed(writer, |writer| {
+                serialize_properties_deep(ser, obj, type_def, writer)
+            })
+        }
+    })
+}
+
 fn deserialize_properties(
     de: &mut SerializerParts,
     object_size: usize,
@@ -76,7 +101,6 @@ fn deserialize_properties(
     })))
 }
 
-#[inline]
 fn deserialize_properties_shallow(
     obj: &mut IndexMap<Arc<str>, Value>,
     de: &mut SerializerParts,
@@ -98,7 +122,7 @@ fn deserialize_properties_shallow(
                     .flags
                     .contains(SerializerFlags::FORBID_DELTA_ENCODE)
                 {
-                    return Err(Error::MissingDelta);
+                    return Err(Error::MissingDelta(property.name.clone()));
                 }
 
                 continue;
@@ -112,7 +136,32 @@ fn deserialize_properties_shallow(
     Ok(())
 }
 
-#[inline]
+fn serialize_properties_shallow(
+    ser: &mut SerializerParts,
+    obj: &Object,
+    type_def: &TypeDef,
+    writer: &mut LittleEndianWriter<Vec<u8>>,
+) -> Result<(), Error> {
+    // In shallow mode, we walk masked properties in order.
+    let mask = ser.options.property_mask;
+    for property in type_def
+        .properties
+        .values()
+        .filter(|p| p.flags.contains(mask))
+    {
+        let value = property_value(ser, obj, property)?;
+        if property.flags.contains(PropertyFlags::DELTA_ENCODE) {
+            utils::write_bool(writer, value.is_some())?;
+        }
+
+        if let Some(v) = value {
+            property::serialize(ser, property, v, writer)?;
+        }
+    }
+
+    Ok(())
+}
+
 fn deserialize_properties_deep(
     obj: &mut IndexMap<Arc<str>, Value>,
     de: &mut SerializerParts,
@@ -156,6 +205,54 @@ fn deserialize_properties_deep(
     }
 
     Ok(())
+}
+
+fn serialize_properties_deep(
+    ser: &mut SerializerParts,
+    obj: &Object,
+    type_def: &TypeDef,
+    writer: &mut LittleEndianWriter<Vec<u8>>,
+) -> Result<(), Error> {
+    let mask = ser.options.property_mask;
+    for property in type_def
+        .properties
+        .values()
+        .filter(|p| p.flags.contains(mask) && !p.flags.contains(PropertyFlags::DEPRECATED))
+    {
+        let Some(value) = property_value(ser, obj, property)? else {
+            continue;
+        };
+
+        utils::write_prefixed(writer, |writer| {
+            utils::write_bits(writer, property.hash as u64, u32::BITS)?;
+            property::serialize(ser, property, value, writer)
+        })?;
+    }
+
+    Ok(())
+}
+
+#[inline]
+fn property_value<'a>(
+    ser: &SerializerParts,
+    obj: &'a Object,
+    property: &Property,
+) -> Result<Option<&'a Value>, Error> {
+    match obj.get(&*property.name) {
+        Some(v) => Ok(Some(v)),
+        None if property.flags.contains(PropertyFlags::DELTA_ENCODE) => {
+            if ser
+                .options
+                .flags
+                .contains(SerializerFlags::FORBID_DELTA_ENCODE)
+            {
+                Err(Error::MissingDelta(property.name.clone()))
+            } else {
+                Ok(None)
+            }
+        }
+        None => Err(Error::MissingProperty(property.name.clone())),
+    }
 }
 
 #[inline]

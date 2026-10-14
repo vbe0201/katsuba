@@ -266,5 +266,5 @@ test_should_fail!(
     delta_encode_forbid_absent,
     "fixtures/should-fail/delta-encode-forbid-absent.bin",
     "fixtures/should-fail/delta-encode-forbid-absent.config.json",
-    Error::MissingDelta
+    Error::MissingDelta(..)
 );

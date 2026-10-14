@@ -4,7 +4,7 @@ use std::{io, sync::Arc};
 
 use bitflags::bitflags;
 use katsuba_types::{PropertyFlags, TypeList};
-use libdeflater::{DecompressionError, Decompressor};
+use libdeflater::{CompressionError, CompressionLvl, Compressor, DecompressionError, Decompressor};
 use thiserror::Error;
 
 mod de;
@@ -14,6 +14,8 @@ mod enum_variant;
 mod object;
 
 mod property;
+
+mod ser;
 
 mod simple_data;
 
@@ -31,6 +33,10 @@ pub enum Error {
     /// An I/O error occured while trying to read data from the input source.
     #[error("{0}")]
     Io(#[from] io::Error),
+
+    /// Failed to compress a zlib object stream.
+    #[error("{0}")]
+    Compress(#[from] CompressionError),
 
     /// Failed to decompress a zlib object stream.
     #[error("{0}")]
@@ -80,8 +86,25 @@ pub enum Error {
 
     /// When a delta-encoded property is missing from a stream which enforces
     /// its presence.
-    #[error("missing delta value which must be present")]
-    MissingDelta,
+    #[error("missing delta value '{0}' which must be present")]
+    MissingDelta(Arc<str>),
+
+    /// An object being serialized has no value for a property that must be
+    /// written.
+    #[error("missing value for property '{0}'")]
+    MissingProperty(Arc<str>),
+
+    /// A value being serialized does not match the type of its property.
+    #[error("value does not match expected type '{0}'")]
+    TypeMismatch(Arc<str>),
+
+    /// A value being serialized does not fit into the range of its type.
+    #[error("value is out of range for type '{0}'")]
+    OutOfRange(Arc<str>),
+
+    /// A length or size being serialized exceeds what its prefix can encode.
+    #[error("length {0} exceeds the maximum encodable length")]
+    LengthOverflow(usize),
 }
 
 bitflags! {
@@ -119,9 +142,7 @@ pub struct SerializerOptions {
     /// Whether the data is manually compressed.
     pub manual_compression: bool,
     /// A recursion limit for nested data to avoid stack
-    /// overflows during deserialization.
-    ///
-    /// Ignored during serialization.
+    /// overflows during (de)serialization.
     pub recursion_limit: i8,
     /// Skips unknown types during deserialization of properties.
     ///
@@ -144,8 +165,8 @@ impl Default for SerializerOptions {
 
 pub(super) struct ZlibParts {
     inflater: Decompressor,
+    deflater: Compressor,
 
-    // Most of the time, only one of these will be in use.
     scratch1: Vec<u8>,
     scratch2: Vec<u8>,
 }
@@ -154,6 +175,7 @@ impl ZlibParts {
     pub fn new() -> Self {
         Self {
             inflater: Decompressor::new(),
+            deflater: Compressor::new(CompressionLvl::default()),
             scratch1: Vec::new(),
             scratch2: Vec::new(),
         }

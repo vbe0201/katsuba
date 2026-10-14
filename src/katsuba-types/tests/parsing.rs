@@ -38,7 +38,7 @@ fn query_properties() -> Result<(), Error> {
 
     let (&hash, property) = cls.properties.first().unwrap();
     assert_eq!(&*property.name, "m_equipmentSetList");
-    assert_eq!(property.r#type, "class SharedPointer<class EquipmentSet>");
+    assert_eq!(&*property.r#type, "class SharedPointer<class EquipmentSet>");
     assert_eq!(property.id, 0);
     assert_eq!(property.hash, 1788831224);
     assert!(property.dynamic);

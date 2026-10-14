@@ -65,7 +65,7 @@ pub struct Property {
     #[serde(skip)]
     pub name: Arc<str>,
     /// The type of the property.
-    pub r#type: String,
+    pub r#type: Arc<str>,
     /// The ID of the property.
     pub id: u32,
     /// The associated property flag mask.

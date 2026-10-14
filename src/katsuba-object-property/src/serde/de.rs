@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
 use bitter::LittleEndianReader;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use katsuba_types::TypeList;
 use libdeflater::Decompressor;
 
 use super::*;
 use crate::Value;
 
-#[inline]
 pub(super) fn zlib_decompress(
     inflater: &mut Decompressor,
     mut data: &[u8],
