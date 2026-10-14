@@ -6,9 +6,10 @@ use std::{
 
 use katsuba_object_property::serde::{self, SerializerFlags};
 use pyo3::{
+    buffer::PyBuffer,
     exceptions::{PyKeyError, PyValueError},
     prelude::*,
-    types::{PyDict, PyType},
+    types::{PyByteArray, PyByteArrayMethods, PyBytes, PyDict, PyTuple, PyType},
 };
 
 use crate::{KatsubaError, error};
@@ -143,15 +144,100 @@ impl SerializerOptions {
 }
 
 #[pyclass(module = "katsuba.op", subclass)]
-pub struct Serializer(pub(crate) serde::Serializer);
+pub struct Serializer {
+    pub(crate) inner: serde::Serializer,
+    buf: Vec<u8>,
+}
+
+impl Serializer {
+    fn serialize_impl(&mut self, py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<()> {
+        let value = conversion::python_to_object(obj, &self.inner.parts.types)?;
+        py.detach(|| self.inner.serialize_into(&value, &mut self.buf))
+            .map_err(error::op_to_py_err)
+    }
+}
 
 #[pymethods]
 impl Serializer {
     #[new]
     pub fn new(options: SerializerOptions, types: &TypeList) -> PyResult<Self> {
         serde::Serializer::new(options.0, Arc::clone(&types.0))
-            .map(Self)
+            .map(|inner| Self {
+                inner,
+                buf: Vec::new(),
+            })
             .map_err(error::op_to_py_err)
+    }
+
+    #[getter]
+    pub fn get_options(&self) -> SerializerOptions {
+        SerializerOptions(self.inner.parts.options)
+    }
+
+    #[setter]
+    pub fn set_options(&mut self, new: SerializerOptions) {
+        self.inner.parts.options = new.0;
+    }
+
+    #[getter]
+    pub fn get_flags(&self) -> u32 {
+        self.inner.parts.options.flags.bits()
+    }
+
+    #[setter]
+    pub fn set_flags(&mut self, new: u32) {
+        self.inner.parts.options.flags = serde::SerializerFlags::from_bits_truncate(new);
+    }
+
+    #[getter]
+    pub fn get_property_mask(&self) -> u32 {
+        self.inner.parts.options.property_mask.bits()
+    }
+
+    #[setter]
+    pub fn set_property_mask(&mut self, new: u32) {
+        self.inner.parts.options.property_mask =
+            katsuba_types::PropertyFlags::from_bits_truncate(new);
+    }
+
+    #[getter]
+    pub fn get_shallow(&self) -> bool {
+        self.inner.parts.options.shallow
+    }
+
+    #[setter]
+    pub fn set_shallow(&mut self, new: bool) {
+        self.inner.parts.options.shallow = new;
+    }
+
+    #[getter]
+    pub fn get_manual_compression(&self) -> bool {
+        self.inner.parts.options.manual_compression
+    }
+
+    #[setter]
+    pub fn set_manual_compression(&mut self, new: bool) {
+        self.inner.parts.options.manual_compression = new;
+    }
+
+    #[getter]
+    pub fn get_recursion_limit(&self) -> i8 {
+        self.inner.parts.options.recursion_limit
+    }
+
+    #[setter]
+    pub fn set_recursion_limit(&mut self, new: i8) {
+        self.inner.parts.options.recursion_limit = new;
+    }
+
+    #[getter]
+    pub fn get_skip_unknown_types(&self) -> bool {
+        self.inner.parts.options.skip_unknown_types
+    }
+
+    #[setter]
+    pub fn set_skip_unknown_types(&mut self, new: bool) {
+        self.inner.parts.options.skip_unknown_types = new;
     }
 
     pub fn deserialize<'py>(
@@ -159,8 +245,33 @@ impl Serializer {
         py: Python<'py>,
         data: &[u8],
     ) -> PyResult<Bound<'py, PyAny>> {
-        let value = self.0.deserialize(data).map_err(error::op_to_py_err)?;
+        let value = py
+            .detach(|| self.inner.deserialize(data))
+            .map_err(error::op_to_py_err)?;
         Ok(conversion::value_to_python(&value, py))
+    }
+
+    pub fn serialize<'py>(
+        &mut self,
+        py: Python<'py>,
+        obj: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyBytes>> {
+        self.serialize_impl(py, obj)?;
+        Ok(PyBytes::new(py, &self.buf))
+    }
+
+    pub fn serialize_into(
+        &mut self,
+        py: Python<'_>,
+        obj: &Bound<'_, PyAny>,
+        buf: &Bound<'_, PyByteArray>,
+    ) -> PyResult<()> {
+        self.serialize_impl(py, obj)?;
+
+        buf.resize(self.buf.len())?;
+        PyBuffer::<u8>::get(buf.as_any())?.copy_from_slice(py, &self.buf)?;
+
+        Ok(())
     }
 }
 
@@ -169,11 +280,37 @@ pub struct Object {
     type_hash: u32,
 }
 
+impl Object {
+    pub(super) fn new(type_hash: u32) -> Self {
+        Self { type_hash }
+    }
+}
+
 #[pymethods]
 impl Object {
     #[new]
-    pub fn new(type_hash: u32) -> Self {
-        Object { type_hash }
+    #[pyo3(signature = (type_hash, *_args, **_kwargs))]
+    fn py_new(
+        type_hash: u32,
+        _args: &Bound<'_, PyTuple>,
+        _kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> Self {
+        Self::new(type_hash)
+    }
+
+    #[pyo3(signature = (type_hash, *args, **kwargs))]
+    fn __init__(
+        slf: &Bound<'_, Self>,
+        type_hash: u32,
+        args: &Bound<'_, PyTuple>,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<()> {
+        let _ = type_hash;
+        slf.as_any()
+            .py_super()?
+            .call_method("__init__", args, kwargs)?;
+
+        Ok(())
     }
 
     #[getter]

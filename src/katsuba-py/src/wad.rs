@@ -100,21 +100,15 @@ impl Archive {
         let raw = self.__getitem__(file)?;
         let mut raw: &[u8] = &raw;
 
-        let original_flags = serializer.0.parts.options.flags;
-        let original_shallow = serializer.0.parts.options.shallow;
-
         // Set generic configuration for game files if this is one.
         if raw.get(0..4) == Some(serde::BIND_MAGIC) {
-            serializer.0.parts.options.flags = serde::SerializerFlags::STATEFUL_FLAGS;
-            serializer.0.parts.options.shallow = false;
+            serializer.inner.parts.options.flags = serde::SerializerFlags::STATEFUL_FLAGS;
+            serializer.inner.parts.options.shallow = false;
 
             raw = raw.get(4..).unwrap();
         }
 
-        let v = serializer.deserialize(py, raw);
-        serializer.0.parts.options.flags = original_flags;
-        serializer.0.parts.options.shallow = original_shallow;
-        v
+        serializer.deserialize(py, raw)
     }
 }
 
