@@ -8,6 +8,7 @@ use katsuba_object_property::serde::{self, SerializerFlags};
 use pyo3::{
     buffer::PyBuffer,
     exceptions::{PyKeyError, PyValueError},
+    intern,
     prelude::*,
     types::{PyByteArray, PyByteArrayMethods, PyBytes, PyDict, PyTuple, PyType},
 };
@@ -308,7 +309,7 @@ impl Object {
         let _ = type_hash;
         slf.as_any()
             .py_super()?
-            .call_method("__init__", args, kwargs)?;
+            .call_method(intern!(slf.py(), "__init__"), args, kwargs)?;
 
         Ok(())
     }
