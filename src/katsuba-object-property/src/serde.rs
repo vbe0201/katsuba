@@ -84,6 +84,11 @@ pub enum Error {
     #[error("overflowed object size while consuming data")]
     ObjectSizeMismatch,
 
+    /// Container's declared length exceeds what the remaining buffer could
+    /// possibly hold, assuming the smallest possible element encoding (1 bit).
+    #[error("container length {len} exceeds the {remaining} bits remaining in the buffer")]
+    ContainerTooLarge { len: usize, remaining: usize },
+
     /// When a delta-encoded property is missing from a stream which enforces
     /// its presence.
     #[error("missing delta value '{0}' which must be present")]

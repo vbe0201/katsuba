@@ -187,6 +187,7 @@ fn decode_escaped_units(s: &str) -> Result<Vec<u16>, String> {
     Ok(out)
 }
 
+#[cfg(feature = "serde")]
 fn read_hex_digits<const N: usize>(chars: &mut str::Chars<'_>) -> Result<u16, String> {
     const { assert!(N <= 4) };
 

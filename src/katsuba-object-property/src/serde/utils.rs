@@ -28,19 +28,18 @@ where
     let start = bit_len(writer)?;
 
     // Carve out a 32-bit length prefix for the data about to be written.
+    // Since this is guaranteed to be at a bit-aligned position, we flush
+    // to the underlying Vec here to avoid bit_len misreporting potential
+    // padding bits from a later flush.
     write_bits_aligned(writer, 0, u32::BITS)?;
     let size_pos = ((bit_len(writer)? - u32::BITS) / u8::BITS) as usize;
+    writer.flush()?;
 
     // Delegate to the supplied callback for writing data.
     f(writer)?;
 
-    // Ensure the length prefix is flushed to the Vec for patching.
-    if size_pos + 4 < writer.get_ref().len() {
-        writer.flush()?;
-    }
-
-    // Patch the reserved space with the length of all data written
-    // since `start`.
+    // Since the placeholder bytes are already flushed, overwrite them
+    // with the real length of the written data now.
     let size = bit_len(writer)? - start;
     let buf = writer.get_mut();
     LE::write_u32(&mut buf[size_pos..size_pos + 4], size);

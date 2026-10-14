@@ -100,9 +100,9 @@ pub fn serialize(
             // This check is best effort in an attempt to ensure the user gets
             // the supplied value back during deserialization.
             if (x as f64) == v || v.is_nan() {
-                Err(Error::OutOfRange(ty.clone()))
-            } else {
                 utils::write_bits_aligned(w, x.to_bits() as u64, u32::BITS)
+            } else {
+                Err(Error::OutOfRange(ty.clone()))
             }
         }),
         "double" => expect!(value, ty, Float)

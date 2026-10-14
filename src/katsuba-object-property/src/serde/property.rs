@@ -1,4 +1,4 @@
-use bitter::{LittleEndianReader, LittleEndianWriter};
+use bitter::{BitReader, LittleEndianReader, LittleEndianWriter};
 use katsuba_types::Property;
 
 use super::*;
@@ -92,6 +92,15 @@ fn deserialize_list(
             .flags
             .contains(SerializerFlags::COMPACT_LENGTH_PREFIXES),
     )?;
+
+    // Every element needs at least 1 bit on the wire, so do a naive test
+    // upfront to ensure we are not allocating a wildly disproportionate
+    // length that the data could never meet.
+    let remaining = reader.bits_remaining().unwrap_or(0);
+    if len > remaining {
+        return Err(Error::ContainerTooLarge { len, remaining });
+    }
+
     let mut inner = Vec::with_capacity(len);
 
     de.with_recursion_limit(|de| {

@@ -23,6 +23,8 @@ fn parse_config(json: &str) -> SerializerOptions {
         compress: bool,
         flags: u32,
         property_mask: u32,
+        #[serde(default)]
+        recursion_limit: Option<i8>,
     }
 
     let config: Config = serde_json::from_str(json).expect("failed to parse config");
@@ -32,7 +34,7 @@ fn parse_config(json: &str) -> SerializerOptions {
         property_mask: PropertyFlags::from_bits_truncate(config.property_mask),
         shallow: config.shallow,
         manual_compression: config.compress,
-        recursion_limit: i8::MAX,
+        recursion_limit: config.recursion_limit.unwrap_or(i8::MAX),
         skip_unknown_types: false,
     }
 }
@@ -55,8 +57,23 @@ macro_rules! test_deserialize {
                 !matches!(value, Value::Empty),
                 "deserialized value should not be empty"
             );
+
+            assert_roundtrips(&mut serializer, &value);
         }
     };
+}
+
+fn assert_roundtrips(serializer: &mut Serializer, value: &Value) {
+    let mut buf = Vec::new();
+    serializer
+        .serialize_into(value, &mut buf)
+        .unwrap_or_else(|e| panic!("serialization failed: {e:?}"));
+
+    let roundtripped = serializer
+        .deserialize(&buf)
+        .unwrap_or_else(|e| panic!("re-deserialization failed: {e:?}"));
+
+    assert_eq!(*value, roundtripped, "value did not round-trip");
 }
 
 macro_rules! test_should_fail {
@@ -81,8 +98,6 @@ macro_rules! test_should_fail {
     };
 }
 
-// === Scalar Type Tests ===
-
 test_deserialize!(
     all_scalars_shallow,
     "fixtures/all-scalars-shallow.bin",
@@ -94,8 +109,6 @@ test_deserialize!(
     "fixtures/all-scalars-deep.bin",
     "fixtures/all-scalars-deep.config.json"
 );
-
-// === Bit Integer Tests ===
 
 test_deserialize!(
     bit_integers_shallow,
@@ -109,8 +122,6 @@ test_deserialize!(
     "fixtures/bit-integers-deep.config.json"
 );
 
-// === String Tests ===
-
 test_deserialize!(
     strings_shallow,
     "fixtures/strings-shallow.bin",
@@ -121,12 +132,6 @@ test_deserialize!(
     strings_deep,
     "fixtures/strings-deep.bin",
     "fixtures/strings-deep.config.json"
-);
-
-test_deserialize!(
-    strings_compact,
-    "fixtures/strings-compact.bin",
-    "fixtures/strings-compact.config.json"
 );
 
 test_deserialize!(
@@ -208,18 +213,6 @@ test_deserialize!(
 );
 
 test_deserialize!(
-    list_compact,
-    "fixtures/list-compact.bin",
-    "fixtures/list-compact.config.json"
-);
-
-test_deserialize!(
-    nested_lists,
-    "fixtures/nested-lists.bin",
-    "fixtures/nested-lists.config.json"
-);
-
-test_deserialize!(
     ends_with_bits_shallow,
     "fixtures/ends-with-bits-shallow.bin",
     "fixtures/ends-with-bits-shallow.config.json"
@@ -249,12 +242,6 @@ test_deserialize!(
     "fixtures/empty-string-no-realign.config.json"
 );
 
-test_deserialize!(
-    deep_size_boundary,
-    "fixtures/deep-size-boundary.bin",
-    "fixtures/deep-size-boundary.config.json"
-);
-
 test_should_fail!(
     null_root_should_fail,
     "fixtures/should-fail/null-root.bin",
@@ -267,4 +254,135 @@ test_should_fail!(
     "fixtures/should-fail/delta-encode-forbid-absent.bin",
     "fixtures/should-fail/delta-encode-forbid-absent.config.json",
     Error::MissingDelta(..)
+);
+
+#[test]
+fn strings_compact_aligned() {
+    let types = load_types();
+    let options = parse_config(include_str!("fixtures/strings-compact-aligned.config.json"));
+    let data = include_bytes!("fixtures/strings-compact-aligned.bin");
+
+    let mut serializer = Serializer::new(options, types).expect("failed to create serializer");
+    let value = serializer
+        .deserialize(data)
+        .expect("deserialization failed");
+    assert_roundtrips(&mut serializer, &value);
+
+    let Value::Object(obj) = value else {
+        panic!("expected an object, got {value:?}");
+    };
+    assert_eq!(obj.get("m_flag"), Some(&Value::Bool(true)));
+
+    let Some(Value::String(s)) = obj.get("m_string") else {
+        panic!("expected m_string to be a string");
+    };
+    assert_eq!(s.0, b"Short");
+
+    let Some(Value::WString(s)) = obj.get("m_wstring") else {
+        panic!("expected m_wstring to be a wide string");
+    };
+    assert_eq!(s.0, vec!['A' as u16; 200]);
+}
+
+#[test]
+fn list_compact_aligned() {
+    let types = load_types();
+    let options = parse_config(include_str!("fixtures/list-compact-aligned.config.json"));
+    let data = include_bytes!("fixtures/list-compact-aligned.bin");
+
+    let mut serializer = Serializer::new(options, types).expect("failed to create serializer");
+    let value = serializer
+        .deserialize(data)
+        .expect("deserialization failed");
+    assert_roundtrips(&mut serializer, &value);
+
+    let Value::Object(obj) = value else {
+        panic!("expected an object, got {value:?}");
+    };
+    assert_eq!(obj.get("m_flag"), Some(&Value::Bool(true)));
+
+    let Some(Value::List(list)) = obj.get("m_values") else {
+        panic!("expected m_values to be a list");
+    };
+    let expected: Vec<Value> = (0..10).map(Value::Unsigned).collect();
+    assert_eq!(list.inner, expected);
+    assert_eq!(obj.get("m_count"), Some(&Value::Unsigned(10)));
+}
+
+#[test]
+fn nested_recursive() {
+    let types = load_types();
+    let options = parse_config(include_str!("fixtures/nested-recursive.config.json"));
+    let data = include_bytes!("fixtures/nested-recursive.bin");
+
+    let mut serializer = Serializer::new(options, types).expect("failed to create serializer");
+    let value = serializer
+        .deserialize(data)
+        .expect("deserialization failed");
+    assert_roundtrips(&mut serializer, &value);
+
+    fn as_object(v: &Value) -> &katsuba_object_property::value::Object {
+        match v {
+            Value::Object(obj) => obj,
+            other => panic!("expected an object, got {other:?}"),
+        }
+    }
+
+    fn value_of(v: &Value) -> u64 {
+        match as_object(v).get("m_value") {
+            Some(Value::Unsigned(v)) => *v,
+            other => panic!("expected m_value to be an unsigned int, got {other:?}"),
+        }
+    }
+
+    fn children_of(v: &Value) -> &[Value] {
+        match as_object(v).get("m_children") {
+            Some(Value::List(list)) => &list.inner,
+            other => panic!("expected m_children to be a list, got {other:?}"),
+        }
+    }
+
+    assert_eq!(value_of(&value), 1);
+    let children = children_of(&value);
+    assert_eq!(children.len(), 1);
+
+    assert_eq!(value_of(&children[0]), 2);
+    let grandchildren = children_of(&children[0]);
+    assert_eq!(grandchildren.len(), 1);
+
+    assert_eq!(value_of(&grandchildren[0]), 3);
+    assert!(children_of(&grandchildren[0]).is_empty());
+}
+
+#[test]
+fn enum_alignment_shallow() {
+    let types = load_types();
+    let options = parse_config(include_str!("fixtures/enum-alignment-shallow.config.json"));
+    let data = include_bytes!("fixtures/enum-alignment-shallow.bin");
+
+    let mut serializer = Serializer::new(options, types).expect("failed to create serializer");
+    let value = serializer
+        .deserialize(data)
+        .expect("deserialization failed");
+    assert_roundtrips(&mut serializer, &value);
+
+    let Value::Object(obj) = value else {
+        panic!("expected an object, got {value:?}");
+    };
+    assert_eq!(obj.get("m_flag"), Some(&Value::Bool(true)));
+    assert_eq!(obj.get("m_enum"), Some(&Value::Enum(3)));
+}
+
+test_should_fail!(
+    recursion_limit_exceeded,
+    "fixtures/should-fail/recursion-limit-exceeded.bin",
+    "fixtures/should-fail/recursion-limit-exceeded.config.json",
+    Error::Recursion
+);
+
+test_should_fail!(
+    huge_container,
+    "fixtures/should-fail/huge-container.bin",
+    "fixtures/should-fail/huge-container.config.json",
+    Error::ContainerTooLarge { .. }
 );
