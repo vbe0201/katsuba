@@ -12,16 +12,16 @@
 
 use std::io;
 
-use base64::{prelude::BASE64_STANDARD, Engine};
-use byteorder::{ReadBytesExt, LE};
-use thiserror::{self, Error};
+use base64::{Engine, prelude::BASE64_STANDARD};
+use byteorder::{LE, ReadBytesExt};
 use rsa::{
+    Oaep, RsaPrivateKey,
     pkcs1::DecodeRsaPrivateKey,
     pkcs1v15::SigningKey,
     signature::{RandomizedSigner, SignatureEncoding},
-    Oaep, RsaPrivateKey,
 };
 use sha1::Sha1;
+use thiserror::{self, Error};
 
 const SECRET: &[u8] = b"\xE1\x6C\xD6\xAE\x52\x90\x49\xF1\xF1\xBB\xE9\xEB\xB3\xA6\xDB\x3C";
 

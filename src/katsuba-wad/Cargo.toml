@@ -12,7 +12,7 @@ katsuba-utils = { path = "../katsuba-utils" }
 globset = "0.4"
 libdeflater = { workspace = true }
 memmap2 = "0.9"
-tempfile = { version = "3.24", optional = true }
+tempfile = { version = "3", optional = true }
 thiserror = { workspace = true }
 
 [features]

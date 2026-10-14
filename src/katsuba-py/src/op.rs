@@ -18,7 +18,7 @@ use crate::{KatsubaError, error};
 mod conversion;
 
 #[derive(Clone)]
-#[pyclass(module = "katsuba.op", skip_from_py_object)]
+#[pyclass(module = "katsuba.op")]
 pub struct TypeList(Arc<katsuba_types::TypeList>);
 
 impl TypeList {

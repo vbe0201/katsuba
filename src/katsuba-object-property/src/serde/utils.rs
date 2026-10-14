@@ -2,14 +2,14 @@ use std::io;
 
 use bitter::{BitReader, BitWriter, LittleEndianReader, LittleEndianWriter, sign_extend};
 use byteorder::{ByteOrder, LE, LittleEndian, ReadBytesExt};
-use katsuba_utils::align::align_down;
+use katsuba_utils::align::{align_down, align_up};
 
 use super::{Error, SerializerFlags, SerializerOptions};
 use crate::value::*;
 
 #[inline]
 pub fn bits_to_bytes(bits: usize) -> usize {
-    bits.next_multiple_of(u8::BITS as usize) >> 3
+    align_up(bits, u8::BITS as usize) / u8::BITS as usize
 }
 
 #[inline]

@@ -9,9 +9,9 @@ edition = "2024"
 [dependencies]
 katsuba-utils = { path = "../katsuba-utils" }
 
-base64 = "0.22"
+base64 = "0.23"
 byteorder = { workspace = true }
 rand = "0.8"
 rsa = { version = "0.9.10", features = ["sha1"] }
-sha1 = "0.10.6"
+sha1 = "0.10"
 thiserror = { workspace = true }
