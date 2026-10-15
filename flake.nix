@@ -48,6 +48,7 @@
             clang
             maturin
             python3
+            python3Packages.sphinx
             (rust-bin.stable.latest.default.override {
               extensions = ["rust-src" "rust-analyzer"];
             })
