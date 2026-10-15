@@ -46,11 +46,6 @@ fn validate_extract_path(base: &Path, file: &str) -> eyre::Result<PathBuf> {
     Ok(result)
 }
 
-/// Writes a buffer to a file, handling platform-specific optimizations.
-///
-/// On Windows, closing files has significant overhead due to NTFS metadata
-/// updates. We offload the file close to a separate thread pool to avoid
-/// blocking the extraction pipeline.
 fn write_file(path: &Path, data: &[u8], _mode: u32) -> eyre::Result<()> {
     let mut opts = fs::OpenOptions::new();
     opts.write(true).create(true).truncate(true);
@@ -70,25 +65,39 @@ fn write_file(path: &Path, data: &[u8], _mode: u32) -> eyre::Result<()> {
     Ok(())
 }
 
+fn choose_destination(inp: Option<&Path>, out: OutputSource) -> eyre::Result<PathBuf> {
+    let (mut out, explicit) = match out {
+        OutputSource::Stdout => (env::current_dir()?, false),
+        OutputSource::Dir(p, ..) => (p, true),
+        OutputSource::File(p) => eyre::bail!("'{}' is not a directory", p.display()),
+    };
+
+    match inp {
+        Some(p) => {
+            let stem = p.file_stem().ok_or_else(|| {
+                eyre::eyre!("cannot determine archive name from '{}'", p.display())
+            })?;
+            out.push(stem);
+        }
+        None if explicit => (),
+        None => eyre::bail!("must specify explicit extraction directory with -o/--output"),
+    }
+
+    Ok(out)
+}
+
 pub fn extract_archive(
-    inpath: Option<PathBuf>,
+    inpath: Option<&Path>,
     archive: Archive,
     out: OutputSource,
-    glob: Option<glob::Matcher>,
+    glob: Option<&glob::Matcher>,
 ) -> eyre::Result<()> {
-    // Determine the output directory for the archive files.
-    // Since we can't print here, we use the cwd instead.
-    let input_stem = inpath.as_ref().and_then(|p| p.file_stem()).unwrap();
-    let mut out = match out {
-        OutputSource::Stdout => env::current_dir()?,
-        OutputSource::File(p) | OutputSource::Dir(p, ..) => p,
-    };
-    out.push(input_stem);
+    let out = choose_destination(inpath, out)?;
 
     // Collect files to extract and validate all paths upfront.
     let mut files = Vec::new();
     for (path, file) in archive.files().iter() {
-        if let Some(matcher) = &glob
+        if let Some(matcher) = glob
             && !matcher.is_match(path)
         {
             continue;

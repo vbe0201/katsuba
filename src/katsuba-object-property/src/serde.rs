@@ -159,7 +159,7 @@ impl Default for SerializerOptions {
     fn default() -> Self {
         Self {
             flags: SerializerFlags::empty(),
-            property_mask: PropertyFlags::TRANSMIT | PropertyFlags::PRIVILEGED_TRANSMIT,
+            property_mask: PropertyFlags::SAVE | PropertyFlags::COPY | PropertyFlags::PUBLIC,
             shallow: true,
             manual_compression: false,
             recursion_limit: i8::MAX,
@@ -180,7 +180,7 @@ impl ZlibParts {
     pub fn new() -> Self {
         Self {
             inflater: Decompressor::new(),
-            deflater: Compressor::new(CompressionLvl::default()),
+            deflater: Compressor::new(CompressionLvl::new(9).unwrap()),
             scratch1: Vec::new(),
             scratch2: Vec::new(),
         }

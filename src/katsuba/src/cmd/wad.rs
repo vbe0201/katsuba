@@ -5,7 +5,7 @@ use eyre::Context;
 use katsuba_wad::{Archive, glob};
 
 use super::Command;
-use crate::cli::{InputsOutputs, Reader, process};
+use crate::cli::{InputsOutputs, process};
 
 mod extract;
 mod pack;
@@ -88,26 +88,24 @@ impl Command for Wad {
 
             WadCommand::Unpack { args, glob } => {
                 let (inputs, outputs) = args.evaluate("")?;
+                let matcher = glob
+                    .as_deref()
+                    .map(glob::Matcher::new)
+                    .transpose()
+                    .context("invalid glob pattern")?;
+
                 process(
                     inputs,
                     outputs,
-                    |r| {
-                        let res = match r {
-                            Reader::Stdin(buf) => Archive::from_vec(buf.into_inner()),
-                            Reader::File(f) => Archive::mmap(f.into_inner()),
-                        };
-                        res.map_err(Into::into)
+                    || Ok(()),
+                    |_, r| {
+                        r.either(
+                            |buf| Archive::from_vec(buf.into_inner()),
+                            |f| Archive::mmap(f.into_inner()),
+                        )
+                        .map_err(Into::into)
                     },
-                    |inp, a, out| {
-                        let matcher = if let Some(pattern) = glob.as_ref() {
-                            let m = glob::Matcher::new(pattern).context("invalid glob pattern")?;
-                            Some(m)
-                        } else {
-                            None
-                        };
-
-                        extract::extract_archive(inp, a, out, matcher)
-                    },
+                    |inp, a, out| extract::extract_archive(inp, a, out, matcher.as_ref()),
                 )
             }
         }

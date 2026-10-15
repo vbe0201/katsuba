@@ -21,6 +21,7 @@ katsuba-wad = { path = "../katsuba-wad" }
 
 clap = { version = "4", features = ["derive", "env"] }
 color-eyre = { version = "0.6", default-features = false }
+either = "1"
 eyre = "0.6"
 glob = "0.3"
 log = { workspace = true }

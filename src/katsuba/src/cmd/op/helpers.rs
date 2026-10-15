@@ -1,27 +1,28 @@
-use std::{fs, io::BufReader, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
-use eyre::Context;
+use eyre::{Context, OptionExt};
 use katsuba_object_property::{Value, value};
 use katsuba_types::{Property, TypeList};
+
+fn read_type_list(path: &Path) -> eyre::Result<TypeList> {
+    let data = fs::read_to_string(path)
+        .with_context(|| format!("failed to open type list at '{}'", path.display()))?;
+    TypeList::from_str(&data).map_err(Into::into)
+}
 
 /// Reads all the given type list paths and merges them into a single
 /// [`TypeList`] instance.
 pub fn merge_type_lists(paths: Vec<PathBuf>) -> eyre::Result<TypeList> {
     let (first, rest) = paths
         .split_first()
-        .ok_or_else(|| eyre::eyre!("at least one type list is required for deserialization"))?;
+        .ok_or_eyre("at least one type list is required for deserialization")?;
 
-    let first = fs::File::open(first)
-        .with_context(|| format!("failed to open type list at '{}'", first.display()))?;
-    let mut list = TypeList::from_reader(BufReader::new(first))?;
-
-    // Merge remaining type lists into `list`.
+    let mut list = read_type_list(first)?;
     for path in rest {
-        let file = fs::File::open(path)
-            .with_context(|| format!("failed to open type list at '{}'", path.display()))?;
-        let next = TypeList::from_reader(BufReader::new(file))?;
-
-        list.merge(next);
+        list.merge(read_type_list(path)?);
     }
 
     Ok(list)

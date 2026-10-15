@@ -550,6 +550,7 @@ dependencies = [
  "blocking",
  "clap",
  "color-eyre",
+ "either",
  "eyre",
  "glob",
  "katsuba-bcd",

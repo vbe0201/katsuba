@@ -1,13 +1,19 @@
 use std::{path::PathBuf, sync::Arc};
 
 use clap::{Args, Subcommand};
-use katsuba_object_property::serde;
+use katsuba_object_property::{
+    Value,
+    serde::{BIND_MAGIC, Serializer, SerializerFlags, SerializerOptions},
+};
 use katsuba_types::PropertyFlags;
 
 use super::Command;
-use crate::cli::{InputsOutputs, helpers, process_par};
+use crate::{
+    cli::{self, InputsOutputs, process},
+    utils,
+};
 
-mod utils;
+mod helpers;
 
 /// Subcommand for working with ObjectProperty serialization.
 #[derive(Debug, Args)]
@@ -40,7 +46,7 @@ pub struct ObjectProperty {
     /// of an object from the serialization.
     ///
     /// When in doubt what to pick, try the default value or 0.
-    #[clap(short, long, default_value_t = 0x18)]
+    #[clap(short, long, default_value_t = 0x7)]
     mask: u32,
 
     /// Whether the object is serialized shallow.
@@ -82,13 +88,25 @@ enum ObjectPropertyCommand {
         #[clap(short, long, default_value_t = false)]
         ignore_unknown_types: bool,
     },
+
+    /// Serializes JSON state to ObjectProperty binary format.
+    Ser {
+        #[clap(flatten)]
+        args: InputsOutputs,
+
+        /// Prepends the `BINd` magic header and overwrites configuration
+        /// to match what is used for persistent object state shipped in
+        /// the game files.
+        #[clap(long, default_value_t = false)]
+        bind: bool,
+    },
 }
 
 impl Command for ObjectProperty {
     fn handle(self) -> eyre::Result<()> {
-        let type_list = Arc::new(utils::merge_type_lists(self.type_lists)?);
-        let mut options = serde::SerializerOptions {
-            flags: serde::SerializerFlags::from_bits_truncate(self.flags),
+        let type_list = Arc::new(helpers::merge_type_lists(self.type_lists)?);
+        let mut options = SerializerOptions {
+            flags: SerializerFlags::from_bits_truncate(self.flags),
             property_mask: PropertyFlags::from_bits_truncate(self.mask),
             shallow: self.shallow,
             manual_compression: self.zlib_manual,
@@ -106,19 +124,22 @@ impl Command for ObjectProperty {
 
                 let original_flags = options.flags;
                 let original_shallow = options.shallow;
-                process_par(
+                process(
                     inputs,
                     outputs,
-                    || serde::Serializer::new(options, type_list.clone()).unwrap(),
+                    || {
+                        Serializer::new(options, type_list.clone())
+                            .map_err(|e| eyre::eyre!("invalid serializer configuration: {e}"))
+                    },
                     |de, r| {
-                        let buf = r.read_to_vec()?;
+                        let buf = cli::read_to_vec(r)?;
                         let mut buf: &[u8] = &buf;
 
                         // If the data starts with the `BINd` magic, it is a game file.
                         // These always use a fixed base config so we set it here.
-                        if buf.get(0..4) == Some(serde::BIND_MAGIC) {
+                        if buf.get(0..4) == Some(BIND_MAGIC) {
                             de.parts.options.shallow = false;
-                            de.parts.options.flags = serde::SerializerFlags::STATEFUL_FLAGS;
+                            de.parts.options.flags = SerializerFlags::STATEFUL_FLAGS;
 
                             buf = buf.get(4..).unwrap();
                         } else {
@@ -128,12 +149,64 @@ impl Command for ObjectProperty {
 
                         let mut value = de.deserialize(buf)?;
                         if string_enums {
-                            utils::stringify_enums(&mut value, &de.parts.types);
+                            helpers::stringify_enums(&mut value, &de.parts.types);
                         }
 
                         Ok(value)
                     },
-                    helpers::write_as_json,
+                    utils::write_as_json,
+                )
+            }
+
+            ObjectPropertyCommand::Ser { args, bind } => {
+                let (inputs, outputs) = args.evaluate("ser.bin")?;
+
+                if bind {
+                    options.shallow = false;
+                    options.flags = SerializerFlags::STATEFUL_FLAGS
+                        | SerializerFlags::COMPACT_LENGTH_PREFIXES
+                        | SerializerFlags::HUMAN_READABLE_ENUMS
+                        | SerializerFlags::WITH_COMPRESSION;
+                }
+
+                process(
+                    inputs,
+                    outputs,
+                    || {
+                        Serializer::new(options, type_list.clone())
+                            .map_err(|e| eyre::eyre!("invalid serializer configuration: {e}"))
+                    },
+                    |ser, r| {
+                        let data = cli::read_to_vec(r)?;
+                        let value = Value::deserialize_obj(
+                            &mut serde_json::Deserializer::from_slice(&data),
+                            &ser.parts.types,
+                        )
+                        .map_err(|e| eyre::eyre!("failed to parse input: {e}"))?;
+
+                        let mut buf = Vec::new();
+                        ser.serialize_into(&value, &mut buf)?;
+
+                        if bind {
+                            Ok((BIND_MAGIC, buf))
+                        } else {
+                            Ok((&[], buf))
+                        }
+                    },
+                    |inp, (prefix, v), out| {
+                        utils::write_to_out(
+                            inp,
+                            |w| {
+                                if !prefix.is_empty() {
+                                    w.write_all(prefix)?;
+                                }
+                                w.write_all(&v)?;
+
+                                Ok(())
+                            },
+                            out,
+                        )
+                    },
                 )
             }
         }
