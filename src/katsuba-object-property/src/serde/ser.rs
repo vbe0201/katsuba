@@ -95,7 +95,7 @@ impl Serializer {
             Value::Empty => return Err(Error::NullRoot),
             _ => return Err(Error::TypeMismatch("PropertyClass".into())),
         };
-        log::info!("Serializing object with config {:?}", self.parts.options);
+        log::debug!("Serializing object with config {:?}", self.parts.options);
 
         let mut buf = mem::take(out);
         buf.clear();

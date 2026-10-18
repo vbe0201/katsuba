@@ -5,6 +5,7 @@ use std::{
 };
 
 use katsuba_object_property::serde::{self, SerializerFlags};
+use katsuba_types::PropertyFlags;
 use pyo3::{
     buffer::PyBuffer,
     exceptions::{PyKeyError, PyValueError},
@@ -79,8 +80,45 @@ pub struct SerializerOptions(serde::SerializerOptions);
 #[pymethods]
 impl SerializerOptions {
     #[new]
-    pub fn new() -> Self {
-        Self::default()
+    #[pyo3(signature = (
+        *,
+        flags = None,
+        property_mask = None,
+        shallow = None,
+        manual_compression = None,
+        recursion_limit = None,
+        skip_unknown_types = None
+    ))]
+    pub fn new(
+        flags: Option<u32>,
+        property_mask: Option<u32>,
+        shallow: Option<bool>,
+        manual_compression: Option<bool>,
+        recursion_limit: Option<i8>,
+        skip_unknown_types: Option<bool>,
+    ) -> Self {
+        let mut this = serde::SerializerOptions::default();
+
+        if let Some(v) = flags {
+            this.flags = SerializerFlags::from_bits_truncate(v);
+        }
+        if let Some(v) = property_mask {
+            this.property_mask = PropertyFlags::from_bits_truncate(v);
+        }
+        if let Some(v) = shallow {
+            this.shallow = v;
+        }
+        if let Some(v) = manual_compression {
+            this.manual_compression = v;
+        }
+        if let Some(v) = recursion_limit {
+            this.recursion_limit = v;
+        }
+        if let Some(v) = skip_unknown_types {
+            this.skip_unknown_types = v;
+        }
+
+        Self(this)
     }
 
     #[getter]
@@ -90,7 +128,7 @@ impl SerializerOptions {
 
     #[setter]
     pub fn set_flags(&mut self, new: u32) {
-        self.0.flags = serde::SerializerFlags::from_bits_truncate(new);
+        self.0.flags = SerializerFlags::from_bits_truncate(new);
     }
 
     #[getter]
@@ -100,7 +138,7 @@ impl SerializerOptions {
 
     #[setter]
     pub fn set_property_mask(&mut self, new: u32) {
-        self.0.property_mask = katsuba_types::PropertyFlags::from_bits_truncate(new);
+        self.0.property_mask = PropertyFlags::from_bits_truncate(new);
     }
 
     #[getter]
@@ -187,7 +225,7 @@ impl Serializer {
 
     #[setter]
     pub fn set_flags(&mut self, new: u32) {
-        self.inner.parts.options.flags = serde::SerializerFlags::from_bits_truncate(new);
+        self.inner.parts.options.flags = SerializerFlags::from_bits_truncate(new);
     }
 
     #[getter]
@@ -197,8 +235,7 @@ impl Serializer {
 
     #[setter]
     pub fn set_property_mask(&mut self, new: u32) {
-        self.inner.parts.options.property_mask =
-            katsuba_types::PropertyFlags::from_bits_truncate(new);
+        self.inner.parts.options.property_mask = PropertyFlags::from_bits_truncate(new);
     }
 
     #[getter]
@@ -291,7 +328,7 @@ impl Object {
 impl Object {
     #[new]
     #[pyo3(signature = (type_hash, *_args, **_kwargs))]
-    fn py_new(
+    fn __new__(
         type_hash: u32,
         _args: &Bound<'_, PyTuple>,
         _kwargs: Option<&Bound<'_, PyDict>>,

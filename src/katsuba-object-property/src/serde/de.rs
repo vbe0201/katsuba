@@ -83,7 +83,7 @@ impl Serializer {
 
     fn deserialize_(&mut self, data: &[u8]) -> Result<Value, Error> {
         let mut reader = self.zlib_parts.configure(&mut self.parts.options, data)?;
-        log::info!("Deserializing object with config {:?}", self.parts.options);
+        log::debug!("Deserializing object with config {:?}", self.parts.options);
 
         let value = object::deserialize(&mut self.parts, &mut reader)?;
         if let Value::Empty = value {
