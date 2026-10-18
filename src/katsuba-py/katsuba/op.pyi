@@ -11,7 +11,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Any, Literal, Self, Sequence, overload
 
-STATEFUL_FLAGS: Literal[1 << 0]
+STATEFUL_FLAGS: Literal[1]
 """
 Flag bit for use in :attr:`SerializerOptions.flags`.
 
@@ -24,7 +24,7 @@ data stream directly, which in turn also allows deserializers to pick up on
 them automatically.
 """
 
-COMPACT_LENGTH_PREFIXES: Literal[1 << 1]
+COMPACT_LENGTH_PREFIXES: Literal[2]
 """
 Flag bit for use in :attr:`SerializerOptions.flags`.
 
@@ -32,7 +32,7 @@ Length prefixes of lists and strings in the serialized output are compressed to
 save space, whenever possible.
 """
 
-HUMAN_READABLE_ENUMS: Literal[1 << 2]
+HUMAN_READABLE_ENUMS: Literal[4]
 """
 Flag bit for use in :attr:`SerializerOptions.flags`.
 
@@ -41,14 +41,14 @@ value. This ensures previously serialized data can still be correctly
 deserialized even after the enum definition changes.
 """
 
-WITH_COMPRESSION: Literal[1 << 3]
+WITH_COMPRESSION: Literal[8]
 """
 Flag bit for use in :attr:`SerializerOptions.flags`.
 
 The serialized data stream will be compressed to save space.
 """
 
-FORBID_DELTA_ENCODE: Literal[1 << 4]
+FORBID_DELTA_ENCODE: Literal[16]
 """
 Flag bit for use in :attr:`SerializerOptions.flags`.
 
@@ -402,7 +402,7 @@ class Serializer:
     @property
     def options(self) -> SerializerOptions:
         """
-        Gets or modifies the current serializer configuration.
+        Gets or sets the current serializer configuration.
 
         .. warning::
 

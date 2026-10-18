@@ -110,7 +110,7 @@ class Archive:
 
         This is a convenience method to extract and deserialize
         ObjectProperty state in a single operation. The configuration
-        of the provided :class:`Serializer` instance is preserved
+        of the provided :class:`~katsuba.op.Serializer` instance is preserved
         across every call.
 
         .. note::

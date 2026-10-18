@@ -17,6 +17,11 @@ author = 'Valentin B.'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
+nitpicky = True
+nitpick_ignore = [
+    ('py:class', 'dict[str, Any]'),
+]
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.extlinks',
@@ -27,8 +32,9 @@ extensions = [
     'autoapi.extension',
 ]
 
-autodoc_member_order = "bysource"
+autodoc_member_order = 'bysource'
 autodoc_typehints = 'description'
+autodoc_inherit_docstrings = False
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
@@ -63,5 +69,6 @@ exclude_patterns = ['Thumbs.db', '.DS_Store']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+html_css_files = ["styles.css"]

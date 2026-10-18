@@ -1,0 +1,24 @@
+{% extends "!layout.html" %}
+
+{% block sidebartitle %}
+
+{# check sphinx_rtd_theme/layout.html:sidebartitle if this snippet has become outdated #}
+
+<a href="{{ pathto(root_doc) }}">{{ project }}</a>
+
+{%- set nav_version = version %}
+{% if current_version %}
+  {%- set nav_version = current_version %}
+{% endif %}
+{# don't show the version on RTD if it's the default #}
+{% if nav_version != 'latest' %}
+  <div class="project-version">{{ nav_version }}</div>
+{% endif %}
+
+{% include "searchbox.html" %}
+
+<p class="katsuba-help-hint">Need help? Join our <a
+href="https://discord.gg/Anagxv6NBX">Discord server</a>.
+</p>
+
+{% endblock %}
