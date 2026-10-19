@@ -82,6 +82,11 @@ h1, h2, h3, h4, h5, h6, legend,
   font-family: inherit;
 }
 
+/* Do not render toctree captions on the page. */
+div.toctree-wrapper > p.caption {
+    display: none;
+}
+
 .rst-content code.literal,
 .rst-content tt.literal {
   color: #2b3a4a;
