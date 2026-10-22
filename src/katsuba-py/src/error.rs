@@ -14,6 +14,6 @@ pub fn op_to_py_err(err: OpError) -> PyErr {
 pub fn wad_to_py_err(err: ArchiveError) -> PyErr {
     match err {
         ArchiveError::Io(e) => e.into(),
-        e => KatsubaError::new_err(format!("{e}")),
+        e => KatsubaError::new_err(e.to_string()),
     }
 }

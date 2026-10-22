@@ -1,0 +1,111 @@
+/* ---------- Sidebar header ---------- */
+
+:root {
+  --katsuba-header-bg: #4a9fd6;
+}
+
+/* Lighter blue for the sidebar header and the mobile top bar. */
+.wy-side-nav-search,
+.wy-nav-top {
+  background: var(--katsuba-header-bg);
+}
+
+
+/* Project title */
+.wy-side-nav-search > a {
+  display: block;
+  margin: 0.2em 0 0.5em;
+  padding: 0.2em 0.4em 0.1em;
+  color: #fff;
+  font-size: 140%;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.wy-side-nav-search > a:hover {
+  background: transparent;
+  color: #fff;
+}
+
+/* Short accent line under the title */
+.wy-side-nav-search > a::after {
+  content: "";
+  display: block;
+  width: 2.2em;
+  height: 3px;
+  margin: 0.2em auto 0;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.wy-side-nav-search .project-version {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 90%;
+  margin-bottom: 0.4em;
+}
+
+.wy-side-nav-search .katsuba-help-hint {
+  margin: 0.8em 0.8em 0;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 80%;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.wy-side-nav-search .katsuba-help-hint a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid;
+}
+
+.wy-side-nav-search .katsuba-help-hint a:hover {
+  color: #fff;
+  border-bottom-width: 2px;
+}
+
+/* ---------- Content ---------- */
+
+.rst-content div.deprecated {
+  background: #fff8d6;
+  border-left: 4px solid #e0b000;
+  padding: 0.6em 1em;
+  margin-bottom: 1em;
+}
+
+h1, h2, h3, h4, h5, h6, legend,
+.rst-content .toctree-wrapper p.caption {
+  font-family: inherit;
+}
+
+/* Do not render toctree captions on the page. */
+div.toctree-wrapper > p.caption {
+    display: none;
+}
+
+.rst-content code.literal,
+.rst-content tt.literal {
+  color: #2b3a4a;
+}
+
+/* ---------- API docs on narrow screens ---------- */
+
+/* Reformat Parameters/Returns/Raises fields for narrow viewports. */
+@media screen and (max-width: 1024px) {
+  html.writer-html5 .rst-content dl.field-list {
+    display: block;
+  }
+}
+
+html.writer-html5 .rst-content dl.field-list > dt {
+  padding-left: 0;
+}
+
+/* Long signatures and identifiers shouldn't force horizontal scrolling. */
+html.writer-html5 .rst-content {
+  overflow-wrap: break-word;
+}

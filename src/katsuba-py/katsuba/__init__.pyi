@@ -1,17 +1,11 @@
 """
-katsuba
-~~~~~~~
+``katsuba`` is a Python library for interacting with various
+proprietary KingsIsle file formats for data-processing scripts
+and automation purposes.
 
-A Python library for interfacing with KingsIsle file formats.
-This implements ergonomic bindings to the ``katsuba`` Rust
-crates which are responsible for the heavy lifting.
+It offers bindings to the Rust crates that comprise the project
+and implement all core functionality.
 """
 
 class KatsubaError(Exception):
-    """
-    Base class for errors in katsuba.
-    
-    Errors from the Rust side that cannot be mapped to a more
-    appropriate builtin exception type will be reported using
-    this type.
-    """
+    """The base class for custom exceptions in katsuba."""

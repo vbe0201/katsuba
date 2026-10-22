@@ -36,7 +36,7 @@ enum WadCommand {
         /// is generally not recommended. The only exception to that
         /// rule is when repacking Root.wad, in which case a value of
         /// 1 must be set.
-        #[clap(short, default_value_t = 0)]
+        #[clap(short, long, default_value_t = 0)]
         flags: u8,
 
         /// The optional output file to write the archive to.

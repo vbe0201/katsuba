@@ -20,7 +20,7 @@ fn extract_file_contents<'a>(
             let mut inflater = katsuba_wad::Inflater::new();
             inflater
                 .decompress(contents, file.uncompressed_size as _)
-                .map_err(|e| KatsubaError::new_err(format!("{e:?}")))?;
+                .map_err(|e| KatsubaError::new_err(e.to_string()))?;
 
             Cow::Owned(inflater.into_inner())
         }
@@ -65,7 +65,7 @@ impl Archive {
 
     pub fn iter_glob(slf: PyRef<'_, Self>, pattern: &str) -> PyResult<Py<GlobArchiveIter>> {
         let matcher = katsuba_wad::glob::Matcher::new(pattern)
-            .map_err(|e| KatsubaError::new_err(format!("{e:?}")))?;
+            .map_err(|e| KatsubaError::new_err(e.to_string()))?;
         let keys = slf
             .0
             .files()

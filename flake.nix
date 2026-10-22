@@ -47,7 +47,13 @@
           packages = with pkgs; [
             clang
             maturin
-            python3
+            (python3.withPackages (ps: with ps; [
+              sphinx
+              sphinx-autoapi
+              sphinx-codeautolink
+              sphinx-copybutton
+              sphinx-rtd-theme
+            ]))
             (rust-bin.stable.latest.default.override {
               extensions = ["rust-src" "rust-analyzer"];
             })
