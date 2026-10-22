@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.11.0] - 2026-10-22
+
+This release contains serialization support for all formats and bug fixes.
+
+This is a big update so if anything regressed or is not working as intended, feel free to reach out
+through our [Discord server](https://discord.gg/Anagxv6NBX) or open an issue on GitHub.
+
+### CLI
+
+- The `wad unpack` command now supports a `--glob` flag for only extracting selected files.
+  - For example, run `katsuba wad unpack Root.wad --glob "**/*Messages*.xml"` to extract just DML protocol files.
+- Add more safeguards for malicious WAD archives during extraction.
+  - As always, use common sense and do not extract archives from untrusted sources.
+- Add serialization support for ObjectProperty, POI, NAV, BCD.
+
+### BCD
+
+- Fix a bug where constructed values are serialized even if the geometry type isn't a mesh.
+
+### ObjectProperty
+
+- Align the bit stream for enum reads in shallow mode.
+  - Most users deserialize game files in deep mode, hence this bug went unnoticed.
+- Deprecated properties in shallow mode are not skipped anymore.
+  - This behavior is exclusive to deep mode, matching KingsIsle's logic.
+- Fix integer overflow in recursion guard.
+  - This bug caused serializer instances to become corrupted if the recursion guard ever triggered.
+  - This was never a security issue though for applications using katsuba to deserialize untrusted inputs.
+- Serializer configuration is no longer clobbered by `STATEFUL_FLAGS` updating the config.
+  - When a `deserialize` call returns, the config is restored to what it was prior to the call.
+- For compressed data, only bit 0 instead of a whole byte is checked for the compression indicator.
+  - The previous behavior was not wrong in practice, but it was doing too much compared to KingsIsle's code.
+- `Value` can now be both serialized and deserialized using `serde`.
+- **`Serializer` now supports the serialization of `Value`s too.**
+
+### Python
+
+- Various internal performance optimizations.
+- ObjectProperty serialization support exposed through the public API.
+- Docs and Python type stubs received updates to be more descriptive and accurate.
+
 ## [0.10.0] - 2025-02-14
 
 This release comes with mainly bug fixes and some internal restructuring.
