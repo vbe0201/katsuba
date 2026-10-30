@@ -60,6 +60,185 @@ serialized stream when the value has not been altered since the last time
 the object was serialized before.
 """
 
+SAVE: Literal[1]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property is saved when serializing objects to files.
+"""
+
+COPY: Literal[2]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property is copied when objects are duplicated.
+"""
+
+PUBLIC: Literal[4]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property is publicly visible.
+"""
+
+TRANSMIT: Literal[8]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property is transmitted to clients over the network.
+"""
+
+PRIVILEGED_TRANSMIT: Literal[16]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property is only transmitted to privileged clients.
+"""
+
+PERSIST: Literal[32]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property is persisted to the database.
+"""
+
+DEPRECATED: Literal[64]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property is deprecated.
+
+Deprecated properties are skipped in the deep serialization format.
+"""
+
+NOSCRIPT: Literal[128]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property is not accessible from scripts.
+"""
+
+DELTA_ENCODE: Literal[256]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property supports delta encoding.
+
+See :data:`FORBID_DELTA_ENCODE` for details.
+"""
+
+BLOB: Literal[512]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+The property holds a binary blob.
+"""
+
+NOEDIT: Literal[65536]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property is not editable.
+"""
+
+FILENAME: Literal[131072]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property holds a file name.
+"""
+
+COLOR: Literal[262144]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property holds a color.
+"""
+
+CONSTRAINED_VALUE: Literal[524288]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property's value is constrained.
+"""
+
+BITS: Literal[1048576]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property is a bit mask of enum options.
+"""
+
+ENUM: Literal[2097152]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property is an enum.
+"""
+
+LOCALIZED: Literal[4194304]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property holds a localized string.
+"""
+
+STRING_KEY: Literal[8388608]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property holds a string key.
+"""
+
+OBJECT_ID: Literal[16777216]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property holds an object ID.
+"""
+
+REFERENCE_ID: Literal[33554432]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property holds a reference ID.
+"""
+
+RADIANS: Literal[67108864]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property holds an angle in radians.
+"""
+
+OBJECT_NAME: Literal[134217728]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property holds an object name.
+"""
+
+HAS_BASECLASS: Literal[268435456]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property's type has a base class.
+"""
+
+IS_BEHAVIOR: Literal[536870912]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The class is a behavior, not a property type.
+"""
+
+ASSET: Literal[1073741824]
+"""
+Property flag bit for use in :attr:`SerializerOptions.property_mask`.
+
+Editor hint: The property refers to an asset.
+"""
+
 class TypeList:
     """
     A manifest of C++ type information used for ObjectProperty serialization.
@@ -211,7 +390,8 @@ class SerializerOptions:
 
         Property flags are metadata associated with every property in the
         :class:`TypeList`. They are stored in the ``flags`` JSON key of every
-        property.
+        property, and every flag bit is available as a constant in this module,
+        such as :data:`SAVE` or :data:`TRANSMIT`.
 
         During serialization and deserialization, properties that do not
         fulfill ``(property.flags & property_mask) == property_mask`` are skipped.

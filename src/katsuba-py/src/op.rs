@@ -422,6 +422,12 @@ pub fn katsuba_op(m: &Bound<'_, PyModule>) -> PyResult<()> {
         SerializerFlags::FORBID_DELTA_ENCODE.bits(),
     )?;
 
+    // Composite flags like `ENUM_LIKE` are not yielded since their bits
+    // are covered by the individual flags before them.
+    for (name, flag) in PropertyFlags::all().iter_names() {
+        m.add(name, flag.bits())?;
+    }
+
     m.add_class::<Object>()?;
 
     Ok(())
