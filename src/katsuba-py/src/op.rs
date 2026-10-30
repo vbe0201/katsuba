@@ -32,7 +32,7 @@ impl TypeList {
 
     pub fn find(&self, hash: u32) -> PyResult<katsuba_types::TypeDef> {
         self.0
-            .0
+            .classes
             .get(&hash)
             .cloned()
             .ok_or_else(|| PyValueError::new_err(format!("'{hash}' not in type list")))
@@ -65,7 +65,7 @@ impl TypeList {
     pub fn name_for(&self, type_hash: u32) -> PyResult<&str> {
         let entry = self
             .0
-            .0
+            .classes
             .get(&type_hash)
             .ok_or_else(|| PyKeyError::new_err(format!("'{type_hash}'")))?;
 

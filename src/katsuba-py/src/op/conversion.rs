@@ -201,7 +201,7 @@ pub(super) fn python_to_object(obj: &Bound<'_, PyAny>, types: &TypeList) -> PyRe
             template_id,
         });
     let type_def = types
-        .0
+        .classes
         .get(&type_hash)
         .ok_or_else(|| PyValueError::new_err(format!("unknown type hash '{type_hash}'")))?;
 

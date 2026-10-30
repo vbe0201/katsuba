@@ -57,7 +57,14 @@ impl From<serde_json::Error> for Error {
 
 /// Representation of the list of types dumped from the game client.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct TypeList(pub HashMap<u32, TypeDef>);
+pub struct TypeList {
+    /// A mapping of type hashes to their definitions.
+    pub classes: HashMap<u32, TypeDef>,
+    /// A mapping of CoreObject types to the classes they construct.
+    ///
+    /// Only v3 lists provide this. Empty for older versions.
+    pub core_object_factory_types: HashMap<u8, CoreObjectFactoryType>,
+}
 
 impl TypeList {
     /// Deserializes a type list in JSON format from a given reader.
@@ -73,10 +80,12 @@ impl TypeList {
 
     /// Merges all entries from `other` into `self`.
     pub fn merge(&mut self, mut other: TypeList) {
-        self.0.reserve(other.0.len());
-        for (k, v) in other.0.drain() {
-            self.0.insert(k, v);
+        self.classes.reserve(other.classes.len());
+        for (k, v) in other.classes.drain() {
+            self.classes.insert(k, v);
         }
+        self.core_object_factory_types
+            .extend(other.core_object_factory_types.drain());
     }
 }
 
@@ -85,10 +94,17 @@ impl<'de> Deserialize<'de> for TypeList {
     where
         D: Deserializer<'de>,
     {
-        deserializer
-            .deserialize_map(serde_impl::TypeListVisitor { version: 1 })
-            .map(Self)
+        deserializer.deserialize_map(serde_impl::TypeListVisitor { version: 1 })
     }
+}
+
+/// The class a CoreObject factory constructs for a core type.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+pub struct CoreObjectFactoryType {
+    /// The namespace of the core type.
+    pub namespace: u8,
+    /// The hash of the constructed class.
+    pub type_hash: u32,
 }
 
 /// An individual type definition inside the list.

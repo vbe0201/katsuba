@@ -21,7 +21,7 @@ fn equal_parse_between_versions() -> Result<(), Error> {
 fn query_types() -> Result<(), Error> {
     let list = read_type_list("tests/data/types_v2.json")?;
 
-    let matrix = list.0.get(&1479974833).unwrap();
+    let matrix = list.classes.get(&1479974833).unwrap();
     assert_eq!(&*matrix.name, "class Matrix3x3");
     assert!(matrix.properties.is_empty());
 
@@ -32,7 +32,7 @@ fn query_types() -> Result<(), Error> {
 fn query_properties() -> Result<(), Error> {
     let list = read_type_list("tests/data/types_v1.json")?;
 
-    let cls = list.0.get(&135649998).unwrap();
+    let cls = list.classes.get(&135649998).unwrap();
     assert_eq!(&*cls.name, "class EquipmentSetList");
     assert_eq!(cls.properties.len(), 1);
 
@@ -43,6 +43,26 @@ fn query_properties() -> Result<(), Error> {
     assert_eq!(property.hash, 1788831224);
     assert!(property.dynamic);
     assert_eq!(hash, property.hash);
+
+    Ok(())
+}
+
+#[test]
+fn resolve_v3_aliases() -> Result<(), Error> {
+    let list = TypeList::from_str(
+        r#"{
+    "version": 3,
+    "aliases": {"2": 1},
+    "classes": {"1": {"name": "class A", "hash": 1, "properties": {}}},
+    "core_object_factory_types": {"104": {"namespace": 1, "type_hash": 1}}
+}"#,
+    )?;
+
+    let class = &list.classes[&1];
+    let alias = &list.classes[&2];
+    assert_eq!(alias.name, class.name);
+    assert_eq!(alias.properties, class.properties);
+    assert_eq!(alias.hash, 2);
 
     Ok(())
 }

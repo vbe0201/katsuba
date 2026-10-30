@@ -154,7 +154,7 @@ impl<'de> Visitor<'de> for ObjectVisitor<'_> {
         let type_hash: u32 = map.next_value()?;
         let type_def = self
             .types
-            .0
+            .classes
             .get(&type_hash)
             .ok_or_else(|| A::Error::custom(format!("unknown type hash '{type_hash}'")))?;
 
