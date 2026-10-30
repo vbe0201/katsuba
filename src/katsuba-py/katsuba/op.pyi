@@ -125,6 +125,23 @@ class TypeList:
         :raises KeyError: No matching entry found in the type list.
         """
 
+    def add_alias(self, alias: int, target: int) -> None:
+        """
+        Registers a type hash as an alias of an existing class.
+
+        The alias receives a copy of the class definition of ``target``,
+        replacing any existing entry for ``alias``.
+
+        .. note::
+
+            :class:`Serializer` instances created from this type list
+            before the call do not see the new alias.
+
+        :param alias: The type hash to register.
+        :param target: The type hash of the existing class.
+        :raises KeyError: ``target`` is not in the type list.
+        """
+
 class SerializerOptions:
     """
     Configurable options to customize the behavior of a :class:`Serializer`.

@@ -66,3 +66,23 @@ fn resolve_v3_aliases() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[test]
+fn add_custom_alias() -> Result<(), Error> {
+    let mut list = read_type_list("tests/data/types_v2.json")?;
+
+    list.add_alias(3, 1479974833)?;
+    assert_eq!(&*list.classes[&3].name, "class Matrix3x3");
+    assert_eq!(list.classes[&3].hash, 3);
+
+    assert!(matches!(
+        list.add_alias(4, 5),
+        Err(Error::UnknownAliasTarget {
+            alias: 4,
+            target: 5
+        })
+    ));
+    assert!(!list.classes.contains_key(&4));
+
+    Ok(())
+}

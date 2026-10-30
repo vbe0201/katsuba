@@ -42,6 +42,15 @@ pub enum Error {
     /// An error occurred during JSON deserialization.
     #[error("{0}")]
     Serde(serde_json::Error),
+
+    /// An alias refers to a class that is not in the list.
+    #[error("alias {alias} refers to unknown class {target}")]
+    UnknownAliasTarget {
+        /// The hash of the alias.
+        alias: u32,
+        /// The hash of the missing class.
+        target: u32,
+    },
 }
 
 impl From<serde_json::Error> for Error {
@@ -86,6 +95,21 @@ impl TypeList {
         }
         self.core_object_factory_types
             .extend(other.core_object_factory_types.drain());
+    }
+
+    /// Registers `alias` as a copy of the existing class `target`.
+    ///
+    /// An existing entry for `alias` is replaced.
+    pub fn add_alias(&mut self, alias: u32, target: u32) -> Result<(), Error> {
+        let mut class = self
+            .classes
+            .get(&target)
+            .cloned()
+            .ok_or(Error::UnknownAliasTarget { alias, target })?;
+        class.hash = alias;
+        self.classes.insert(alias, class);
+
+        Ok(())
     }
 }
 

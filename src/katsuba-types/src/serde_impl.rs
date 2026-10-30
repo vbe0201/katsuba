@@ -86,11 +86,7 @@ impl<'de> Visitor<'de> for TypeListVisitor {
                 // with older versions, we resolve them into copies.
                 list.classes.reserve(aliases.len());
                 for (alias, target) in aliases {
-                    let mut class = list.classes.get(&target).cloned().ok_or_else(|| {
-                        A::Error::custom(format!("alias {alias} refers to unknown class {target}"))
-                    })?;
-                    class.hash = alias;
-                    list.classes.insert(alias, class);
+                    list.add_alias(alias, target).map_err(A::Error::custom)?;
                 }
             }
 

@@ -71,6 +71,12 @@ impl TypeList {
 
         Ok(&entry.name)
     }
+
+    pub fn add_alias(&mut self, alias: u32, target: u32) -> PyResult<()> {
+        Arc::make_mut(&mut self.0)
+            .add_alias(alias, target)
+            .map_err(|_| PyKeyError::new_err(format!("'{target}'")))
+    }
 }
 
 #[derive(Clone, Copy, Default)]
