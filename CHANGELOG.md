@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.1] - 2026-10-31
+
+This is a small bugfix release.
+
+### BCD
+
+- Fixed the parsing and writing order of `length` and `radius` for cylinders and tubes.
+
 ## [0.12.0] - 2026-10-30
 
 This release brings some bug fixes, scripting additions and CoreObject serialization support.

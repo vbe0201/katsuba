@@ -97,7 +97,9 @@ class GeomParams:
         def radius(self) -> float: ...
 
     class Cylinder(GeomParams):
-        """Cylinder-shaped geometry."""
+        """
+        Capsule-shaped geometry of ``length`` along the local z axis, rounded off by ``radius``.
+        """
 
         @property
         def radius(self) -> float: ...
@@ -105,7 +107,7 @@ class GeomParams:
         def length(self) -> float: ...
 
     class Tube(GeomParams):
-        """Tube-shaped geometry."""
+        """Cylinder-shaped geometry of ``length`` along the local z axis."""
 
         @property
         def radius(self) -> float: ...

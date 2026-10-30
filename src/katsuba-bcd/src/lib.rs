@@ -90,10 +90,11 @@ pub enum GeomParams {
     /// Sphere-shaped geometry.
     Sphere { radius: f32 },
 
-    /// Cylinder-shaped geometry.
+    /// Capsule-shaped geometry: a straight part of `length` along the
+    /// local z axis, rounded off by `radius`.
     Cylinder { radius: f32, length: f32 },
 
-    /// Tube-shaped geometry.
+    /// Cylinder-shaped geometry of `length` along the local z axis.
     Tube { radius: f32, length: f32 },
 
     /// Plane-shaped geometry.
@@ -120,12 +121,12 @@ impl GeomParams {
                 radius: binary::float32(reader)?,
             },
             3 => Self::Cylinder {
-                radius: binary::float32(reader)?,
                 length: binary::float32(reader)?,
+                radius: binary::float32(reader)?,
             },
             4 => Self::Tube {
-                radius: binary::float32(reader)?,
                 length: binary::float32(reader)?,
+                radius: binary::float32(reader)?,
             },
             5 => Self::Plane {
                 normal: [
@@ -174,13 +175,13 @@ impl GeomParams {
             }
             &Self::Cylinder { radius, length } => {
                 binary::write_uint32(writer, 3)?;
-                binary::write_float32(writer, radius)?;
                 binary::write_float32(writer, length)?;
+                binary::write_float32(writer, radius)?;
             }
             &Self::Tube { radius, length } => {
                 binary::write_uint32(writer, 4)?;
-                binary::write_float32(writer, radius)?;
                 binary::write_float32(writer, length)?;
+                binary::write_float32(writer, radius)?;
             }
             &Self::Plane { normal, distance } => {
                 binary::write_uint32(writer, 5)?;
