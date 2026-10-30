@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{io, sync::Arc};
 
 use bitter::LittleEndianReader;
 use byteorder::{LE, ReadBytesExt};
@@ -10,10 +10,11 @@ use crate::Value;
 
 pub(super) fn zlib_decompress(
     inflater: &mut Decompressor,
-    mut data: &[u8],
+    size: u32,
+    data: &[u8],
     out: &mut Vec<u8>,
 ) -> Result<(), Error> {
-    let size = data.read_u32::<LE>()? as usize;
+    let size = size as usize;
     out.resize(size, 0);
 
     let decompressed = inflater.zlib_decompress(data, out)?;
@@ -33,10 +34,18 @@ impl ZlibParts {
         opts: &mut SerializerOptions,
         mut data: &'a [u8],
     ) -> Result<LittleEndianReader<'a>, Error> {
-        // If the data is manually compressed, uncompress into scratch.
         if opts.manual_compression {
-            zlib_decompress(&mut self.inflater, data, &mut self.scratch1)?;
-            data = &self.scratch1;
+            // When the highest bit is set, treat the data as uncompressed.
+            let size = data.read_u32::<LE>()?;
+            if size & MANUAL_UNCOMPRESSED_BIT != 0 {
+                let size = (size & !MANUAL_UNCOMPRESSED_BIT) as usize;
+                data = data
+                    .get(..size)
+                    .ok_or_else(|| io::Error::from(io::ErrorKind::UnexpectedEof))?;
+            } else {
+                zlib_decompress(&mut self.inflater, size, data, &mut self.scratch1)?;
+                data = &self.scratch1;
+            }
         }
 
         // If the serializer flags are stateful, update the options.
@@ -46,7 +55,8 @@ impl ZlibParts {
 
         // If the data is compressed, uncompress it into scratch.
         if opts.flags.contains(SerializerFlags::WITH_COMPRESSION) && data.read_u8()? & 1 != 0 {
-            zlib_decompress(&mut self.inflater, data, &mut self.scratch2)?;
+            let size = data.read_u32::<LE>()?;
+            zlib_decompress(&mut self.inflater, size, data, &mut self.scratch2)?;
             data = &self.scratch2;
         }
 

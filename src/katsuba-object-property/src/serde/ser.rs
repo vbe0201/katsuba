@@ -11,16 +11,26 @@ pub(super) fn zlib_compress(
     deflater: &mut Compressor,
     data: &[u8],
     out: &mut Vec<u8>,
+    manual: bool,
 ) -> Result<(), Error> {
-    let size = u32::try_from(data.len()).map_err(|_| Error::LengthOverflow(data.len()))?;
-    out.extend_from_slice(&size.to_le_bytes());
+    let mut size = u32::try_from(data.len()).map_err(|_| Error::LengthOverflow(data.len()))?;
+    if manual && size & MANUAL_UNCOMPRESSED_BIT != 0 {
+        return Err(Error::LengthOverflow(data.len()));
+    }
 
-    let start = out.len();
-    out.resize(start + deflater.zlib_compress_bound(data.len()), 0);
+    let start = out.len() + 4;
+    out.resize(start + deflater.zlib_compress_bound(size as usize), 0);
 
     let compressed = deflater.zlib_compress(data, &mut out[start..])?;
-    out.truncate(start + compressed);
+    if manual && compressed > data.len() {
+        size |= MANUAL_UNCOMPRESSED_BIT;
+        out.truncate(start);
+        out.extend_from_slice(data);
+    } else {
+        out.truncate(start + compressed);
+    }
 
+    LE::write_u32(&mut out[start - 4..start], size);
     Ok(())
 }
 
@@ -40,7 +50,7 @@ impl ZlibParts {
             self.scratch2.clear();
 
             self.scratch2.push(1);
-            zlib_compress(&mut self.deflater, &data, &mut self.scratch2)?;
+            zlib_compress(&mut self.deflater, &data, &mut self.scratch2, false)?;
 
             if !self.scratch2.is_empty() && self.scratch2.len() < data.len() {
                 mem::swap(&mut data, &mut self.scratch2);
@@ -64,7 +74,7 @@ impl ZlibParts {
         // Compress the entire data buffer if manual compression is requested.
         if opts.manual_compression {
             self.scratch1.clear();
-            zlib_compress(&mut self.deflater, &data, &mut self.scratch1)?;
+            zlib_compress(&mut self.deflater, &data, &mut self.scratch1, true)?;
             mem::swap(&mut data, &mut self.scratch1);
         }
 

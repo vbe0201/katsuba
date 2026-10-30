@@ -27,6 +27,10 @@ mod utils;
 /// Magic header for persistent object state shipped with the client.
 pub const BIND_MAGIC: &[u8] = b"BINd";
 
+// Marker bit in the size prefix of manually compressed data which
+// indicates that the payload is stored uncompressed.
+const MANUAL_UNCOMPRESSED_BIT: u32 = 1 << 31;
+
 /// Errors that may occur during the ObjectProperty (de)serialization process.
 #[derive(Debug, Error)]
 pub enum Error {
