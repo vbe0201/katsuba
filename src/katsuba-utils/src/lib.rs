@@ -6,3 +6,5 @@
 pub mod align;
 pub mod binary;
 pub mod hash;
+#[cfg(feature = "python")]
+pub mod python;

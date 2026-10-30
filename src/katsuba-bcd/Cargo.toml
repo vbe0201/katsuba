@@ -6,8 +6,12 @@ description = "Crate for working with Binary Collision Data files"
 license = "ISC"
 edition = "2024"
 
+[features]
+python = ["dep:pyo3", "katsuba-utils/python"]
+
 [dependencies]
 katsuba-utils = { path = "../katsuba-utils" }
 
 bitflags = { workspace = true, features = ["serde"] }
+pyo3 = { workspace = true, optional = true }
 serde = { workspace = true }

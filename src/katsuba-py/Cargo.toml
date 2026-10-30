@@ -11,13 +11,16 @@ name = "katsuba"
 crate-type = ["cdylib"]
 
 [dependencies]
+katsuba-bcd = { path = "../katsuba-bcd", features = ["python"] }
+katsuba-nav = { path = "../katsuba-nav", features = ["python"] }
 katsuba-object-property = { path = "../katsuba-object-property" }
+katsuba-poi = { path = "../katsuba-poi", features = ["python"] }
 katsuba-types = { path = "../katsuba-types" }
-katsuba-utils = { path = "../katsuba-utils" }
+katsuba-utils = { path = "../katsuba-utils", features = ["python"] }
 katsuba-wad = { path = "../katsuba-wad" }
 
 bytemuck = "1"
-pyo3 = { version = "0.30", features = ["abi3-py312"] }
+pyo3 = { workspace = true, features = ["abi3-py312"] }
 
 [build-dependencies]
 pyo3-build-config = { version = "0.30" }

@@ -11,8 +11,15 @@ use std::io;
 use katsuba_utils::binary;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+pub mod python;
+
 /// A navigation node in the zone.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.nav", frozen, get_all)
+)]
 pub struct NavigationNode {
     /// The location of the node.
     pub location: [f32; 3],
@@ -22,6 +29,10 @@ pub struct NavigationNode {
 
 /// A link between two [`NavigationNode`]s in the graph.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.nav", frozen, get_all)
+)]
 pub struct NavigationLink {
     /// The first [`NavigationNode`] identifier.
     pub first: u16,
@@ -31,6 +42,10 @@ pub struct NavigationLink {
 
 /// A graph of navigation nodes and their interconnections.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.nav", frozen, get_all)
+)]
 pub struct NavigationGraph {
     /// The navigation nodes, representing the edges of the graph.
     pub nodes: Vec<NavigationNode>,
@@ -94,6 +109,10 @@ impl NavigationGraph {
 
 /// A navigation graph across zones.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.nav", frozen, get_all)
+)]
 pub struct ZoneNavigationGraph {
     /// The raw [`NavigationGraph`].
     pub graph: NavigationGraph,

@@ -12,6 +12,9 @@ use bitflags::bitflags;
 use katsuba_utils::binary;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+pub mod python;
+
 bitflags! {
     /// Attribute flags encoded in [`Geometry`] objects.
     #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -32,6 +35,10 @@ bitflags! {
 
 /// A face used to describe mesh [`ShapeData`].
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.bcd", frozen, get_all)
+)]
 pub struct Face {
     /// The face vector.
     pub face: [u32; 3],
@@ -68,6 +75,7 @@ impl Face {
 
 /// Extra parameters for the encoded geometric shape.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "katsuba.bcd", frozen))]
 pub enum GeomParams {
     /// Box-shaped geometry.
     Box { length: f32, width: f32, depth: f32 },
@@ -92,7 +100,7 @@ pub enum GeomParams {
     Plane { normal: [f32; 3], distance: f32 },
 
     /// Mesh geometry.
-    Mesh,
+    Mesh {},
 }
 
 impl GeomParams {
@@ -127,7 +135,7 @@ impl GeomParams {
                 ],
                 distance: binary::float32(reader)?,
             },
-            6 => Self::Mesh,
+            6 => Self::Mesh {},
 
             _ => {
                 return Err(io::Error::new(
@@ -181,7 +189,7 @@ impl GeomParams {
                 }
                 binary::write_float32(writer, distance)?;
             }
-            Self::Mesh => {
+            Self::Mesh {} => {
                 binary::write_uint32(writer, 6)?;
             }
         }
@@ -192,6 +200,10 @@ impl GeomParams {
 
 /// Representation of any geometric shape.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.bcd", frozen, get_all)
+)]
 pub struct ProxyGeometry {
     /// The name of the shape.
     pub name: String,
@@ -265,13 +277,17 @@ impl ProxyGeometry {
             GeomParams::Cylinder { .. } => 3,
             GeomParams::Tube { .. } => 4,
             GeomParams::Plane { .. } => 5,
-            GeomParams::Mesh => 6,
+            GeomParams::Mesh {} => 6,
         }
     }
 }
 
 /// Representation of an arbitrary mesh shape.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.bcd", frozen, get_all)
+)]
 pub struct ProxyMesh {
     /// A dynamic list of vertices in the mesh.
     pub vertices: Vec<[f32; 3]>,
@@ -314,6 +330,10 @@ impl ProxyMesh {
 ///
 /// Describes a geometric shape and the associated metadata.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.bcd", frozen, get_all)
+)]
 pub struct Collision {
     /// The category flags for the shape.
     pub category_flags: CollisionFlags,
@@ -345,7 +365,7 @@ impl Collision {
         binary::write_uint32(writer, self.category_flags.bits())?;
         binary::write_uint32(writer, self.collision_flags.bits())?;
         if let Some(mesh) = &self.mesh
-            && matches!(self.geometry.params, GeomParams::Mesh)
+            && matches!(self.geometry.params, GeomParams::Mesh {})
         {
             mesh.write(writer)?;
         }
@@ -357,6 +377,10 @@ impl Collision {
 
 /// Representation of a BCD file.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.bcd", frozen, get_all)
+)]
 pub struct Bcd {
     /// A list of all [`Collision`] objects in the file.
     pub collisions: Vec<Collision>,

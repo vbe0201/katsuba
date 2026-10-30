@@ -10,8 +10,15 @@ use std::{collections::HashMap, io};
 use katsuba_utils::binary;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+pub mod python;
+
 /// An event point inside a [`Poi`] object.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.poi", frozen, get_all)
+)]
 pub struct Point {
     /// Whether the quest helper references this point.
     pub no_quest_helper: bool,
@@ -59,6 +66,10 @@ impl Point {
 
 /// Representation of a teleporter entry in [`Poi`] files.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.poi", frozen, get_all)
+)]
 pub struct Teleporter {
     /// The destination zone for the teleport.
     pub destination: String,
@@ -90,6 +101,10 @@ impl Teleporter {
 
 /// Representation of a POI file.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "katsuba.poi", frozen, get_all)
+)]
 pub struct Poi {
     /// A list of all zone names described by this file.
     pub zone_names: Vec<String>,
@@ -136,14 +151,16 @@ impl Poi {
                     binary::seq(r, len, binary::uint32)
                 })
             })?,
+            // Mobs are stored as a flat list of (zone ID, mob asset) pairs.
             zone_mobs: binary::uint32(&mut reader).and_then(|len| {
-                binary::map(&mut reader, len, binary::uint32, |r| {
-                    let len = binary::uint32(r)?;
-                    binary::seq(r, len, |r| {
-                        let len = binary::uint32(r)?;
-                        binary::str(r, len, false)
-                    })
-                })
+                let mut mobs: HashMap<u32, Vec<String>> = HashMap::new();
+                for _ in 0..len {
+                    let zone_id = binary::uint32(&mut reader)?;
+                    let len = binary::uint32(&mut reader)?;
+                    let mob = binary::str(&mut reader, len, false)?;
+                    mobs.entry(zone_id).or_default().push(mob);
+                }
+                Ok(mobs)
             })?,
         })
     }
@@ -181,13 +198,16 @@ impl Poi {
             |&v, w| binary::write_uint64(w, v),
             |v, w| binary::write_seq(w, true, v, |&v, w| binary::write_uint32(w, v)),
         )?;
-        binary::write_map(
+        binary::write_uint32(
             &mut writer,
-            true,
-            &self.zone_mobs,
-            |&v, w| binary::write_uint32(w, v),
-            |v, w| binary::write_seq(w, true, v, |v, w| binary::write_str(w, v, false)),
+            self.zone_mobs.values().map(Vec::len).sum::<usize>() as u32,
         )?;
+        for (&zone_id, mobs) in &self.zone_mobs {
+            for mob in mobs {
+                binary::write_uint32(&mut writer, zone_id)?;
+                binary::write_str(&mut writer, mob, false)?;
+            }
+        }
 
         Ok(())
     }

@@ -8,6 +8,7 @@ byteorder = "1"
 indexmap = "2"
 libdeflater = { version = "1", features = ["freestanding"] }
 log = "0.4"
+pyo3 = "0.30"
 serde = "1"
 serde_json = "1"
 thiserror = "2"

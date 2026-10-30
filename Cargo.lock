@@ -576,6 +576,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "katsuba-utils",
+ "pyo3",
  "serde",
 ]
 
@@ -597,6 +598,7 @@ name = "katsuba-nav"
 version = "0.1.0"
 dependencies = [
  "katsuba-utils",
+ "pyo3",
  "serde",
 ]
 
@@ -622,6 +624,7 @@ name = "katsuba-poi"
 version = "0.1.0"
 dependencies = [
  "katsuba-utils",
+ "pyo3",
  "serde",
 ]
 
@@ -630,7 +633,10 @@ name = "katsuba-py"
 version = "0.6.0"
 dependencies = [
  "bytemuck",
+ "katsuba-bcd",
+ "katsuba-nav",
  "katsuba-object-property",
+ "katsuba-poi",
  "katsuba-types",
  "katsuba-utils",
  "katsuba-wad",
@@ -653,6 +659,9 @@ dependencies = [
 [[package]]
 name = "katsuba-utils"
 version = "0.1.0"
+dependencies = [
+ "pyo3",
+]
 
 [[package]]
 name = "katsuba-wad"

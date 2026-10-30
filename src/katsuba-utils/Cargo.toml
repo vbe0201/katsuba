@@ -6,4 +6,8 @@ description = "Utility code shared throughout the Katsuba project"
 license = "ISC"
 edition = "2024"
 
+[features]
+python = ["dep:pyo3"]
+
 [dependencies]
+pyo3 = { workspace = true, optional = true }
