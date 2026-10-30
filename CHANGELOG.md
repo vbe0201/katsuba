@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.12.0] - 2026-10-30
+
+This release brings some bug fixes, scripting additions and CoreObject serialization support.
+
+### CLI
+
+- Add `-c` option to `katsuba op` command to enable the CoreObject serializer.
+
+### ObjectProperty
+
+- Fix a bug where the `manual_compression` setting does not recognize data that is already uncompressed.
+- Add support for the `core_objects` serializer option for `CoreObject` serialization.
+
+### Python
+
+- The `PropertyFlags` bits from `katsuba-types` are now exposed as named constants in `katsuba.op`.
+- `TypeList.add_alias` allows the manual registration of hashes that alias existing types.
+  - This is mainly useful when dealing with `CoreObject`s sent over the network.
+
+### Types
+
+- Support was added for an experimental type list v3 JSON schema.
+  - There are currently no tools that dump the new format and it is subject to changes still.
+  - Notable new JSON fields in v3:
+    - `"aliases": {"123": 345}` deduplicates the `"classes"` key by avoiding some repetitions of
+      existing entries. This mainly reduces the file size a bit.
+    - `"core_object_factory_types": {"2": {"namespace": 2, "type_hash": 350837933}}` introduces
+      a mapping of core type bytes to their corresponding type hashes.
+
 ## [0.11.0] - 2026-10-22
 
 This release contains serialization support for all formats and bug fixes.
