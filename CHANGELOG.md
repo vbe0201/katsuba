@@ -18,6 +18,7 @@ This release brings some bug fixes, scripting additions and CoreObject serializa
 - The `PropertyFlags` bits from `katsuba-types` are now exposed as named constants in `katsuba.op`.
 - `TypeList.add_alias` allows the manual registration of hashes that alias existing types.
   - This is mainly useful when dealing with `CoreObject`s sent over the network.
+- `katsuba.bcd`, `katsuba.poi`, and `katusba.nav` now expose readers for these binary formats for scripting.
 
 ### Types
 
