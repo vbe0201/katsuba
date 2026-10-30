@@ -87,7 +87,8 @@ impl SerializerOptions {
         shallow = None,
         manual_compression = None,
         recursion_limit = None,
-        skip_unknown_types = None
+        skip_unknown_types = None,
+        core_objects = None
     ))]
     pub fn new(
         flags: Option<u32>,
@@ -96,6 +97,7 @@ impl SerializerOptions {
         manual_compression: Option<bool>,
         recursion_limit: Option<i8>,
         skip_unknown_types: Option<bool>,
+        core_objects: Option<bool>,
     ) -> Self {
         let mut this = serde::SerializerOptions::default();
 
@@ -116,6 +118,9 @@ impl SerializerOptions {
         }
         if let Some(v) = skip_unknown_types {
             this.skip_unknown_types = v;
+        }
+        if let Some(v) = core_objects {
+            this.core_objects = v;
         }
 
         Self(this)
@@ -179,6 +184,16 @@ impl SerializerOptions {
     #[setter]
     pub fn set_skip_unknown_types(&mut self, new: bool) {
         self.0.skip_unknown_types = new;
+    }
+
+    #[getter]
+    pub fn get_core_objects(&self) -> bool {
+        self.0.core_objects
+    }
+
+    #[setter]
+    pub fn set_core_objects(&mut self, new: bool) {
+        self.0.core_objects = new;
     }
 }
 
@@ -278,6 +293,16 @@ impl Serializer {
         self.inner.parts.options.skip_unknown_types = new;
     }
 
+    #[getter]
+    pub fn get_core_objects(&self) -> bool {
+        self.inner.parts.options.core_objects
+    }
+
+    #[setter]
+    pub fn set_core_objects(&mut self, new: bool) {
+        self.inner.parts.options.core_objects = new;
+    }
+
     pub fn deserialize<'py>(
         &mut self,
         py: Python<'py>,
@@ -316,11 +341,15 @@ impl Serializer {
 #[pyclass(extends=PyDict, module = "katsuba.op")]
 pub struct Object {
     type_hash: u32,
+    core: Option<(u8, u8, u32)>,
 }
 
 impl Object {
     pub(super) fn new(type_hash: u32) -> Self {
-        Self { type_hash }
+        Self {
+            type_hash,
+            core: None,
+        }
     }
 }
 
@@ -354,6 +383,16 @@ impl Object {
     #[getter]
     pub fn type_hash(&self) -> u32 {
         self.type_hash
+    }
+
+    #[getter]
+    pub fn get_core_header(&self) -> Option<(u8, u8, u32)> {
+        self.core
+    }
+
+    #[setter]
+    pub fn set_core_header(&mut self, new: Option<(u8, u8, u32)>) {
+        self.core = new;
     }
 }
 

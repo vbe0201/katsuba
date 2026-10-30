@@ -68,12 +68,16 @@ pub enum Error {
     Enum(#[from] katsuba_types::EncodingError),
 
     /// Failed to identify a type from its type tag during deserialization.
-    #[error("failed to identify type with tag '{0}'")]
+    #[error("unknown type tag for object: '{0}'")]
     UnknownType(u32),
 
     /// Object stream specifies a property that is not part of the object.
-    #[error("unknown property for object with hash '{0}'")]
+    #[error("unknown property for object: '{0}'")]
     UnknownProperty(u32),
+
+    /// Failed to identify a type from its core type during deserialization.
+    #[error("unknown core type for object: {0}")]
+    UnknownCoreType(u8),
 
     /// Encoded property size did not match the actually consumed data for it.
     #[error("mismatch for property size: expected {expected}, got {actual}")]
@@ -153,6 +157,8 @@ pub struct SerializerOptions {
     ///
     /// Ignored during serialization.
     pub skip_unknown_types: bool,
+    /// Handles the special `CoreObject` serialization format.
+    pub core_objects: bool,
 }
 
 impl Default for SerializerOptions {
@@ -164,6 +170,7 @@ impl Default for SerializerOptions {
             manual_compression: false,
             recursion_limit: i8::MAX,
             skip_unknown_types: false,
+            core_objects: false,
         }
     }
 }

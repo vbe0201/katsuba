@@ -36,6 +36,7 @@ fn parse_config(json: &str) -> SerializerOptions {
         manual_compression: config.compress,
         recursion_limit: config.recursion_limit.unwrap_or(i8::MAX),
         skip_unknown_types: false,
+        core_objects: false,
     }
 }
 

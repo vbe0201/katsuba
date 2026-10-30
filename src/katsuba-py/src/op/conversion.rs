@@ -43,9 +43,10 @@ pub fn value_to_python<'py>(value: &Value, py: Python<'py>) -> Bound<'py, PyAny>
         }
 
         Value::Object(obj) => {
-            let bound = Py::new(py, Object::new(obj.type_hash))
-                .unwrap()
-                .into_bound(py);
+            let mut py_obj = Object::new(obj.type_hash);
+            py_obj.set_core_header(obj.core.map(|h| (h.core_type, h.namespace, h.template_id)));
+
+            let bound = Py::new(py, py_obj).unwrap().into_bound(py);
             {
                 let dict = bound.as_any().cast::<PyDict>().unwrap();
                 for (k, v) in obj.iter() {
@@ -191,6 +192,14 @@ pub(super) fn python_to_object(obj: &Bound<'_, PyAny>, types: &TypeList) -> PyRe
         .map_err(|_| PyTypeError::new_err("expected None or a katsuba.op.Object instance"))?;
 
     let type_hash = py_obj.borrow().type_hash();
+    let core = py_obj
+        .borrow()
+        .get_core_header()
+        .map(|(core_type, namespace, template_id)| CoreHeader {
+            core_type,
+            namespace,
+            template_id,
+        });
     let type_def = types
         .0
         .get(&type_hash)
@@ -213,7 +222,11 @@ pub(super) fn python_to_object(obj: &Bound<'_, PyAny>, types: &TypeList) -> PyRe
     }
 
     Ok(Value::Object(Box::new(
-        katsuba_object_property::value::Object { type_hash, inner },
+        katsuba_object_property::value::Object {
+            type_hash,
+            core,
+            inner,
+        },
     )))
 }
 

@@ -2,6 +2,7 @@ use bitter::{LittleEndianReader, LittleEndianWriter};
 use katsuba_types::{TypeDef, TypeList};
 
 use super::{Error, utils};
+use crate::value::{CoreHeader, Object};
 
 #[inline]
 pub fn property_class<'a>(
@@ -10,6 +11,32 @@ pub fn property_class<'a>(
 ) -> Result<Option<&'a TypeDef>, Error> {
     let hash = utils::read_bits_aligned(reader, u32::BITS)? as u32;
     find_class_def(types, hash)
+}
+
+#[inline]
+pub fn core_object<'a>(
+    reader: &mut LittleEndianReader<'_>,
+    types: &'a TypeList,
+) -> Result<(Option<&'a TypeDef>, Option<CoreHeader>), Error> {
+    let core_type = utils::read_bits_aligned(reader, u8::BITS)? as u8;
+    let namespace = utils::read_bits(reader, u8::BITS)? as u8;
+    let type_or_template = utils::read_bits(reader, u32::BITS)? as u32;
+
+    if core_type == 0 {
+        return Ok((find_class_def(types, type_or_template)?, None));
+    }
+
+    let type_hash = client_class_for(core_type).ok_or(Error::UnknownCoreType(core_type))?;
+    let type_def = find_class_def(types, type_hash)?.ok_or(Error::UnknownType(type_hash))?;
+
+    Ok((
+        Some(type_def),
+        Some(CoreHeader {
+            core_type,
+            namespace,
+            template_id: type_or_template,
+        }),
+    ))
 }
 
 #[inline]
@@ -24,6 +51,25 @@ pub fn write_property_class<'a>(
 }
 
 #[inline]
+pub fn write_core_object<'a>(
+    writer: &mut LittleEndianWriter<Vec<u8>>,
+    types: &'a TypeList,
+    obj: &Object,
+) -> Result<&'a TypeDef, Error> {
+    let def = find_class_def(types, obj.type_hash)?.ok_or(Error::UnknownType(obj.type_hash))?;
+    let (core_type, namespace, id) = match obj.core {
+        Some(h) => (h.core_type, h.namespace, h.template_id),
+        None => (0, 0, obj.type_hash),
+    };
+
+    utils::write_bits_aligned(writer, core_type as u64, u8::BITS)?;
+    utils::write_bits(writer, namespace as u64, u8::BITS)?;
+    utils::write_bits(writer, id as u64, u32::BITS)?;
+
+    Ok(def)
+}
+
+#[inline]
 fn find_class_def(types: &TypeList, hash: u32) -> Result<Option<&TypeDef>, Error> {
     if hash == 0 {
         log::debug!("Received null hash for object");
@@ -34,4 +80,22 @@ fn find_class_def(types: &TypeList, hash: u32) -> Result<Option<&TypeDef>, Error
     } else {
         Err(Error::UnknownType(hash))
     }
+}
+
+#[inline]
+fn client_class_for(core_type: u8) -> Option<u32> {
+    Some(match core_type {
+        0x02 | 0x05 | 0x09 => 350837933,
+        0x68 => 766500222,
+        0x6A => 1167581154,
+        0x6C => 2109552587,
+        0x73 => 1653772158,
+        0x83 => 958775582,
+        0x84 => 398229815,
+        0x85 => 168649233,
+        0x94 => 1748894102,
+        0xBA => 1653772158,
+        0xBD => 1653772158,
+        _ => return None,
+    })
 }

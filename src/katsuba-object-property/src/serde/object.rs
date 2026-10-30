@@ -14,11 +14,24 @@ pub fn deserialize(
 ) -> Result<Value, Error> {
     de.with_recursion_limit(|de| {
         let types = de.types.clone();
-        let res = match type_tag::property_class(reader, &types) {
+        let (tag, core) = match de.options.core_objects {
+            true => match type_tag::core_object(reader, &types) {
+                Ok((type_def, core)) => (Ok(type_def), core),
+                Err(e) => (Err(e), None),
+            },
+            false => (type_tag::property_class(reader, &types), None),
+        };
+
+        let res = match tag {
             // If a type definition exists, read the full object.
             Ok(Some(type_def)) => {
                 let object_size = read_bit_size(de, reader)? as usize;
-                deserialize_properties(de, object_size, type_def, reader)?
+                let mut value = deserialize_properties(de, object_size, type_def, reader)?;
+                if let Value::Object(obj) = &mut value {
+                    obj.core = core;
+                }
+
+                value
             }
 
             // If we encountered a null pointer, return an empty value.
@@ -64,11 +77,22 @@ pub fn serialize(
     ser.with_recursion_limit(|ser| {
         let Some(obj) = obj else {
             log::debug!("Writing null hash for object");
+
+            if ser.options.core_objects {
+                utils::write_bits_aligned(writer, 0, u8::BITS)?;
+                utils::write_bits(writer, 0, u8::BITS)?;
+                return utils::write_bits(writer, 0, u32::BITS);
+            }
+
             return utils::write_bits_aligned(writer, 0, u32::BITS);
         };
 
         let types = ser.types.clone();
-        let type_def = type_tag::write_property_class(writer, &types, obj.type_hash)?;
+        let type_def = if ser.options.core_objects {
+            type_tag::write_core_object(writer, &types, obj)?
+        } else {
+            type_tag::write_property_class(writer, &types, obj.type_hash)?
+        };
         log::debug!("Writing object '{}'", type_def.name);
 
         if ser.options.shallow {
@@ -97,6 +121,7 @@ fn deserialize_properties(
 
     Ok(Value::Object(Box::new(Object {
         type_hash: type_def.hash,
+        core: None,
         inner,
     })))
 }

@@ -144,6 +144,8 @@ class SerializerOptions:
     :param skip_unknown_types: Whether unknown types should be ignored by the
                                serializer. See :attr:`skip_unknown_types` for
                                more details.
+    :param core_objects: Whether objects use the CoreObject format. See
+                         :attr:`core_objects` for more details.
     """
 
     def __init__(
@@ -154,7 +156,8 @@ class SerializerOptions:
         shallow: bool = True,
         manual_compression: bool = False,
         recursion_limit: int = 127,
-        skip_unknown_types: bool = False
+        skip_unknown_types: bool = False,
+        core_objects: bool = False
     ) -> None: ...
 
     @property
@@ -287,6 +290,22 @@ class SerializerOptions:
     @skip_unknown_types.setter
     def skip_unknown_types(self, v: bool) -> None: ...
 
+    @property
+    def core_objects(self) -> bool:
+        """
+        Gets or sets whether objects are serialized in the CoreObject format.
+
+        KingsIsle serializes game entities such as players and items with a
+        dedicated serializer for CoreObjects.
+
+        When enabled, deserialized objects built from a template expose this
+        header as :attr:`Object.core_header` and serialization writes it back.
+        """
+        ...
+
+    @core_objects.setter
+    def core_objects(self, v: bool) -> None: ...
+
 class Object(dict[str, Any]):
     """
     Representation of an object in the ObjectProperty system.
@@ -374,6 +393,24 @@ class Object(dict[str, Any]):
         This property is read-only.
         """
         ...
+
+    @property
+    def core_header(self) -> tuple[int, int, int] | None:
+        """
+        Gets or sets the CoreObject header of this object.
+
+        The header is a ``(core_type, namespace, template_id)`` tuple. It is
+        only set on templated objects deserialized with
+        :attr:`SerializerOptions.core_objects` enabled, and ``None`` otherwise.
+
+        When serializing with :attr:`SerializerOptions.core_objects`, objects
+        with a header are written as templated CoreObjects and objects without
+        one as regular classes.
+        """
+        ...
+
+    @core_header.setter
+    def core_header(self, v: tuple[int, int, int] | None) -> None: ...
 
 class Serializer:
     """
@@ -479,6 +516,17 @@ class Serializer:
 
     @skip_unknown_types.setter
     def skip_unknown_types(self, v: bool) -> None: ...
+
+    @property
+    def core_objects(self) -> bool:
+        """
+        Gets or sets :attr:`SerializerOptions.core_objects` of the current
+        serializer configuration.
+        """
+        ...
+
+    @core_objects.setter
+    def core_objects(self, v: bool) -> None: ...
 
     def deserialize(self, data: bytes) -> Object | None:
         """

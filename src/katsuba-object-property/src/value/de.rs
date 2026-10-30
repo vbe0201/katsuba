@@ -174,7 +174,11 @@ impl<'de> Visitor<'de> for ObjectVisitor<'_> {
             inner.insert(property.name.clone(), value);
         }
 
-        Ok(Value::Object(Box::new(Object { type_hash, inner })))
+        Ok(Value::Object(Box::new(Object {
+            type_hash,
+            core: None,
+            inner,
+        })))
     }
 }
 

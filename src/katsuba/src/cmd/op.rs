@@ -65,6 +65,12 @@ pub struct ObjectProperty {
     /// When in doubt if you need this, just try it and see if it works.
     #[clap(short, long, default_value_t = false)]
     zlib_manual: bool,
+
+    /// Whether the CoreObject serializer should be used.
+    ///
+    /// CoreObjects are used for game entities transferred over the network.
+    #[clap(short, long, default_value_t = false)]
+    core_objects: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -110,6 +116,7 @@ impl Command for ObjectProperty {
             property_mask: PropertyFlags::from_bits_truncate(self.mask),
             shallow: self.shallow,
             manual_compression: self.zlib_manual,
+            core_objects: self.core_objects,
             ..Default::default()
         };
 
