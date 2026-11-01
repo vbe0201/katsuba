@@ -83,11 +83,10 @@ impl<'de> Visitor<'de> for TypeListVisitor {
                 list.classes = classes.ok_or_else(|| A::Error::missing_field("classes"))?;
 
                 // Aliases deduplicate classes in v3 lists. For compatibility
-                // with older versions, we resolve them into copies.
-                list.classes.reserve(aliases.len());
-                for (alias, target) in aliases {
-                    list.add_alias(alias, target).map_err(A::Error::custom)?;
-                }
+                // with older versions, we resolve them into copies. Those of
+                // classes from other lists will wait for a merge.
+                list.pending_aliases = aliases;
+                list.resolve_aliases();
             }
 
             // Reject any potentially newer version until proper support is added.

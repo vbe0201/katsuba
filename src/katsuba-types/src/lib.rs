@@ -73,6 +73,10 @@ pub struct TypeList {
     ///
     /// Only v3 lists provide this. Empty for older versions.
     pub core_object_factory_types: HashMap<u8, CoreObjectFactoryType>,
+    /// Type hashes that alias classes that are not present in the list.
+    ///
+    /// These are kept for resolution attempts made by [`TypeList::merge`].
+    pub pending_aliases: HashMap<u32, u32>,
 }
 
 impl TypeList {
@@ -93,8 +97,20 @@ impl TypeList {
         for (k, v) in other.classes.drain() {
             self.classes.insert(k, v);
         }
+
         self.core_object_factory_types
             .extend(other.core_object_factory_types.drain());
+        self.pending_aliases.extend(other.pending_aliases.drain());
+        self.resolve_aliases();
+    }
+
+    pub(crate) fn resolve_aliases(&mut self) {
+        let pending: Vec<_> = self.pending_aliases.drain().collect();
+        for (alias, target) in pending {
+            if !self.classes.contains_key(&target) {
+                self.pending_aliases.insert(alias, target);
+            }
+        }
     }
 
     /// Registers `alias` as a copy of the existing class `target`.

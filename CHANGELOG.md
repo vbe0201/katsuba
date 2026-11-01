@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.12.2] - 2026-11-01
+
+This is a small bugfix release.
+
+### Types
+
+- Allow supplying unresolved aliases in a v3 type list.
+  - Previously, it was not possible for a type list to name aliases for types it doesn't define.
+  - With the new change, alias resolution happens once after parsing and then again after every
+    TypeList merge.
+
 ## [0.12.1] - 2026-10-31
 
 This is a small bugfix release.
