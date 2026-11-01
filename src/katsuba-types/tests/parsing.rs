@@ -52,8 +52,8 @@ fn resolve_v3_aliases() -> Result<(), Error> {
     let list = TypeList::from_str(
         r#"{
     "version": 3,
-    "aliases": {"2": 1},
     "classes": {"1": {"name": "class A", "hash": 1, "properties": {}}},
+    "aliases": {"2": 1},
     "core_object_factory_types": {"104": {"namespace": 1, "type_hash": 1}}
 }"#,
     )?;

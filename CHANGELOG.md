@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.3] - 2026-11-01
+
+This is a small bugfix release.
+
+### Types
+
+- Fixes a regression from v0.12.2 which accidentally breaks alias handling completely.
+
 ## [0.12.2] - 2026-11-01
 
 This is a small bugfix release.

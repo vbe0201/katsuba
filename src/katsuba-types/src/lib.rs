@@ -107,7 +107,7 @@ impl TypeList {
     pub(crate) fn resolve_aliases(&mut self) {
         let pending: Vec<_> = self.pending_aliases.drain().collect();
         for (alias, target) in pending {
-            if !self.classes.contains_key(&target) {
+            if self.add_alias(alias, target).is_err() {
                 self.pending_aliases.insert(alias, target);
             }
         }
